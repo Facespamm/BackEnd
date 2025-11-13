@@ -1,0 +1,195 @@
+/* Стили для судейского интерфейса */
+
+.referee-interface {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: white;
+}
+
+.referee-header {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px 0;
+    margin-bottom: 30px;
+}
+
+.referee-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    color: #333;
+}
+
+.referee-timer {
+    font-family: 'Courier New', monospace;
+    font-size: 5em;
+    font-weight: bold;
+    text-align: center;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin: 20px 0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.referee-timer.golden {
+    background: linear-gradient(135deg, #ff9800, #ffc107);
+    color: #333;
+    animation: pulse 1s infinite;
+}
+
+.score-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.score-btn {
+    padding: 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.score-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.score-btn:active {
+    transform: translateY(-1px);
+}
+
+.btn-ippon {
+    background: linear-gradient(135deg, #4caf50, #66bb6a);
+    color: white;
+}
+
+.btn-wazaari {
+    background: linear-gradient(135deg, #2196f3, #42a5f5);
+    color: white;
+}
+
+.btn-shido {
+    background: linear-gradient(135deg, #ff9800, #ffb74d);
+    color: white;
+}
+
+.btn-hansoku {
+    background: linear-gradient(135deg, #f44336, #ef5350);
+    color: white;
+}
+
+.athlete-score {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 10px 0;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.athlete-white {
+    border-left: 10px solid #f8f9fa;
+    border-right: 5px solid #dee2e6;
+}
+
+.athlete-blue {
+    border-left: 10px solid #e3f2fd;
+    border-right: 5px solid #2196f3;
+}
+
+.score-display-large {
+    font-size: 4em;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.penalty-display {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.penalty-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #ff9800;
+}
+
+.penalty-dot.active {
+    background-color: #f44336;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}
+
+.quick-actions {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.quick-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    font-size: 1.5em;
+    margin: 5px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.quick-btn:hover {
+    transform: scale(1.1);
+}
+
+.fight-info-panel {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.control-panel {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .referee-timer {
+        font-size: 3em;
+        padding: 20px;
+    }
+
+    .score-display-large {
+        font-size: 2.5em;
+    }
+
+    .score-controls {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .score-btn {
+        padding: 15px;
+        font-size: 1em;
+    }
+}

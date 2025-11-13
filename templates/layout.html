@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                {% block sidebar %}
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('admin.dashboard') }}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            Dashboard
+                        </a>
+                    </li>
+
+                    <!-- Tournaments Section -->
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#tournamentsCollapse">
+                            <i class="fas fa-trophy"></i>
+                            Турниры
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </a>
+                        <div class="collapse show" id="tournamentsCollapse">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('tournaments.list_tournaments') }}">
+                                        Все турниры
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('tournaments.create_tournament') }}">
+                                        Создать турнир
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
+                    <!-- Athletes Section -->
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#athletesCollapse">
+                            <i class="fas fa-users"></i>
+                            Участники
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </a>
+                        <div class="collapse" id="athletesCollapse">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('athletes.list_athletes') }}">
+                                        Все участники
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('athletes.add_athlete') }}">
+                                        Добавить участника
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
+                    <!-- Clubs Section -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin.clubs') }}">
+                            <i class="fas fa-flag"></i>
+                            Клубы
+                        </a>
+                    </li>
+
+                    <!-- Users Section -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin.users') }}">
+                            <i class="fas fa-user-cog"></i>
+                            Пользователи
+                        </a>
+                    </li>
+
+                    <!-- System Section -->
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#systemCollapse">
+                            <i class="fas fa-cog"></i>
+                            Система
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </a>
+                        <div class="collapse" id="systemCollapse">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('admin.system_stats') }}">
+                                        Статистика
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('admin.system_backup') }}">
+                                        Резервное копирование
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+                {% endblock %}
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    {% block page_actions %}{% endblock %}
+                </div>
+            </div>
+
+            {% block page_content %}
+            <div class="container-fluid">
+                <!-- Content will be here -->
+            </div>
+            {% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}
