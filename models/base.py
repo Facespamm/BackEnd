@@ -1,5 +1,8 @@
 from datetime import datetime
-from database.db import db
+
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
 
 class BaseModel(db.Model):
     """

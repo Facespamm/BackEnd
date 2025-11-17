@@ -22,7 +22,7 @@ if __name__ == '__main__':
     print("⏹️  Остановка: Ctrl+C")
 
     try:
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        app.run(host='0.0.0.0', port=5001, debug=True)
     except KeyboardInterrupt:
         print("\n👋 Сервер остановлен")
     except Exception as e:
