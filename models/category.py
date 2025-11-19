@@ -1,6 +1,7 @@
+from datetime import datetime
 from database.db import db
 from models.base import BaseModel
-from datetime import datetime
+from models.associations import category_athletes  # Импортируем таблицу связей
 
 class Category(BaseModel):
     """
@@ -24,7 +25,7 @@ class Category(BaseModel):
 
     # Связи
     brackets = db.relationship('Bracket', backref='category', lazy=True, cascade='all, delete-orphan')
-    athletes = db.relationship('Athlete', secondary='category_athletes', lazy='subquery',
+    athletes = db.relationship('Athlete', secondary=category_athletes, lazy='subquery',
                               backref=db.backref('categories', lazy=True))
 
     def __repr__(self):
@@ -73,6 +74,7 @@ class Category(BaseModel):
 
     def get_bracket(self):
         """Получить турнирную сетку категории"""
+        from models.bracket import Bracket
         return Bracket.query.filter_by(category_id=self.id).first()
 
     def get_completed_fights_count(self):
@@ -85,10 +87,3 @@ class Category(BaseModel):
                 status='COMPLETED'
             ).count()
         return 0
-
-# Таблица связи многие-ко-многим для участников и категорий
-category_athletes = db.Table('category_athletes',
-    db.Column('category_id', db.Integer, db.ForeignKey('categories.id'), primary_key=True),
-    db.Column('athlete_id', db.Integer, db.ForeignKey('athletes.id'), primary_key=True),
-    db.Column('registered_at', db.DateTime, default=datetime.utcnow)
-)
