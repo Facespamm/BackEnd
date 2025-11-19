@@ -14,25 +14,25 @@ public_bp = Blueprint('public', __name__)
 def index():
     """Главная публичная страница"""
     # Активные турниры
-    active_tournaments = Tournament.query.filter_by(status='LIVE').order_by(
-        Tournament.start_date.desc()
-    ).limit(3).all()
+    # active_tournaments = Tournament.query.filter_by(status='LIVE').order_by(
+    #     Tournament.start_date.desc()
+    # ).limit(3).all()
 
-    # Ближайшие турниры
-    upcoming_tournaments = Tournament.query.filter(
-        Tournament.status.in_(['PLANNED', 'REGISTRATION'])
-    ).order_by(Tournament.start_date).limit(3).all()
+    # # Ближайшие турниры
+    # upcoming_tournaments = Tournament.query.filter(
+    #     Tournament.status.in_(['PLANNED', 'REGISTRATION'])
+    # ).order_by(Tournament.start_date).limit(3).all()
 
-    # Последние завершенные турниры
-    completed_tournaments = Tournament.query.filter_by(status='COMPLETED').order_by(
-        Tournament.end_date.desc()
-    ).limit(3).all()
+    # # Последние завершенные турниры
+    # completed_tournaments = Tournament.query.filter_by(status='COMPLETED').order_by(
+    #     Tournament.end_date.desc()
+    # ).limit(3).all()
 
     return render_template(
         'public/index.html',
-        active_tournaments=active_tournaments,
-        upcoming_tournaments=upcoming_tournaments,
-        completed_tournaments=completed_tournaments
+        # active_tournaments=active_tournaments,
+        # upcoming_tournaments=upcoming_tournaments,
+        # completed_tournaments=completed_tournaments
     )
 
 @public_bp.route('/tournaments')
