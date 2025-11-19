@@ -1,8 +1,9 @@
 from flask import Flask
 from flask_restx import Api
 from flask_cors import CORS
+from flask_migrate import Migrate
 from config import Config
-from database.db import db, init_db
+from database.db import db
 import os
 
 
@@ -13,11 +14,11 @@ def create_app():
     # CORS для API
     CORS(app)
 
-    # Создаем папку для базы данных если нет
-    os.makedirs('instance', exist_ok=True)
-
     # Инициализация базы данных
-    init_db(app)
+    db.init_app(app)
+
+    # Инициализация миграций
+    migrate = Migrate(app, db)
 
     # Инициализация API
     api = Api(

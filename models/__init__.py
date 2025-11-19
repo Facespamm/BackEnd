@@ -2,7 +2,7 @@
 Модели данных для системы управления турнирами по дзюдо
 """
 
-from .base import BaseModel as Base  # ← ИЗМЕНИЛ ЭТУ СТРОКУ!
+from .base import BaseModel
 from .athlete import Athlete
 from .club import Club
 from .tournament import Tournament
@@ -14,7 +14,7 @@ from .user import User
 from .weighing import Weighing
 
 __all__ = [
-    'Base',
+    'BaseModel',
     'Athlete',
     'Club', 
     'Tournament',

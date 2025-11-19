@@ -1,24 +1,25 @@
 import os
 from datetime import timedelta
+import urllib.parse
+
 
 class Config:
     # Базовые настройки
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'judo-tournament-secret-key-2024'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///judo_tournament.db'
+
+    # PostgreSQL - ЭКРАНИРУЕМ пароль
+    password = urllib.parse.quote_plus("string@123F")
+    SQLALCHEMY_DATABASE_URI = f'postgresql://postgres:{password}@localhost:5432/judo_tournament?client_encoding=utf8'
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Настройки сессии
+    # Остальные настройки без изменений...
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
-
-    # Настройки загрузки файлов
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     UPLOAD_FOLDER = 'static/uploads'
+    DEFAULT_FIGHT_DURATION = 300
+    GOLDEN_SCORE_DURATION = 180
 
-    # Настройки турнира
-    DEFAULT_FIGHT_DURATION = 300  # 5 минут в секундах
-    GOLDEN_SCORE_DURATION = 180   # 3 минуты золотой скор
-
-    # Возрастные категории (в годах)
     AGE_CATEGORIES = {
         'U10': (8, 10),
         'U12': (10, 12),
@@ -30,7 +31,6 @@ class Config:
         'VETERAN': (35, 100)
     }
 
-    # Весовые категории (мужчины/женщины в кг)
     WEIGHT_CATEGORIES = {
         'MALE': {
             'U60': (0, 60),
@@ -51,7 +51,6 @@ class Config:
         }
     }
 
-    # Типы побед
     VICTORY_TYPES = {
         'IPPON': 'Иппон',
         'WAZAARI': 'Ваза-ари',
@@ -62,7 +61,6 @@ class Config:
         'KIKEN_GACHI': 'Кикэн-гати (отказ)'
     }
 
-    # Роли пользователей
     USER_ROLES = {
         'ADMIN': 'Администратор',
         'REFEREE': 'Судья',

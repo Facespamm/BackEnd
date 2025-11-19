@@ -1,6 +1,6 @@
 from datetime import datetime
 from database.db import db
-from models.base import BaseModel
+from models import BaseModel
 
 class Weighing(BaseModel):
     """

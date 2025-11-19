@@ -5,5 +5,5 @@ from database.db import db
 category_athletes = db.Table('category_athletes',
     db.Column('category_id', db.Integer, db.ForeignKey('categories.id'), primary_key=True),
     db.Column('athlete_id', db.Integer, db.ForeignKey('athletes.id'), primary_key=True),
-    db.Column('registered_at', db.DateTime, default=datetime.utcnow)
+    db.Column('registered_at', db.DateTime, default=datetime.utcnow)  # Убрали лишний db.Column
 )

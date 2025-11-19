@@ -1,5 +1,5 @@
 from database.db import db
-from models.base import BaseModel
+from models import BaseModel
 from utils.security import hash_password, check_password
 
 class User(BaseModel):

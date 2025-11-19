@@ -1,7 +1,7 @@
 from datetime import datetime
 from database.db import db
 from models.base import BaseModel
-from models.associations import category_athletes  # Импортируем таблицу связей
+from models.associations import category_athletes  # Импортируем таблицу связи
 
 class Category(BaseModel):
     """
@@ -13,19 +13,19 @@ class Category(BaseModel):
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
 
     # Информация о категории
-    name = db.Column(db.String(50), nullable=False)  # Например: "Мужчины до 73кг"
-    gender = db.Column(db.String(10), nullable=False)  # MALE/FEMALE
-    min_weight = db.Column(db.Float)  # Минимальный вес (кг)
-    max_weight = db.Column(db.Float)  # Максимальный вес (кг)
-    min_age = db.Column(db.Integer)   # Минимальный возраст
-    max_age = db.Column(db.Integer)   # Максимальный возраст
-
-    # Статус
+    name = db.Column(db.String(50), nullable=False)
+    gender = db.Column(db.String(10), nullable=False)
+    min_weight = db.Column(db.Float)
+    max_weight = db.Column(db.Float)
+    min_age = db.Column(db.Integer)
+    max_age = db.Column(db.Integer)
     is_active = db.Column(db.Boolean, default=True)
 
     # Связи
     brackets = db.relationship('Bracket', backref='category', lazy=True, cascade='all, delete-orphan')
-    athletes = db.relationship('Athlete', secondary=category_athletes, lazy='subquery',
+    athletes = db.relationship('Athlete',
+                              secondary=category_athletes,  # Используем объект таблицы
+                              lazy='subquery',
                               backref=db.backref('categories', lazy=True))
 
     def __repr__(self):
