@@ -1,13 +1,16 @@
+from datetime import datetime
 from database.db import db
-from models import BaseModel
 
-class Result(BaseModel):
+class Result(db.Model):
     """
     Модель результата схватки
     """
     __tablename__ = 'results'
 
     # Связи
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     fight_id = db.Column(db.Integer, db.ForeignKey('fights.id'), nullable=False, unique=True)
     winner_id = db.Column(db.Integer, db.ForeignKey('athletes.id'), nullable=False)
 

@@ -1,7 +1,7 @@
+from datetime import datetime
 from database.db import db
-from models import BaseModel
 
-class Bracket(BaseModel):
+class Bracket(db.Model):
     """
     Модель турнирной сетки
     """
@@ -12,6 +12,9 @@ class Bracket(BaseModel):
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
 
     # Информация о сетке
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     name = db.Column(db.String(100), nullable=False)
     bracket_type = db.Column(db.String(20), default='SINGLE_ELIMINATION')  # SINGLE_ELIMINATION, DOUBLE_ELIMINATION, ROUND_ROBIN
     status = db.Column(db.String(20), default='CREATED')  # CREATED, GENERATED, LIVE, COMPLETED

@@ -1,14 +1,17 @@
 from datetime import datetime
 from database.db import db
-from models import BaseModel
+from models.fight import Fight
 
-class Tournament(BaseModel):
+class Tournament(db.Model):
     """
     Модель турнира
     """
     __tablename__ = 'tournaments'
 
     # Основная информация
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
 

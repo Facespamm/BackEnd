@@ -15,11 +15,11 @@ app = create_app()
 if __name__ == '__main__':
     print("🥋 Judo Tournament Management System")
     print("🚀 Запуск сервера...")
-    print("📊 Админка: http://localhost:5000/admin")
-    print("🎯 Судьи: http://localhost:5000/referee")
-    print("📺 Табло: http://localhost:5000/scoreboard")
-    print("🌐 Публичная: http://localhost:5000/public")
-    print("⏹️  Остановка: Ctrl+C")
+    # print("📊 Админка: http://localhost:5000/admin")
+    # print("🎯 Судьи: http://localhost:5000/referee")
+    # print("📺 Табло: http://localhost:5000/scoreboard")
+    # print("🌐 Публичная: http://localhost:5000/public")
+    # print("⏹️  Остановка: Ctrl+C")
 
     try:
         app.run(host='0.0.0.0', port=5001, debug=True)

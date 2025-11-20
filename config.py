@@ -2,14 +2,18 @@ import os
 from datetime import timedelta
 import urllib.parse
 
-
 class Config:
     # Базовые настройки
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'judo-tournament-secret-key-2024'
 
     # PostgreSQL - ЭКРАНИРУЕМ пароль
-    password = urllib.parse.quote_plus("string@123F")
-    SQLALCHEMY_DATABASE_URI = f'postgresql://postgres:{password}@localhost:5432/judo_tournament?client_encoding=utf8'
+        # PostgreSQL - правильное экранирование пароля с кириллицей
+    password = os.getenv('DB_PASSWORD', 'okjtt@123')  # Ваш пароль с кириллицей
+    # Кодируем пароль в UTF-8, затем экранируем для URL
+    encoded_password = urllib.parse.quote_plus(password)
+    
+    SQLALCHEMY_DATABASE_URI = f'postgresql+psycopg2://postgres:{encoded_password}@localhost:5432/judo_tournament'
+
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

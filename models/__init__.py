@@ -2,7 +2,6 @@
 Модели данных для системы управления турнирами по дзюдо
 """
 
-from .base import BaseModel
 from .athlete import Athlete
 from .club import Club
 from .tournament import Tournament

@@ -1,14 +1,17 @@
+from datetime import datetime
 from database.db import db
-from models import BaseModel
 from utils.security import hash_password, check_password
 
-class User(BaseModel):
+class User(db.Model):
     """
     Модель пользователя системы
     """
     __tablename__ = 'users'
 
     # Учетные данные
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 

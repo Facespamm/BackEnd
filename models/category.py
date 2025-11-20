@@ -1,9 +1,8 @@
 from datetime import datetime
 from database.db import db
-from models.base import BaseModel
 from models.associations import category_athletes  # Импортируем таблицу связи
 
-class Category(BaseModel):
+class Category(db.Model):
     """
     Модель весовой категории
     """
@@ -13,6 +12,9 @@ class Category(BaseModel):
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
 
     # Информация о категории
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     name = db.Column(db.String(50), nullable=False)
     gender = db.Column(db.String(10), nullable=False)
     min_weight = db.Column(db.Float)

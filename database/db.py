@@ -1,10 +1,14 @@
+import logger
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
 
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
+db = SQLAlchemy()
+log = logger.logger
 
 def init_db(app):
+    """Инициализация и создание таблиц"""
     db.init_app(app)
+    
+    with app.app_context():        # ← ЭТО ОБЯЗАТЕЛЬНО!
+        log.info("Создаём таблицы в базе данных...")
+        db.create_all()
+        log.info("Таблицы успешно созданы (или уже существуют)")

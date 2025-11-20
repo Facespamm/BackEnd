@@ -1,13 +1,16 @@
+from datetime import datetime
 from database.db import db
-from models import BaseModel
 
-class Club(BaseModel):
+class Club(db.Model):
     """
     Модель клуба/команды
     """
     __tablename__ = 'clubs'
 
     # Основная информация
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     name = db.Column(db.String(100), nullable=False, unique=True)
     short_name = db.Column(db.String(20))
     city = db.Column(db.String(50))

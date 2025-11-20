@@ -1,14 +1,16 @@
 from datetime import datetime
 from database.db import db
-from models import BaseModel
 
-class Weighing(BaseModel):
+class Weighing(db.Model):
     """
     Модель взвешивания участника
     """
     __tablename__ = 'weighings'
 
     # Связи
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
     athlete_id = db.Column(db.Integer, db.ForeignKey('athletes.id'), nullable=False)
 

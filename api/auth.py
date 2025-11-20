@@ -60,12 +60,12 @@ class Login(Resource):
             return {'success': False, 'message': 'Неверные учетные данные'}, 401
 
 
-@auth_ns.route('/profile')
-class Profile(Resource):
-    @auth_ns.marshal_with(user_model)
-    def get(self):
-        """Получить профиль текущего пользователя"""
-        # Здесь должна быть проверка JWT токена
-        user_id = get_user_id_from_token()  # Реализуйте эту функцию
-        user = User.query.get(user_id)
-        return user
+# @auth_ns.route('/profile')
+# class Profile(Resource):
+#     @auth_ns.marshal_with(user_model)
+#     def get(self):
+#         """Получить профиль текущего пользователя"""
+#         # Здесь должна быть проверка JWT токена
+#         user_id = get_user_id_from_token()  # Реализуйте эту функцию
+#         user = User.query.get(user_id)
+#         return user

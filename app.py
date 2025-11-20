@@ -3,7 +3,7 @@ from flask_restx import Api
 from flask_cors import CORS
 from flask_migrate import Migrate
 from config import Config
-from database.db import db
+from database.db import init_db
 import os
 
 
@@ -15,10 +15,7 @@ def create_app():
     CORS(app)
 
     # Инициализация базы данных
-    db.init_app(app)
-
-    # Инициализация миграций
-    migrate = Migrate(app, db)
+    init_db(app)
 
     # Инициализация API
     api = Api(

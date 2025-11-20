@@ -1,14 +1,16 @@
 from datetime import datetime
 from database.db import db
-from models import BaseModel
 
-class Fight(BaseModel):
+class Fight(db.Model):
     """
     Модель схватки
     """
     __tablename__ = 'fights'
 
     # Основная информация
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
     bracket_id = db.Column(db.Integer, db.ForeignKey('brackets.id'))
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
