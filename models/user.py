@@ -1,5 +1,5 @@
 from datetime import datetime
-from database.db import db
+from databse.db import db
 from utils.security import hash_password, check_password
 
 class User(db.Model):

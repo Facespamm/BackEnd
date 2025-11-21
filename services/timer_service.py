@@ -4,10 +4,11 @@
 
 import threading
 import time
-from datetime import datetime, timedelta
-from database.db import db
+from datetime import datetime
+
 from models.fight import Fight
 from services.fight_manager import FightManager
+
 
 class TimerService:
     """Сервис управления таймерами"""

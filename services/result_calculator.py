@@ -2,8 +2,6 @@
 Калькулятор результатов и рейтингов
 """
 
-from database.db import db
-from models.result import Result
 from models.fight import Fight
 from utils.helpers import calculate_ranking_points
 

@@ -1,70 +1,72 @@
 from flask import Flask
-from flask_restx import Api
 from flask_cors import CORS
-from flask_migrate import Migrate
-from config import Config
-from database.db import init_db
-import os
+from flask_restx import Api
+from databse.db import init_db
+from flasgger import Swagger
 
+app = Flask(__name__)
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:okjtt@localhost:5432/judo_tournament?client_encoding=utf8'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # CORS для API
-    CORS(app)
+# CORS для API
+CORS(app)
 
-    # Инициализация базы данных
-    init_db(app)
+# Инициализация базы данных
+init_db(app)
 
-    # Инициализация API
-    api = Api(
-        app,
-        version='1.0',
-        title='Judo Tournament API',
-        description='REST API для системы управления турнирами по дзюдо',
-        doc='/docs/'
-    )
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": 'apispec',
+            "route": '/apispec.json',
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/api/docs/"
+}
 
-    # Регистрация namespace'ов
-    from api.auth import auth_ns
-    from api.tournaments import tournaments_ns
-    from api.athletes import athletes_ns
-    from api.clubs import clubs_ns
-    from api.fights import fights_ns
-    from api.brackets import brackets_ns
-    from api.results import results_ns
-    from api.weighing import weighing_ns
+swagger_template = {
+    "swagger": "2.0",
+    "info": {
+        "title": "Clubs API",
+        "description": "API для управления спортивными клубами",
+        "version": "1.0.0",
+        "contact": {
+            "name": "API Support",
+            "email": "support@example.com"
+        }
+    },
+    "basePath": "/",
+    "schemes": ["http", "https"],
+    "consumes": ["application/json"],
+    "produces": ["application/json"]
+}
 
-    api.add_namespace(auth_ns, '/api/auth')
-    api.add_namespace(tournaments_ns, '/api/tournaments')
-    api.add_namespace(athletes_ns, '/api/athletes')
-    api.add_namespace(clubs_ns, '/api/clubs')
-    api.add_namespace(fights_ns, '/api/fights')
-    api.add_namespace(brackets_ns, '/api/brackets')
-    api.add_namespace(results_ns, '/api/results')
-    api.add_namespace(weighing_ns, '/api/weighing')
+swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
-    # Обработчик ошибок для API
-    @app.errorhandler(404)
-    def not_found(error):
-        return {
-            'success': False,
-            'message': 'Ресурс не найден',
-            'error': str(error)
-        }, 404
+# Регистрация namespace'ов
+from api.auth import auth_bp
+from api.tournaments import tournaments_bp
+from api.athletes import athletes_bp
+from api.clubs import clubs_bp
+from api.fights import fights_bp
+from api.brackets import brackets_bp
+from api.results import results_bp
+from api.weighing import weighing_bp
 
-    @app.errorhandler(500)
-    def internal_error(error):
-        return {
-            'success': False,
-            'message': 'Внутренняя ошибка сервера',
-            'error': str(error)
-        }, 500
-
-    return app
-
+app.register_blueprint(auth_bp)
+app.register_blueprint(tournaments_bp)
+app.register_blueprint(athletes_bp)
+app.register_blueprint(clubs_bp)
+app.register_blueprint(fights_bp)
+app.register_blueprint(brackets_bp)
+app.register_blueprint(results_bp)
+app.register_blueprint(weighing_bp)
 
 if __name__ == '__main__':
-    app = create_app()
     app.run(debug=True, host='0.0.0.0', port=5001)

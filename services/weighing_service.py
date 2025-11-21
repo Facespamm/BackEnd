@@ -2,10 +2,10 @@
 Сервис управления взвешиванием
 """
 
-from database.db import db
-from models.weighing import Weighing
-from models.category import Category
 from config import Config
+from databse.db import db
+from models.weighing import Weighing
+
 
 class WeighingService:
     """Сервис управления взвешиванием"""
@@ -116,7 +116,6 @@ class WeighingService:
 
     def get_athletes_without_weighing(self):
         """Получить участников без взвешивания"""
-        from models.athlete import Athlete
         from models.tournament import Tournament
 
         tournament = Tournament.query.get(self.tournament_id)

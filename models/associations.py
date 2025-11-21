@@ -1,5 +1,5 @@
 from datetime import datetime
-from database.db import db
+from databse.db import db
 
 # Таблица связи многие-ко-многим для участников и категорий
 category_athletes = db.Table('category_athletes',

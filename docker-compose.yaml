@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: judo_streams_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+#      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5434:5432"
+volumes:
+    postgres-data:

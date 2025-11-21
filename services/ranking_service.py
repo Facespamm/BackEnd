@@ -2,7 +2,6 @@
 Сервис расчета рейтингов и статистики
 """
 
-from database.db import db
 from models.athlete import Athlete
 from models.club import Club
 from models.tournament import Tournament

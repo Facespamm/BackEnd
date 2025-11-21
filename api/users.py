@@ -1,102 +1,203 @@
-from flask_restx import Namespace, Resource, fields
-from flask import request
+from flask import Blueprint, request, jsonify
+from flasgger import swag_from
 from models.user import User
-from utils.security import hash_password
 
-users_ns = Namespace('users', description='Операции с пользователями (админка)')
-
-user_model = users_ns.model('User', {
-    'username': fields.String(required=True),
-    'password': fields.String(required=True),
-    'name': fields.String(required=True),
-    'email': fields.String(),
-    'phone': fields.String(),
-    'role': fields.String(required=True),
-    'referee_level': fields.String(),
-    'tatami_assigned': fields.Integer()
-})
+users_bp = Blueprint('users', __name__, url_prefix='/users')
 
 
-@users_ns.route('/')
-class UserList(Resource):
-    @users_ns.doc('list_users')
-    def get(self):
-        """Получить список пользователей"""
-        try:
-            users = User.query.filter_by(is_active=True).order_by(User.username).all()
-
-            result = []
-            for user in users:
-                result.append({
-                    'id': user.id,
-                    'username': user.username,
-                    'name': user.name,
-                    'email': user.email,
-                    'phone': user.phone,
-                    'role': user.role,
-                    'role_display': user.role_display,
-                    'referee_level': user.referee_level,
-                    'tatami_assigned': user.tatami_assigned
-                })
-
-            return {
-                'success': True,
-                'users': result,
-                'total': len(result)
+@users_bp.route('/', methods=['GET'])
+@swag_from({
+    'tags': ['Users'],
+    'summary': 'Получить список пользователей',
+    'description': 'Возвращает список всех активных пользователей (админка)',
+    'responses': {
+        200: {
+            'description': 'Список пользователей получен успешно',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'users': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'id': {'type': 'integer'},
+                                'username': {'type': 'string'},
+                                'name': {'type': 'string'},
+                                'email': {'type': 'string'},
+                                'phone': {'type': 'string'},
+                                'role': {'type': 'string'},
+                                'role_display': {'type': 'string'},
+                                'referee_level': {'type': 'string'},
+                                'tatami_assigned': {'type': 'integer'}
+                            }
+                        }
+                    },
+                    'total': {'type': 'integer'}
+                }
             }
-        except Exception as e:
-            return {
+        },
+        500: {
+            'description': 'Ошибка сервера'
+        }
+    }
+})
+def get_users():
+    """Получить список пользователей"""
+    try:
+        users = User.query.filter_by(is_active=True).order_by(User.username).all()
+
+        result = []
+        for user in users:
+            result.append({
+                'id': user.id,
+                'username': user.username,
+                'name': user.name,
+                'email': user.email,
+                'phone': user.phone,
+                'role': user.role,
+                'role_display': user.role_display,
+                'referee_level': user.referee_level,
+                'tatami_assigned': user.tatami_assigned
+            })
+
+        return jsonify({
+            'success': True,
+            'users': result,
+            'total': len(result)
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при получении пользователей: {str(e)}'
+        }), 500
+
+
+@users_bp.route('/', methods=['POST'])
+@swag_from({
+    'tags': ['Users'],
+    'summary': 'Создать нового пользователя',
+    'description': 'Создает нового пользователя в системе',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['username', 'password', 'name', 'role'],
+                'properties': {
+                    'username': {
+                        'type': 'string',
+                        'description': 'Имя пользователя (логин)'
+                    },
+                    'password': {
+                        'type': 'string',
+                        'description': 'Пароль пользователя'
+                    },
+                    'name': {
+                        'type': 'string',
+                        'description': 'Полное имя пользователя'
+                    },
+                    'email': {
+                        'type': 'string',
+                        'description': 'Email адрес'
+                    },
+                    'phone': {
+                        'type': 'string',
+                        'description': 'Телефон'
+                    },
+                    'role': {
+                        'type': 'string',
+                        'description': 'Роль пользователя',
+                        'enum': ['ADMIN', 'REFEREE', 'SECRETARY', 'VIEWER'],
+                        'default': 'VIEWER'
+                    },
+                    'referee_level': {
+                        'type': 'string',
+                        'description': 'Уровень судьи (для роли REFEREE)'
+                    },
+                    'tatami_assigned': {
+                        'type': 'integer',
+                        'description': 'Назначенное татами (для роли REFEREE)'
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        201: {
+            'description': 'Пользователь успешно создан',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'user_id': {'type': 'integer'}
+                }
+            }
+        },
+        400: {
+            'description': 'Ошибка валидации или пользователь уже существует'
+        },
+        500: {
+            'description': 'Ошибка сервера'
+        }
+    }
+})
+def create_user():
+    """Создать нового пользователя"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
                 'success': False,
-                'message': f'Ошибка при получении пользователей: {str(e)}'
-            }, 500
+                'message': 'Не передан JSON'
+            }), 400
 
-    @users_ns.expect(user_model)
-    @users_ns.doc('create_user')
-    def post(self):
-        """Создать нового пользователя"""
-        try:
-            data = request.json
-
-            if not data.get('username') or not data.get('password') or not data.get('name'):
-                return {
-                    'success': False,
-                    'message': 'Обязательные поля: username, password, name'
-                }, 400
-
-            # Проверяем уникальность username
-            existing_user = User.query.filter_by(username=data['username']).first()
-            if existing_user:
-                return {
-                    'success': False,
-                    'message': 'Пользователь с таким именем уже существует'
-                }, 400
-
-            user = User(
-                username=data['username'],
-                name=data['name'],
-                email=data.get('email'),
-                phone=data.get('phone'),
-                role=data.get('role', 'VIEWER'),
-                referee_level=data.get('referee_level'),
-                tatami_assigned=data.get('tatami_assigned')
-            )
-
-            user.set_password(data['password'])
-
-            if user.save():
-                return {
-                    'success': True,
-                    'message': 'Пользователь успешно создан',
-                    'user_id': user.id
-                }, 201
-            else:
-                return {
-                    'success': False,
-                    'message': 'Ошибка при сохранении пользователя'
-                }, 400
-
-        except Exception as e:
-            return {
+        if not data.get('username') or not data.get('password') or not data.get('name'):
+            return jsonify({
                 'success': False,
-                'message': f'Ошибка при создании пользователя: {str(e)}'
-            }, 500
+                'message': 'Обязательные поля: username, password, name'
+            }), 400
+
+        # Проверяем уникальность username
+        existing_user = User.query.filter_by(username=data['username']).first()
+        if existing_user:
+            return jsonify({
+                'success': False,
+                'message': 'Пользователь с таким именем уже существует'
+            }), 400
+
+        user = User(
+            username=data['username'],
+            name=data['name'],
+            email=data.get('email'),
+            phone=data.get('phone'),
+            role=data.get('role', 'VIEWER'),
+            referee_level=data.get('referee_level'),
+            tatami_assigned=data.get('tatami_assigned')
+        )
+
+        user.set_password(data['password'])
+
+        if user.save():
+            return jsonify({
+                'success': True,
+                'message': 'Пользователь успешно создан',
+                'user_id': user.id
+            }), 201
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Ошибка при сохранении пользователя'
+            }), 400
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при создании пользователя: {str(e)}'
+        }), 500

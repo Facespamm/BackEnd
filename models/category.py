@@ -1,5 +1,5 @@
 from datetime import datetime
-from database.db import db
+from databse.db import db
 from models.associations import category_athletes  # Импортируем таблицу связи
 
 class Category(db.Model):

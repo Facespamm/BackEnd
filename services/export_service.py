@@ -6,7 +6,7 @@ import json
 import csv
 import io
 from datetime import datetime
-from database.db import db
+from databse.db import db
 from models.tournament import Tournament
 from models.category import Category
 from models.fight import Fight

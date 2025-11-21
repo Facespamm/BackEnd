@@ -3,7 +3,7 @@
 """
 
 from datetime import datetime
-from database.db import db
+from databse.db import db
 from models.fight import Fight
 from models.result import Result
 from services.bracket_generator import BracketGenerator

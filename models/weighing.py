@@ -1,5 +1,5 @@
 from datetime import datetime
-from database.db import db
+from databse.db import db
 
 class Weighing(db.Model):
     """
