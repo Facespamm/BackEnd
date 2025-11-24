@@ -1,5 +1,8 @@
+import os
+
 from flask import Flask
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from flask_restx import Api
 from databse.db import init_db
 from flasgger import Swagger
@@ -8,9 +11,15 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:okjtt@localhost:5432/judo_tournament?client_encoding=utf8'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY','cc820b15d44f7643fa52046a6c34f98a804c35d5ebdf830204a074c2c0059f88')
+app.config['JWT_TOKEN_LOCATION'] = ['headers']           # только в Authorization: Bearer
+app.config['JWT_HEADER_NAME'] = 'Authorization'
+app.config['JWT_HEADER_TYPE'] = 'Bearer'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 86400))
 # CORS для API
 CORS(app)
+
+jwt = JWTManager(app)
 
 # Инициализация базы данных
 init_db(app)
@@ -49,7 +58,6 @@ swagger_template = {
 
 swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
-# Регистрация namespace'ов
 from api.auth import auth_bp
 from api.tournaments import tournaments_bp
 from api.athletes import athletes_bp

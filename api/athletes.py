@@ -1,8 +1,11 @@
 from flask import request, Blueprint, jsonify
 from flasgger import swag_from
+from flask_jwt_extended import jwt_required
+
 from databse.db import db
 from models.athlete import Athlete
 import datetime
+
 
 athletes_bp = Blueprint('athletes', __name__, url_prefix='/athletes')
 
@@ -129,7 +132,6 @@ def get_athletes():
             'message': f'Ошибка при получении участников: {str(e)}'
         }), 500
 
-
 @athletes_bp.route('/', methods=['POST'])
 @swag_from({
     "summary": "Создать нового участника",
@@ -176,6 +178,7 @@ def get_athletes():
         }
     }
 })
+@jwt_required()
 def create_athlete():
     """Создать нового участника"""
     try:
@@ -363,6 +366,7 @@ def get_athlete_by_id(athlete_id):
         }
     }
 })
+@jwt_required()
 def update_athlete(athlete_id):
     """Обновить информацию об участнике"""
     try:
@@ -404,7 +408,6 @@ def update_athlete(athlete_id):
             'message': f'Ошибка при обновлении участника: {str(e)}'
         }), 500
 
-
 @athletes_bp.route('/<int:athlete_id>', methods=['DELETE'])
 @swag_from({
     "summary": "Удалить участника",
@@ -436,6 +439,7 @@ def update_athlete(athlete_id):
         }
     }
 })
+@jwt_required()
 def delete_athlete(athlete_id):
     """Удалить участника (мягкое удаление)"""
     try:
