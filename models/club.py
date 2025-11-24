@@ -49,3 +49,12 @@ class Club(db.Model):
             'victories': victories,
             'athletes_count': len([a for a in self.athletes if a.is_active])
         }
+
+    def save_to_db(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except:
+            db.session.rollback()
+            return False

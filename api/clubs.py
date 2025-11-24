@@ -72,25 +72,64 @@ def get_clubs():
 
 
 @clubs_bp.route('/', methods=['POST'])
+@swag_from({
+    "tags": ["Clubs"],
+    "summary": "Создать новый клуб",
+    "description": "Добавляет новый спортивный клуб в систему",
+    "parameters": [
+        {
+            "name": "body",
+            "in": "body",
+            "required": True,
+            "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                    "name": {"type": "string", "example": "Динамо"},
+                    "short_name": {"type": "string", "example": "ДНМ"},
+                    "city": {"type": "string", "example": "Москва"},
+                    "country": {"type": "string", "example": "Россия"},
+                    "coach_name": {"type": "string", "example": "Петров А.В."},
+                    "address": {"type": "string"},
+                    "phone": {"type": "string"},
+                    "email": {"type": "string"},
+                    "website": {"type": "string"},
+                    "founded_year": {"type": "integer", "example": 1923}
+                }
+            }
+        }
+    ],
+    "responses": {
+        201: {
+            "description": "Клуб успешно создан",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"},
+                    "message": {"type": "string"},
+                    "club_id": {"type": "integer"}
+                }
+            }
+        },
+        400: {"description": "Ошибка валидации или клуб уже существует"}
+    }
+})
 def create_club():
     """Создать новый клуб"""
     try:
         data = request.get_json()
 
         if not data:
-            return jsonify({
-                'success': False,
-                'message': 'Не передан JSON'
-            }), 400
+            return jsonify({"success": False, "message": "Не передан JSON"}), 400
 
         if not data.get('name'):
-            return jsonify({
-                'success': False,
-                'message': 'Название клуба обязательно'
-            }), 400
+            return jsonify({"success": False, "message": "Название клуба обязательно"}), 400
+
+        if Club.query.filter_by(name=data['name'].strip()).first():
+            return jsonify({"success": False, "message": "Клуб с таким названием уже существует"}), 400
 
         club = Club(
-            name=data['name'],
+            name=data['name'].strip(),
             short_name=data.get('short_name'),
             city=data.get('city'),
             country=data.get('country', 'Россия'),
@@ -102,20 +141,14 @@ def create_club():
             founded_year=data.get('founded_year')
         )
 
-        if club.save():
+        if club.save_to_db():
             return jsonify({
-                'success': True,
-                'message': 'Клуб успешно создан',
-                'club_id': club.id
+                "success": True,
+                "message": "Клуб успешно создан",
+                "club_id": club.id
             }), 201
         else:
-            return jsonify({
-                'success': False,
-                'message': 'Ошибка при сохранении клуба'
-            }), 400
+            return jsonify({"success": False, "message": "Ошибка при сохранении в базу"}), 400
 
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при создании клуба: {str(e)}'
-        }), 500
+        return jsonify({"success": False, "message": f"Ошибка сервера: {str(e)}"}), 500

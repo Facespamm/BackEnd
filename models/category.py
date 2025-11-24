@@ -89,3 +89,12 @@ class Category(db.Model):
                 status='COMPLETED'
             ).count()
         return 0
+
+    def save_to_db(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except:
+            db.session.rollback()
+            return False

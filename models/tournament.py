@@ -1,5 +1,5 @@
 from datetime import datetime
-from databse.db import db
+from databse.db import db, create_session
 from models.fight import Fight
 
 class Tournament(db.Model):
@@ -112,3 +112,13 @@ class Tournament(db.Model):
             Fight.tournament_id == self.id,
             db.func.date(Fight.scheduled_time) == today
         ).all()
+
+    def save_to_db(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(e)  # или логгируй
+            return False

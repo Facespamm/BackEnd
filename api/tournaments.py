@@ -160,7 +160,7 @@ def create_tournament():
             tatami_count=data.get('tatami_count', 1)
         )
 
-        if tournament.save():
+        if tournament.save_to_db():
             return jsonify({
                 'id': tournament.id,
                 'name': tournament.name,

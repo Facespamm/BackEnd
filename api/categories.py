@@ -195,7 +195,7 @@ def create_category():
             max_age=data.get('max_age')
         )
 
-        if category.save():
+        if category.save_to_db():
             return jsonify({
                 'success': True,
                 'message': 'Категория успешно создана',

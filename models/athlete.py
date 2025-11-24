@@ -83,3 +83,12 @@ class Athlete(db.Model):
         if tournament_id:
             query = query.join(Fight).filter(Fight.tournament_id == tournament_id)
         return query.count()
+
+    def save_to_db(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except:
+            db.session.rollback()
+            return False
