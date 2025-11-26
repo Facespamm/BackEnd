@@ -130,3 +130,13 @@ class Weighing(db.Model):
         data['status_display'] = self.status_display
         data['category_name'] = self.weight_category
         return data
+
+    def save_to_db(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(e)  # или логгируй
+            return False

@@ -205,7 +205,8 @@ def create_weighing():
         # Определяем категорию
         weighing.determine_category()
 
-        if weighing.save():
+        # ИСПРАВЛЕНО: используем save_to_db() вместо save()
+        if weighing.save_to_db():
             return jsonify({
                 'success': True,
                 'message': 'Взвешивание успешно записано',

@@ -152,3 +152,13 @@ class Fight(db.Model):
         data['blue_athlete'] = self.blue_athlete.full_name if self.blue_athlete else None
         data['result'] = self.result.to_dict() if self.result else None
         return data
+
+    def save_to_db(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(e)
+            return False

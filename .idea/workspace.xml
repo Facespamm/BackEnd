@@ -5,26 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6559d010-01ce-415d-82f4-c262001ad7cb" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/BackEnd.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/BackEnd.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/866913b8-9ffc-45f4-9a40-79985380243b.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/8d8ce4cb-b6a6-4a64-aca9-6ea92d4e8c8e.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/athletes.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/athletes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/categories.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/categories.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/clubs.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/clubs.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/tournaments.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/tournaments.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/athlete.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/athlete.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/category.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/category.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/club.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/club.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/tournament.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/tournament.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/brackets.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/brackets.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/fights.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/fights.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/weighing.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/weighing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/bracket.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/bracket.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/fight.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/fight.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/weighing.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/weighing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/bracket_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/bracket_generator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -261,7 +249,7 @@
       <workItem from="1763699609311" duration="8673000" />
       <workItem from="1763712293042" duration="1823000" />
       <workItem from="1763715177427" duration="2218000" />
-      <workItem from="1763718486144" duration="36400000" />
+      <workItem from="1763718486144" duration="52013000" />
     </task>
     <servers />
   </component>

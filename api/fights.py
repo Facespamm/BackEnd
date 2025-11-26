@@ -2,7 +2,10 @@ from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from datetime import datetime
 from models.fight import Fight
+from models.tournament import Tournament
+from models.athlete import Athlete
 from services.fight_manager import FightManager
+from sqlalchemy.exc import IntegrityError
 
 fights_bp = Blueprint('fights', __name__, url_prefix='/fights')
 
@@ -208,6 +211,12 @@ def get_fights():
         400: {
             'description': 'Ошибка валидации'
         },
+        404: {
+            'description': 'Турнир или спортсмен не найден'
+        },
+        409: {
+            'description': 'Конфликт - схватка с такими параметрами уже существует'
+        },
         500: {
             'description': 'Ошибка сервера'
         }
@@ -230,6 +239,54 @@ def create_fight():
                 'message': 'Обязательное поле: tournament_id'
             }), 400
 
+        # Проверяем существование турнира
+        tournament = Tournament.query.get(data['tournament_id'])
+        if not tournament:
+            return jsonify({
+                'success': False,
+                'message': 'Турнир не найден'
+            }), 404
+
+        # Проверяем существование спортсменов
+        if data.get('white_athlete_id'):
+            white_athlete = Athlete.query.get(data['white_athlete_id'])
+            if not white_athlete:
+                return jsonify({
+                    'success': False,
+                    'message': f'Спортсмен с ID {data["white_athlete_id"]} не найден'
+                }), 404
+
+        if data.get('blue_athlete_id'):
+            blue_athlete = Athlete.query.get(data['blue_athlete_id'])
+            if not blue_athlete:
+                return jsonify({
+                    'success': False,
+                    'message': f'Спортсмен с ID {data["blue_athlete_id"]} не найден'
+                }), 404
+
+        # Проверяем, что один спортсмен не борется сам с собой
+        if (data.get('white_athlete_id') and data.get('blue_athlete_id') and
+                data['white_athlete_id'] == data['blue_athlete_id']):
+            return jsonify({
+                'success': False,
+                'message': 'Спортсмен не может бороться сам с собой'
+            }), 400
+
+        # Проверяем уникальность схватки (если есть tatami, round_number и fight_number)
+        if data.get('tatami') and data.get('round_number') and data.get('fight_number'):
+            existing_fight = Fight.query.filter_by(
+                tournament_id=data['tournament_id'],
+                tatami=data['tatami'],
+                round_number=data['round_number'],
+                fight_number=data['fight_number']
+            ).first()
+
+            if existing_fight:
+                return jsonify({
+                    'success': False,
+                    'message': f'Схватка с такими параметрами уже существует (ID: {existing_fight.id})'
+                }), 409
+
         fight = Fight(
             tournament_id=data['tournament_id'],
             white_athlete_id=data.get('white_athlete_id'),
@@ -242,7 +299,7 @@ def create_fight():
         if data.get('scheduled_time'):
             fight.scheduled_time = datetime.fromisoformat(data['scheduled_time'])
 
-        if fight.save():
+        if fight.save_to_db():
             return jsonify({
                 'success': True,
                 'message': 'Схватка успешно создана',
@@ -254,6 +311,11 @@ def create_fight():
                 'message': 'Ошибка при сохранении схватки'
             }), 400
 
+    except IntegrityError as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка целостности данных: возможно схватка с такими параметрами уже существует'
+        }), 409
     except ValueError as e:
         return jsonify({
             'success': False,

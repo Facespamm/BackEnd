@@ -42,7 +42,7 @@ class BracketGenerator:
 
         # Сохраняем сетку
         self.bracket.status = 'GENERATED'
-        self.bracket.save()
+        self.bracket.save_to_db()
 
         return fights
 
@@ -106,7 +106,7 @@ class BracketGenerator:
 
         # Сохраняем все схватки
         for fight in fights:
-            fight.save()
+            fight.save_to_db()
 
         return fights
 

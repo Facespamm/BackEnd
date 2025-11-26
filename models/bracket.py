@@ -148,3 +148,13 @@ class Bracket(db.Model):
             standing['position'] = i + 1
 
         return standings
+
+    def save_to_db(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(e)
+            return False
