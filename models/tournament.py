@@ -1,5 +1,6 @@
 from datetime import datetime
 from databse.db import db, create_session
+from models.associations import athlete_tournament
 from models.fight import Fight
 
 class Tournament(db.Model):
@@ -43,9 +44,11 @@ class Tournament(db.Model):
     contact_email = db.Column(db.String(100))
 
     # Связи
-    categories = db.relationship('Category', backref='tournament', lazy=True, cascade='all, delete-orphan')
-    fights = db.relationship('Fight', backref='tournament', lazy=True)
-    brackets = db.relationship('Bracket', backref='tournament', lazy=True)
+    categories = db.relationship('Category', back_populates='tournament', lazy=True, cascade='all, delete-orphan')
+    fights = db.relationship('Fight', back_populates='tournament', lazy=True)
+    brackets = db.relationship('Bracket', back_populates='tournament')
+    athletes = db.relationship('Athlete', secondary=athlete_tournament,back_populates='tournament')
+    referees = db.relationship('Referee', secondary='referee_tournament', back_populates='tournaments')
 
     def __repr__(self):
         return f'<Tournament {self.name}>'

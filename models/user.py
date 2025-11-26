@@ -1,5 +1,6 @@
 from datetime import datetime
 from databse.db import db
+from models.associations import user_roles
 from utils.security import hash_password, check_password
 
 class User(db.Model):
@@ -16,17 +17,19 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
     # Информация о пользователе
-    name = db.Column(db.String(100), nullable=False)
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    middle_name = db.Column(db.String(50))
     email = db.Column(db.String(100))
     phone = db.Column(db.String(20))
 
-    # Роль и права
-    role = db.Column(db.String(20), nullable=False, default='VIEWER')  # ADMIN, REFEREE, SCOREBOARD, VIEWER
+    # role = db.Column(db.String(20), nullable=False, default='VIEWER')  # ADMIN, REFEREE, SCOREBOARD, VIEWER
     is_active = db.Column(db.Boolean, default=True)
 
-    # Специализация (для судей)
-    referee_level = db.Column(db.String(20))  # NATIONAL, INTERNATIONAL, etc.
-    tatami_assigned = db.Column(db.Integer)   # Назначенный татами
+    # Связи
+    referees = db.relationship('Referee', back_populates='user')
+    roles = db.relationship('Role', secondary=user_roles, back_populates='users')
+    athlete_profile = db.relationship('Athlete', back_populates='user')
 
     def __repr__(self):
         return f'<User {self.username} ({self.role})>'
@@ -57,8 +60,8 @@ class User(db.Model):
     @property
     def role_display(self):
         """Отображаемое название роли"""
-        from config import Config
-        return Config.USER_ROLES.get(self.role, self.role)
+        from config import USER_ROLES
+        return USER_ROLES.get(self.role, self.role)
 
     def can_manage_tournament(self, tournament_id=None):
         """Может ли управлять турниром"""
@@ -121,3 +124,16 @@ class User(db.Model):
                 db.session.add(user)
 
         db.session.commit()
+
+    def create(self):
+        """Создать пользователя"""
+        try:
+            db.session.add(self)
+            db.session.commit()
+            db.session.close()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            db.session.close()
+            print(f'Ошибка при создании пользователя: {str(e)}')
+            return False

@@ -10,35 +10,27 @@ class Athlete(db.Model):
 
     # Основная информация
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    first_name = db.Column(db.String(50), nullable=False)
-    last_name = db.Column(db.String(50), nullable=False)
-    middle_name = db.Column(db.String(50))
     birth_date = db.Column(db.Date, nullable=False)
-    gender = db.Column(db.String(10), nullable=False)  # MALE/FEMALE
-
-    # Спортивная информация
+    gender = db.Column(db.String(10), nullable=False)
     club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'))
-    rank = db.Column(db.String(20))  # КЮ/ДАН
-    license_number = db.Column(db.String(50))  # Лицензия
-
-    # Контактная информация
-    phone = db.Column(db.String(20))
-    email = db.Column(db.String(100))
-
-    # Медицинская информация
+    rank_id = db.Column(db.Integer, db.ForeignKey('dans.id'))  # КЮ/ДАН
+    license_number = db.Column(db.String(50))
     medical_check = db.Column(db.Boolean, default=False)
     insurance_number = db.Column(db.String(50))
-
-    # Статус
     is_active = db.Column(db.Boolean, default=True)
 
     # Связи
+    user = db.relationship('User', back_populates='athlete_profile', uselist=False)
     club = db.relationship('Club', backref=db.backref('athletes', lazy=True))
     weighings = db.relationship('Weighing', backref='athlete', lazy=True)
     fights_as_white = db.relationship('Fight', foreign_keys='Fight.white_athlete_id', backref='white_athlete')
     fights_as_blue = db.relationship('Fight', foreign_keys='Fight.blue_athlete_id', backref='blue_athlete')
+    ranks = db.relationship('Dan', back_populates='athletes')
+    tournaments = db.relationship('Tournament', secondary='athlete_tournament', back_populates='athletes')
+
 
     def __repr__(self):
         return f'<Athlete {self.first_name} {self.last_name}>'

@@ -1,9 +1,39 @@
 from datetime import datetime
+
+from sqlalchemy import (
+    Table, Column, Integer, String, DateTime,
+    ForeignKey
+)
 from databse.db import db
 
-# Таблица связи многие-ко-многим для участников и категорий
-category_athletes = db.Table('category_athletes',
-    db.Column('category_id', db.Integer, db.ForeignKey('categories.id'), primary_key=True),
-    db.Column('athlete_id', db.Integer, db.ForeignKey('athletes.id'), primary_key=True),
-    db.Column('registered_at', db.DateTime, default=datetime.utcnow)  # Убрали лишний db.Column
+category_athletes = Table(
+    'category_athletes',
+    db.metadata,
+    Column('category_id', Integer, ForeignKey('categories.id'), primary_key=True),
+    Column('athlete_id', Integer, ForeignKey('athletes.id'), primary_key=True),
+    Column('registered_at', DateTime, default=datetime.utcnow),
+)
+
+user_roles = Table(
+    'user_roles',
+    db.metadata,
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+)
+
+athlete_tournament = Table(
+    'athlete_tournament',
+    db.metadata,
+    Column('athlete_id', Integer, ForeignKey('athletes.id'), primary_key=True),
+    Column('tournament_id', Integer, ForeignKey('tournaments.id'), primary_key=True),
+    Column('registered_at', DateTime, default=datetime.utcnow),
+)
+
+referee_tournament = Table(
+    'referee_tournament',
+    db.metadata,
+    Column('referee_id', Integer, ForeignKey('referees.id'), primary_key=True),
+    Column('tournament_id', Integer, ForeignKey('tournaments.id'), primary_key=True),
+    Column('status', String(200), nullable=False, server_default='assigned'),  # или default='assigned'
+    Column('assigned_at', DateTime, default=datetime.utcnow),
 )

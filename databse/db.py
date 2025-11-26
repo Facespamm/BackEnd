@@ -26,6 +26,10 @@ def init_db(app):
         from models.bracket import Bracket
         from models.result import Result
         from models.weighing import Weighing
+        from models.user import User
+        from models.role import Role
+        from models.refere import Referee
+        from models.Dan import Dan
         db.create_all()
 
 def create_session():
