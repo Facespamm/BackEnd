@@ -1,7 +1,9 @@
-from flask import Blueprint, request, jsonify
 from flasgger import swag_from
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
+from databse.db import create_session
 from models.user import User
-
+from config import USER_ROLES
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
 
@@ -73,7 +75,6 @@ def get_users():
             'success': False,
             'message': f'Ошибка при получении пользователей: {str(e)}'
         }), 500
-
 
 @users_bp.route('/', methods=['POST'])
 @swag_from({
@@ -147,6 +148,7 @@ def get_users():
         }
     }
 })
+@jwt_required()
 def create_user():
     """Создать нового пользователя"""
     try:
@@ -177,14 +179,14 @@ def create_user():
             name=data['name'],
             email=data.get('email'),
             phone=data.get('phone'),
-            role=data.get('role', 'VIEWER'),
-            referee_level=data.get('referee_level'),
-            tatami_assigned=data.get('tatami_assigned')
+            role=data.get('role', USER_ROLES['VIEWER']),
+            referee_level=data.get('referee_level', 0),
+            tatami_assigned=data.get('tatami_assigned', None)
         )
 
         user.set_password(data['password'])
 
-        if user.save():
+        if user.create():
             return jsonify({
                 'success': True,
                 'message': 'Пользователь успешно создан',
@@ -200,4 +202,35 @@ def create_user():
         return jsonify({
             'success': False,
             'message': f'Ошибка при создании пользователя: {str(e)}'
+        }), 500
+
+@users_bp.route('/<int:user_id>',  methods=['DELETE'])
+@jwt_required()
+def update_user(user_id: int):
+    """Изменить информацию о пользователе"""
+    session_factory = create_session()
+    data = request.get_json()
+    try:
+        with session_factory() as session:
+            user = session.get(User, user_id)
+
+            if not user or not user.is_active:
+                return jsonify({
+                    'success': False,
+                    'message': 'Пользователь не найден'
+                }), 404
+
+            user.name = data['name', user.name]
+            user.email = data.get('email', user.email)
+            user.phone = data.get('phone', user.phone)
+            session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Пользователь успешно удален'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при удалении пользователя: {str(e)}'
         }), 500

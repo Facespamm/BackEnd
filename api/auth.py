@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
+
+from dns.dnssecalgs import algorithms
 from flask import request, Blueprint, jsonify
 from flasgger import swag_from
-from jwt import JWT
+from flask_jwt_extended import create_access_token
 
 from models.user import User
 
@@ -89,13 +91,15 @@ def login():
 
     if user and user.check_password(password):
         payload = {
-            'user_id': user.id,
-            'username': user.username,
             'role': user.role,
             'exp': datetime.now(timezone.utc) + timedelta(hours=24)
         }
 
-        token = JWT.encode(payload, key='your-secret-key', alg='HS256')
+        token = create_access_token(
+            identity=user.id,
+            additional_claims=payload,
+            expires_delta=timedelta(hours=24),
+        )
 
         return jsonify({
             'success': True,
@@ -112,12 +116,15 @@ def login():
     else:
         return jsonify({'success': False, 'message': 'Неверные учетные данные'}), 401
 
-# @auth_ns.route('/profile')
-# class Profile(Resource):
-#     @auth_ns.marshal_with(user_model)
-#     def get(self):
-#         """Получить профиль текущего пользователя"""
-#         # Здесь должна быть проверка JWT токена
-#         user_id = get_user_id_from_token()  # Реализуйте эту функцию
-#         user = User.query.get(user_id)
-#         return user
+@auth_bp.route('/public/registrations/', methods=['POST'])
+def public_registration():
+    """Публичная регистрация участника"""
+    data = request.get_json(silent=True) or {}
+
+    required_fields = ['athlete_name', 'athlete_birthdate', 'club_name', 'tournament_id']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'success': False, 'message': f'Поле {field} обязательно'}), 400
+
+
+    return jsonify({'success': True, 'message': 'Регистрация успешно создана'}), 201
