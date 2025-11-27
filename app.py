@@ -1,5 +1,8 @@
+import os
+
 from flask import Flask
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from flask_restx import Api
 from databse.db import init_db
 from flasgger import Swagger
@@ -8,9 +11,10 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:okjtt@localhost:5432/judo_tournament?client_encoding=utf8'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY','cc820b15d44f7643fa52046a6c34f98a804c35d5ebdf830204a074c2c0059f88')
 # CORS для API
 CORS(app)
+jwt = JWTManager(app)
 
 # Инициализация базы данных
 init_db(app)

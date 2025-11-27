@@ -1,5 +1,7 @@
 from flask import request, Blueprint, jsonify
 from flasgger import swag_from
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from databse.db import db
 from models.athlete import Athlete
 import datetime
@@ -180,9 +182,10 @@ def create_athlete():
     """Создать нового участника"""
     try:
         data = request.get_json() or {}
+        user_id = 1
 
-        required = ['first_name', 'last_name', 'birth_date', 'gender']
-        missing = [field for field in required if not data.get(field)]
+        required = ['birth_day', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
+        missing = [field for field in required if field not in data]
         if missing:
             return jsonify({
                 'success': False,
@@ -190,17 +193,15 @@ def create_athlete():
             }), 400
 
         athlete = Athlete(
-            first_name=data['first_name'].strip(),
-            last_name=data['last_name'].strip(),
-            middle_name=data.get('middle_name', '').strip() or None,
-            birth_date=datetime.datetime.fromisoformat(data['birth_date']),
+            user_id=user_id,
+            birth_date=datetime.datetime.fromisoformat(data['birth_day']),
             gender=data['gender'],
-            club_id=data.get('club_id'),
-            rank=data.get('rank'),
-            license_number=data.get('license_number'),
-            phone=data.get('phone'),
-            email=data.get('email'),
-            medical_check=data.get('medical_check', False)
+            club_id=data['club_id'],
+            rank_id=data['rank_id'],  # Исправлено: используем rank_id вместо rank
+            license_number=data['license_number'],
+            medical_check=data['medical_check'],
+            insurance_number=data['insurance_number'],
+            is_active=True
         )
 
         if athlete.save_to_db():

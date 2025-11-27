@@ -54,5 +54,6 @@ USER_ROLES: dict[str, str] = {
     'ADMIN': 'Администратор',
     'REFEREE': 'Судья',
     'SCOREBOARD': 'Табло',
-    'VIEWER': 'Зритель'
+    'VIEWER': 'Зритель',
+    'ATHLETE': 'Участник'
 }

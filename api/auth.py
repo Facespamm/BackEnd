@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
-from dns.dnssecalgs import algorithms
-from flask import request, Blueprint, jsonify
 from flasgger import swag_from
+from flask import request, Blueprint, jsonify
 from flask_jwt_extended import create_access_token
 
 from models.user import User
+from repository.auth_repo import AuthRepository
+from utils.security import hash_password
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')  # исправил имя с 'clubs' на 'auth'
 
@@ -89,9 +90,15 @@ def login():
 
     user = User.query.filter_by(username=username, is_active=True).first()
 
+    auth_repo = AuthRepository()
+    user_role = auth_repo.get_role_by_user(user.id) if user else None
+
+    if user_role is None:
+        return jsonify({'success': False, 'message': 'Роль пользователя не найдена'}), 401
+
     if user and user.check_password(password):
         payload = {
-            'role': user.role,
+            'role': user_role.name,
             'exp': datetime.now(timezone.utc) + timedelta(hours=24)
         }
 
@@ -107,10 +114,8 @@ def login():
             'user': {
                 'id': user.id,
                 'username': user.username,
-                'name': user.name,
-                'role': user.role,
-                'referee_level': user.referee_level,
-                'tatami_assigned': user.tatami_assigned
+                'name': user.first_name + ' '+ user.middle_name + ' ' + user.last_name,
+                'role': user_role.name
             }
         }), 200
     else:
@@ -121,10 +126,40 @@ def public_registration():
     """Публичная регистрация участника"""
     data = request.get_json(silent=True) or {}
 
-    required_fields = ['athlete_name', 'athlete_birthdate', 'club_name', 'tournament_id']
+    required_fields = ['login', 'fullname', 'email', 'phone', 'password','role']
     for field in required_fields:
         if field not in data:
             return jsonify({'success': False, 'message': f'Поле {field} обязательно'}), 400
 
+    existing_user = User.query.filter_by(username=data['login']).first()
 
-    return jsonify({'success': True, 'message': 'Регистрация успешно создана'}), 201
+    if existing_user:
+        return jsonify({'success': False, 'message': 'Пользователь с таким логином уже существует'}), 400
+
+    names = data['fullname'].strip().split(' ')
+
+    new_user = User(
+        username=data['login'],
+        password_hash = hash_password(data['password']),
+        first_name=names[0],
+        middle_name=names[1] if len(names) > 1 else '',
+        last_name=names[2] if len(names) > 1 else '',
+        email=data['email'],
+        phone=data['phone'],
+        is_active=True,
+    )
+
+    auth_repo = AuthRepository()
+    user_id = auth_repo.create_user(new_user)
+    role_id = auth_repo.get_role_id(data['role'])
+    is_added = auth_repo.set_user_role(user_id, role_id)
+    print(f'User_role is added : {is_added}')
+    user_role = auth_repo.get_role_by_user(user_id)
+
+    token = create_access_token(identity=user_id, additional_claims={'role': user_role.name})
+
+    return jsonify({'success': True,
+                    'message': 'Регистрация успешно создана',
+                    'token': token,
+                    'role': data['role'],
+                    }), 201

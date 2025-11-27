@@ -85,6 +85,7 @@ class Athlete(db.Model):
             db.session.add(self)
             db.session.commit()
             return True
-        except:
+        except Exception as e:
             db.session.rollback()
+            print(f"Error saving Athlete to DB: {e}")
             return False
