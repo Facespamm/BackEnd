@@ -1,4 +1,6 @@
 from datetime import datetime
+
+from config import VICTORY_TYPES
 from databse.db import db
 
 class Result(db.Model):
@@ -37,6 +39,7 @@ class Result(db.Model):
 
     # Связи
     winner = db.relationship('Athlete', foreign_keys=[winner_id])
+    fight = db.relationship('Fight', back_populates='result')
 
     def __repr__(self):
         return f'<Result Fight#{self.fight_id} Winner: {self.winner_id}>'
@@ -64,8 +67,7 @@ class Result(db.Model):
     @property
     def victory_description(self):
         """Описание типа победы"""
-        from config import Config
-        return Config.VICTORY_TYPES.get(self.victory_type, self.victory_type)
+        return VICTORY_TYPES.get(self.victory_type, self.victory_type)
 
     def add_penalty(self, athlete_color, penalty_type):
         """Добавить штраф участнику"""

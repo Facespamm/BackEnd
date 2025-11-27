@@ -9,7 +9,7 @@ class Dan(db.Model):
     level = db.Column(db.Integer, nullable=False, unique=True)  # уровень дана, например 1-10
     description = db.Column(db.String(255), nullable=True)  # описание или требования для данного уровня
     #Связи
-    athletes = db.relationship('Referee', back_populates='user')
+    athletes = db.relationship('Athlete', back_populates='rank', lazy='dynamic')
 
     def __repr__(self):
         return f'<Dan {self.level}>'

@@ -5,26 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6559d010-01ce-415d-82f4-c262001ad7cb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/models/Dan.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/refere.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/role.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/users.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/databse/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/databse/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/associations.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/associations.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/Dan.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Dan.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/athlete.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/athlete.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/tournament.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/tournament.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/user.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/brackets.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/brackets.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/fights.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/fights.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/weighing.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/weighing.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/bracket.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/bracket.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/category.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/category.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/fight.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/fight.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/result.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/result.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/weighing.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/weighing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/bracket_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/bracket_generator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,7 +62,7 @@
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1&quot;: &quot;true&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;huego&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Api&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;C:/Users/User/Desktop/testapi&quot;,
@@ -264,6 +253,7 @@
       <workItem from="1764140424307" duration="72000" />
       <workItem from="1764143742825" duration="10614000" />
       <workItem from="1763718486144" duration="52013000" />
+      <workItem from="1764212780948" duration="7367000" />
     </task>
     <servers />
   </component>

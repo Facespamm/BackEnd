@@ -25,12 +25,16 @@ class Athlete(db.Model):
     # Связи
     user = db.relationship('User', back_populates='athlete_profile', uselist=False)
     club = db.relationship('Club', backref=db.backref('athletes', lazy=True))
-    weighings = db.relationship('Weighing', backref='athlete', lazy=True)
-    fights_as_white = db.relationship('Fight', foreign_keys='Fight.white_athlete_id', backref='white_athlete')
-    fights_as_blue = db.relationship('Fight', foreign_keys='Fight.blue_athlete_id', backref='blue_athlete')
-    ranks = db.relationship('Dan', back_populates='athletes')
-    tournaments = db.relationship('Tournament', secondary='athlete_tournament', back_populates='athletes')
+    weighings = db.relationship('Weighing', back_populates='athlete', lazy=True)
+    rank = db.relationship('Dan', back_populates='athletes')
+    tournament = db.relationship('Tournament', secondary='athlete_tournament', back_populates='athletes')
 
+    fights_as_white = db.relationship('Fight',
+                                      foreign_keys='Fight.white_athlete_id',
+                                      back_populates='white_athlete')
+    fights_as_blue = db.relationship('Fight',
+                                     foreign_keys='Fight.blue_athlete_id',
+                                     back_populates='blue_athlete')
 
     def __repr__(self):
         return f'<Athlete {self.first_name} {self.last_name}>'
