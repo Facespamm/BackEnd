@@ -24,7 +24,8 @@ class Bracket(db.Model):
     max_rounds = db.Column(db.Integer, default=0)  # 0 = автоматически
 
     # Связи
-    fights = db.relationship('Fight', backref='bracket', lazy=True, cascade='all, delete-orphan')
+    fights = db.relationship('Fight', back_populates='bracket', lazy=True, cascade='all, delete-orphan')
+    tournament = db.relationship('Tournament', back_populates='brackets', lazy=True)
 
     def __repr__(self):
         return f'<Bracket {self.name}>'

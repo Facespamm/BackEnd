@@ -1,4 +1,6 @@
 from datetime import datetime
+
+from config import WEIGHT_CATEGORIES
 from databse.db import db
 
 class Weighing(db.Model):
@@ -27,6 +29,7 @@ class Weighing(db.Model):
 
     # Связи
     tournament = db.relationship('Tournament')
+    athlete = db.relationship('Athlete', back_populates='weighings')
 
     def __repr__(self):
         return f'<Weighing {self.athlete_id} - {self.weight}kg>'
@@ -38,15 +41,13 @@ class Weighing(db.Model):
             return True
 
         # Получаем ограничения категории из конфига
-        from config import Config
-
         category_limits = None
         athlete = self.athlete
 
         if athlete.gender == 'MALE':
-            category_limits = Config.WEIGHT_CATEGORIES['MALE'].get(self.weight_category)
+            category_limits = WEIGHT_CATEGORIES['MALE'].get(self.weight_category)
         else:
-            category_limits = Config.WEIGHT_CATEGORIES['FEMALE'].get(self.weight_category)
+            category_limits = WEIGHT_CATEGORIES['FEMALE'].get(self.weight_category)
 
         if category_limits:
             min_weight, max_weight = category_limits
@@ -66,14 +67,12 @@ class Weighing(db.Model):
 
     def determine_category(self):
         """Определить весовую категорию по весу"""
-        from config import Config
-
         athlete = self.athlete
         if not athlete:
             return None
 
-        categories = (Config.WEIGHT_CATEGORIES['MALE'] if athlete.gender == 'MALE' 
-                     else Config.WEIGHT_CATEGORIES['FEMALE'])
+        categories = (WEIGHT_CATEGORIES['MALE'] if athlete.gender == 'MALE'
+                     else WEIGHT_CATEGORIES['FEMALE'])
 
         for category_name, (min_weight, max_weight) in categories.items():
             if min_weight <= self.weight <= max_weight:

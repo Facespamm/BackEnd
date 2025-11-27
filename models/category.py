@@ -24,11 +24,13 @@ class Category(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
     # Связи
+    tournament = db.relationship('Tournament', back_populates='categories')
     brackets = db.relationship('Bracket', backref='category', lazy=True, cascade='all, delete-orphan')
     athletes = db.relationship('Athlete',
                               secondary=category_athletes,  # Используем объект таблицы
                               lazy='subquery',
                               backref=db.backref('categories', lazy=True))
+    fights = db.relationship('Fight', back_populates='category', lazy=True)
 
     def __repr__(self):
         return f'<Category {self.name}>'

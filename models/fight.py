@@ -41,7 +41,17 @@ class Fight(db.Model):
     judge2 = db.Column(db.String(100))
 
     # Связи
-    result = db.relationship('Result', backref='fight', uselist=False, cascade='all, delete-orphan')
+    tournament = db.relationship('Tournament', back_populates='fights')
+    bracket = db.relationship('Bracket', back_populates='fights')
+    category = db.relationship('Category', back_populates='fights')
+    result = db.relationship('Result', back_populates='fight')
+
+    white_athlete = db.relationship('Athlete',
+                                    foreign_keys=[white_athlete_id],
+                                    back_populates='fights_as_white')
+    blue_athlete = db.relationship('Athlete',
+                                   foreign_keys=[blue_athlete_id],
+                                   back_populates='fights_as_blue')
 
     def __repr__(self):
         return f'<Fight {self.fight_number} - Round {self.round_number}>'
