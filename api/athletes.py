@@ -4,6 +4,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from databse.db import db
 from models.athlete import Athlete
+from models.user import User
 import datetime
 
 athletes_bp = Blueprint('athletes', __name__, url_prefix='/athletes')
@@ -31,54 +32,7 @@ athletes_bp = Blueprint('athletes', __name__, url_prefix='/athletes')
     ],
     "responses": {
         "200": {
-            "description": "Список участников",
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "success": {"type": "boolean"},
-                    "athletes": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "integer"},
-                                "first_name": {"type": "string"},
-                                "last_name": {"type": "string"},
-                                "middle_name": {"type": "string"},
-                                "full_name": {"type": "string"},
-                                "birth_date": {"type": "string", "format": "date"},
-                                "age": {"type": "integer"},
-                                "gender": {"type": "string", "enum": ["М", "Ж"]},
-                                "club": {"type": "string"},
-                                "rank": {"type": "string"},
-                                "license_number": {"type": "string"}
-                            }
-                        }
-                    },
-                    "total": {"type": "integer"}
-                }
-            },
-            "examples": {
-                "application/json": {
-                    "success": True,
-                    "total": 2,
-                    "athletes": [
-                        {
-                            "id": 1,
-                            "first_name": "Иван",
-                            "last_name": "Иванов",
-                            "middle_name": "Иванович",
-                            "full_name": "Иванов Иван Иванович",
-                            "birth_date": "2010-05-15",
-                            "age": 15,
-                            "gender": "М",
-                            "club": "СК Луч",
-                            "rank": "1 юн",
-                            "license_number": "123456"
-                        }
-                    ]
-                }
-            }
+            "description": "Список участников"
         }
     }
 })
@@ -88,35 +42,39 @@ def get_athletes():
         club_id = request.args.get('club_id', type=int)
         search = request.args.get('search', '').strip()
 
-        query = Athlete.query.filter_by(is_active=True)
+        query = Athlete.query.filter_by(is_active=True).join(User)
 
         if club_id:
-            query = query.filter_by(club_id=club_id)
+            query = query.filter(Athlete.club_id == club_id)
 
         if search:
             query = query.filter(
                 db.or_(
-                    Athlete.last_name.ilike(f'%{search}%'),
-                    Athlete.first_name.ilike(f'%{search}%')
+                    User.last_name.ilike(f'%{search}%'),
+                    User.first_name.ilike(f'%{search}%')
                 )
             )
 
-        athletes = query.order_by(Athlete.last_name, Athlete.first_name).all()
+        athletes = query.order_by(User.last_name, User.first_name).all()
 
         result = []
         for athlete in athletes:
             result.append({
                 'id': athlete.id,
-                'first_name': athlete.first_name,
-                'last_name': athlete.last_name,
-                'middle_name': athlete.middle_name,
+                'first_name': athlete.user.first_name,
+                'last_name': athlete.user.last_name,
+                'middle_name': athlete.user.middle_name,
                 'full_name': athlete.full_name,
                 'birth_date': athlete.birth_date.isoformat(),
                 'age': athlete.age,
                 'gender': athlete.gender,
                 'club': athlete.club.name if athlete.club else None,
-                'rank': athlete.rank,
-                'license_number': athlete.license_number
+                'club_id': athlete.club_id,
+                 'rank': athlete.rank.level if athlete.rank else None,
+                'rank_id': athlete.rank_id,
+                'license_number': athlete.license_number,
+                'phone': athlete.user.phone,
+                'email': athlete.user.email
             })
 
         return jsonify({
@@ -145,33 +103,23 @@ def get_athletes():
             "required": True,
             "schema": {
                 "type": "object",
-                "required": ["first_name", "last_name", "birth_date", "gender"],
+                "required": ["birth_date", "gender", "club_id", "rank_id", "license_number", "medical_check",
+                             "insurance_number"],
                 "properties": {
-                    "first_name": {"type": "string", "example": "Алексей"},
-                    "last_name": {"type": "string", "example": "Петров"},
-                    "middle_name": {"type": "string", "example": "Сергеевич"},
                     "birth_date": {"type": "string", "format": "date", "example": "2008-03-22"},
                     "gender": {"type": "string", "enum": ["М", "Ж"], "example": "М"},
                     "club_id": {"type": "integer", "example": 5},
-                    "rank": {"type": "string", "example": "1 разряд"},
+                    "rank_id": {"type": "integer", "example": 3},
                     "license_number": {"type": "string", "example": "ABC123456"},
-                    "phone": {"type": "string", "example": "+79991234567"},
-                    "email": {"type": "string", "example": "petrov@example.com"},
-                    "medical_check": {"type": "boolean", "example": True}
+                    "medical_check": {"type": "boolean", "example": True},
+                    "insurance_number": {"type": "string", "example": "INS123456"}
                 }
             }
         }
     ],
     "responses": {
         "201": {
-            "description": "Участник успешно создан",
-            "examples": {
-                "application/json": {
-                    "success": True,
-                    "message": "Участник успешно создан",
-                    "athlete_id": 42
-                }
-            }
+            "description": "Участник успешно создан"
         },
         "400": {
             "description": "Ошибка валидации или сохранения"
@@ -182,9 +130,17 @@ def create_athlete():
     """Создать нового участника"""
     try:
         data = request.get_json() or {}
-        user_id = 1
 
-        required = ['birth_day', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
+        # Нормализуем названия полей
+        if 'birth_day' in data and 'birth_date' not in data:
+            data['birth_date'] = data['birth_day']
+
+        if 'gender' in data:
+            gender_mapping = {'male': 'М', 'female': 'Ж', 'мужской': 'М', 'женский': 'Ж'}
+            data['gender'] = gender_mapping.get(data['gender'].lower(), data['gender'])
+
+        # Проверяем обязательные поля (только для атлета, без данных пользователя)
+        required = ['birth_date', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
         missing = [field for field in required if field not in data]
         if missing:
             return jsonify({
@@ -192,12 +148,26 @@ def create_athlete():
                 'message': f'Обязательные поля: {", ".join(missing)}'
             }), 400
 
+        # Создаем пользователя для участника с дефолтными значениями
+        username = f"athlete_{datetime.datetime.now().timestamp()}"
+        user = User(
+            username=username,
+            first_name="Имя",  # Дефолтные значения
+            last_name="Фамилия",  # Дефолтные значения
+            is_active=True
+        )
+        user.set_password('defaultpassword')
+
+        db.session.add(user)
+        db.session.flush()
+
+        # Создаем профиль участника
         athlete = Athlete(
-            user_id=user_id,
-            birth_date=datetime.datetime.fromisoformat(data['birth_day']),
+            user_id=user.id,
+            birth_date=datetime.datetime.fromisoformat(data['birth_date']).date(),
             gender=data['gender'],
             club_id=data['club_id'],
-            rank_id=data['rank_id'],  # Исправлено: используем rank_id вместо rank
+            rank_id=data['rank_id'],
             license_number=data['license_number'],
             medical_check=data['medical_check'],
             insurance_number=data['insurance_number'],
@@ -208,7 +178,8 @@ def create_athlete():
             return jsonify({
                 'success': True,
                 'message': 'Участник успешно создан',
-                'athlete_id': athlete.id
+                'athlete_id': athlete.id,
+                'user_id': user.id
             }), 201
         else:
             return jsonify({
@@ -217,11 +188,11 @@ def create_athlete():
             }), 400
 
     except Exception as e:
+        db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Ошибка при создании участника: {str(e)}'
         }), 500
-
 
 @athletes_bp.route('/<int:athlete_id>', methods=['GET'])
 @swag_from({
@@ -238,33 +209,7 @@ def create_athlete():
     ],
     "responses": {
         "200": {
-            "description": "Информация об участнике",
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "success": {"type": "boolean"},
-                    "athlete": {
-                        "type": "object",
-                        "properties": {
-                            "id": {"type": "integer"},
-                            "first_name": {"type": "string"},
-                            "last_name": {"type": "string"},
-                            "middle_name": {"type": "string"},
-                            "full_name": {"type": "string"},
-                            "birth_date": {"type": "string", "format": "date"},
-                            "age": {"type": "integer"},
-                            "gender": {"type": "string"},
-                            "club_id": {"type": "integer"},
-                            "club_name": {"type": "string"},
-                            "rank": {"type": "string"},
-                            "license_number": {"type": "string"},
-                            "phone": {"type": "string"},
-                            "email": {"type": "string"},
-                            "medical_check": {"type": "boolean"}
-                        }
-                    }
-                }
-            }
+            "description": "Информация об участнике"
         },
         "404": {
             "description": "Участник не найден"
@@ -285,20 +230,22 @@ def get_athlete_by_id(athlete_id):
             'success': True,
             'athlete': {
                 'id': athlete.id,
-                'first_name': athlete.first_name,
-                'last_name': athlete.last_name,
-                'middle_name': athlete.middle_name,
+                'first_name': athlete.user.first_name,
+                'last_name': athlete.user.last_name,
+                'middle_name': athlete.user.middle_name,
                 'full_name': athlete.full_name,
                 'birth_date': athlete.birth_date.isoformat(),
                 'age': athlete.age,
                 'gender': athlete.gender,
                 'club_id': athlete.club_id,
                 'club_name': athlete.club.name if athlete.club else None,
-                'rank': athlete.rank,
+                'rank': athlete.rank.level if athlete.rank else None,
+                'rank_id': athlete.rank_id,
                 'license_number': athlete.license_number,
-                'phone': athlete.phone,
-                'email': athlete.email,
-                'medical_check': athlete.medical_check
+                'phone': athlete.user.phone,
+                'email': athlete.user.email,
+                'medical_check': athlete.medical_check,
+                'insurance_number': athlete.insurance_number
             }
         })
 
@@ -330,31 +277,25 @@ def get_athlete_by_id(athlete_id):
             "schema": {
                 "type": "object",
                 "properties": {
-                    "first_name": {"type": "string", "example": "Алексей"},
-                    "last_name": {"type": "string", "example": "Петров"},
-                    "middle_name": {"type": "string", "example": "Сергеевич"},
-                    "birth_date": {"type": "string", "format": "date", "example": "2008-03-22"},
-                    "gender": {"type": "string", "enum": ["М", "Ж"], "example": "М"},
-                    "club_id": {"type": "integer", "example": 5},
-                    "rank": {"type": "string", "example": "1 разряд"},
-                    "license_number": {"type": "string", "example": "ABC123456"},
-                    "phone": {"type": "string", "example": "+79991234567"},
-                    "email": {"type": "string", "example": "petrov@example.com"},
-                    "medical_check": {"type": "boolean", "example": True}
+                    "first_name": {"type": "string"},
+                    "last_name": {"type": "string"},
+                    "middle_name": {"type": "string"},
+                    "birth_date": {"type": "string", "format": "date"},
+                    "gender": {"type": "string", "enum": ["М", "Ж"]},
+                    "club_id": {"type": "integer"},
+                    "rank_id": {"type": "integer"},
+                    "license_number": {"type": "string"},
+                    "phone": {"type": "string"},
+                    "email": {"type": "string"},
+                    "medical_check": {"type": "boolean"},
+                    "insurance_number": {"type": "string"}
                 }
             }
         }
     ],
     "responses": {
         "200": {
-            "description": "Участник успешно обновлен",
-            "examples": {
-                "application/json": {
-                    "success": True,
-                    "message": "Участник успешно обновлен",
-                    "athlete_id": 42
-                }
-            }
+            "description": "Участник успешно обновлен"
         },
         "404": {
             "description": "Участник не найден"
@@ -376,27 +317,38 @@ def update_athlete(athlete_id):
 
         data = request.get_json() or {}
 
-        # Обновляем поля
-        for key, value in data.items():
-            if hasattr(athlete, key):
-                if key == 'birth_date' and isinstance(value, str):
-                    value = datetime.datetime.fromisoformat(value)
-                elif key in ['first_name', 'last_name', 'middle_name'] and isinstance(value, str):
-                    value = value.strip()
-                    if key == 'middle_name' and not value:
-                        value = None
-                setattr(athlete, key, value)
+        # Обновляем данные пользователя
+        user = athlete.user
+        user_fields = ['first_name', 'last_name', 'middle_name', 'phone', 'email']
+        for field in user_fields:
+            if field in data:
+                value = data[field]
+                if isinstance(value, str):
+                    value = value.strip() if value else None
+                setattr(user, field, value)
 
-        if athlete.save():
+        # Обновляем данные участника
+        athlete_fields = ['birth_date', 'gender', 'club_id', 'rank_id',
+                          'license_number', 'medical_check', 'insurance_number']
+        for field in athlete_fields:
+            if field in data:
+                value = data[field]
+                if field == 'birth_date' and isinstance(value, str):
+                    value = datetime.datetime.fromisoformat(value).date()
+                setattr(athlete, field, value)
+
+        try:
+            db.session.commit()
             return jsonify({
                 'success': True,
                 'message': 'Участник успешно обновлен',
                 'athlete_id': athlete.id
             }), 200
-        else:
+        except Exception as e:
+            db.session.rollback()
             return jsonify({
                 'success': False,
-                'message': 'Ошибка при обновлении участника'
+                'message': f'Ошибка при сохранении: {str(e)}'
             }), 400
 
     except Exception as e:
@@ -421,13 +373,7 @@ def update_athlete(athlete_id):
     ],
     "responses": {
         "200": {
-            "description": "Участник успешно удален",
-            "examples": {
-                "application/json": {
-                    "success": True,
-                    "message": "Участник удален"
-                }
-            }
+            "description": "Участник успешно удален"
         },
         "404": {
             "description": "Участник не найден"
@@ -447,15 +393,21 @@ def delete_athlete(athlete_id):
                 'message': 'Участник не найден'
             }), 404
 
-        if athlete.delete():
+        # Мягкое удаление - помечаем как неактивного
+        athlete.is_active = False
+        athlete.user.is_active = False
+
+        try:
+            db.session.commit()
             return jsonify({
                 'success': True,
                 'message': 'Участник удален'
             }), 200
-        else:
+        except Exception as e:
+            db.session.rollback()
             return jsonify({
                 'success': False,
-                'message': 'Ошибка при удалении участника'
+                'message': f'Ошибка при удалении: {str(e)}'
             }), 400
 
     except Exception as e:

@@ -479,61 +479,6 @@ def start_fight(fight_id):
         }), 500
 
 
-@fights_bp.route('/<int:fight_id>/pause', methods=['POST'])
-@swag_from({
-    'tags': ['Fights'],
-    'summary': 'Приостановить схватку',
-    'description': 'Приостанавливает таймер схватки',
-    'parameters': [
-        {
-            'name': 'fight_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID схватки'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Схватка приостановлена'
-        },
-        404: {
-            'description': 'Схватка не найдена'
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
-def pause_fight(fight_id):
-    """Приостановить схватку"""
-    try:
-        fight = Fight.query.get(fight_id)
-        if not fight:
-            return jsonify({
-                'success': False,
-                'message': 'Схватка не найдена'
-            }), 404
-
-        fight_manager = FightManager(fight_id)
-
-        if fight_manager.pause_fight():
-            return jsonify({
-                'success': True,
-                'message': 'Схватка приостановлена'
-            }), 200
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Не удалось приостановить схватку'
-            }), 400
-
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при приостановке схватки: {str(e)}'
-        }), 500
-
 
 @fights_bp.route('/<int:fight_id>/finish', methods=['POST'])
 @swag_from({

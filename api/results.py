@@ -190,7 +190,7 @@ def create_result():
             technique_used=data.get('technique_used')
         )
 
-        if result.save():
+        if result.save_to_db():
             return jsonify({
                 'success': True,
                 'message': 'Результат успешно создан',

@@ -18,144 +18,211 @@ class FightManager:
 
     def start_fight(self, fight_id=None):
         """Начать схватку"""
-        if fight_id:
-            self.fight = Fight.query.get(fight_id)
+        try:
+            if fight_id:
+                self.fight = Fight.query.get(fight_id)
 
-        if not self.fight or self.fight.status != 'SCHEDULED':
+            if not self.fight:
+                print(f"Схватка не найдена: {fight_id}")
+                return False
+
+            print(f"Текущий статус схватки: {self.fight.status}")
+
+            # Разрешаем начинать схватку из статусов SCHEDULED или CANCELLED
+            if self.fight.status not in ['SCHEDULED', 'CANCELLED']:
+                print(f"Невозможно начать схватку со статусом: {self.fight.status}")
+                return False
+
+            # Используем IN_PROGRESS вместо LIVE для соответствия API
+            self.fight.status = 'IN_PROGRESS'
+            self.fight.start_time = datetime.utcnow()
+
+            # Устанавливаем время боя из настроек турнира
+            tournament = self.fight.tournament
+            if tournament and tournament.fight_duration:
+                self.fight.timer_seconds = tournament.fight_duration
+            else:
+                self.fight.timer_seconds = 300  # значение по умолчанию 5 минут
+
+            self.fight.is_golden_score = False
+
+            print(f"Сохранение схватки с таймером: {self.fight.timer_seconds} секунд")
+
+            # Прямое сохранение через db.session
+            db.session.add(self.fight)
+            db.session.commit()
+
+            print("Схватка успешно начата")
+            return True
+
+        except Exception as e:
+            print(f"Ошибка при начале схватки: {str(e)}")
+            db.session.rollback()
             return False
 
-        self.fight.status = 'LIVE'
-        self.fight.start_time = datetime.utcnow()
-        self.fight.timer_seconds = self.fight.tournament.fight_duration
-        self.fight.timer_paused = False
-        self.fight.is_golden_score = False
+    def finish_fight(self):
+        """Завершить схватку (без определения победителя)"""
+        try:
+            if not self.fight or self.fight.status != 'IN_PROGRESS':
+                print(f"Невозможно завершить схватку со статусом: {self.fight.status if self.fight else 'None'}")
+                return False
 
-        return self.fight.save()
+            self.fight.status = 'COMPLETED'
+            self.fight.end_time = datetime.utcnow()
+            self.fight.timer_seconds = 0
 
-    def pause_fight(self):
-        """Приостановить схватку"""
-        if not self.fight or self.fight.status != 'LIVE':
+            db.session.add(self.fight)
+            db.session.commit()
+
+            print("Схватка успешно завершена")
+            return True
+
+        except Exception as e:
+            print(f"Ошибка при завершении схватки: {str(e)}")
+            db.session.rollback()
             return False
-
-        self.fight.timer_paused = True
-        return self.fight.save()
-
-    def resume_fight(self):
-        """Возобновить схватку"""
-        if not self.fight or self.fight.status != 'LIVE':
-            return False
-
-        self.fight.timer_paused = False
-        return self.fight.save()
 
     def update_timer(self, seconds):
         """Обновить таймер"""
-        if not self.fight or self.fight.status != 'LIVE':
-            return False
+        try:
+            if not self.fight or self.fight.status != 'IN_PROGRESS':
+                return False
 
-        self.fight.timer_seconds = seconds
-        return self.fight.save()
+            self.fight.timer_seconds = seconds
+            db.session.add(self.fight)
+            db.session.commit()
+            return True
+
+        except Exception as e:
+            print(f"Ошибка при обновлении таймера: {str(e)}")
+            db.session.rollback()
+            return False
 
     def add_score(self, athlete_color, score_type):
         """Добавить оценку участнику"""
-        if not self.fight or self.fight.status != 'LIVE':
+        try:
+            if not self.fight or self.fight.status != 'IN_PROGRESS':
+                return False
+
+            # Создаем или получаем результат
+            result = self.fight.result
+            if not result:
+                result = Result(fight_id=self.fight.id)
+                db.session.add(result)
+
+            score_type = score_type.upper()
+            athlete_color = athlete_color.upper()
+
+            if score_type == 'IPPON':
+                result.is_ippon = True
+                result.victory_type = 'IPPON'
+                # Автоматическое завершение при иппоне
+                winner_id = (self.fight.white_athlete_id if athlete_color == 'WHITE'
+                            else self.fight.blue_athlete_id)
+                return self.complete_fight(winner_id, 'IPPON')
+
+            elif score_type == 'WAZAARI':
+                result.is_wazaari = True
+                if athlete_color == 'WHITE':
+                    result.white_score += 1
+                else:
+                    result.blue_score += 1
+
+                # Проверка двух ваза-ари
+                if result.white_score >= 2:
+                    result.victory_type = 'WAZAARI_AWASETE_IPPON'
+                    return self.complete_fight(self.fight.white_athlete_id, 'WAZAARI_AWASETE_IPPON')
+                elif result.blue_score >= 2:
+                    result.victory_type = 'WAZAARI_AWASETE_IPPON'
+                    return self.complete_fight(self.fight.blue_athlete_id, 'WAZAARI_AWASETE_IPPON')
+
+            elif score_type == 'SHIDO':
+                result.add_penalty(athlete_color, 'SHIDO')
+
+                # Проверка дисквалификации по штрафам
+                white_penalties = result.get_penalty_count('WHITE')
+                blue_penalties = result.get_penalty_count('BLUE')
+
+                if white_penalties >= 3:
+                    return self.complete_fight(self.fight.blue_athlete_id, 'SHIDO')
+                elif blue_penalties >= 3:
+                    return self.complete_fight(self.fight.white_athlete_id, 'SHIDO')
+
+            db.session.commit()
+            return True
+
+        except Exception as e:
+            print(f"Ошибка при добавлении оценки: {str(e)}")
+            db.session.rollback()
             return False
-
-        # Создаем или получаем результат
-        result = self.fight.result
-        if not result:
-            result = Result(fight_id=self.fight.id)
-            db.session.add(result)
-
-        if score_type.upper() == 'IPPON':
-            result.is_ippon = True
-            result.victory_type = 'IPPON'
-            # Автоматическое завершение при иппоне
-            winner_id = (self.fight.white_athlete_id if athlete_color.upper() == 'WHITE' 
-                        else self.fight.blue_athlete_id)
-            return self.complete_fight(winner_id, 'IPPON')
-
-        elif score_type.upper() == 'WAZAARI':
-            result.is_wazaari = True
-            if athlete_color.upper() == 'WHITE':
-                result.white_score += 1
-            else:
-                result.blue_score += 1
-
-            # Проверка двух ваза-ари
-            if result.white_score >= 2:
-                result.victory_type = 'WAZAARI_AWASETE_IPPON'
-                return self.complete_fight(self.fight.white_athlete_id, 'WAZAARI_AWASETE_IPPON')
-            elif result.blue_score >= 2:
-                result.victory_type = 'WAZAARI_AWASETE_IPPON'
-                return self.complete_fight(self.fight.blue_athlete_id, 'WAZAARI_AWASETE_IPPON')
-
-        elif score_type.upper() == 'SHIDO':
-            result.add_penalty(athlete_color, 'SHIDO')
-
-            # Проверка дисквалификации по штрафам
-            white_penalties = result.get_penalty_count('WHITE')
-            blue_penalties = result.get_penalty_count('BLUE')
-
-            if white_penalties >= 3:
-                return self.complete_fight(self.fight.blue_athlete_id, 'SHIDO')
-            elif blue_penalties >= 3:
-                return self.complete_fight(self.fight.white_athlete_id, 'SHIDO')
-
-        return result.save()
 
     def complete_fight(self, winner_id, victory_type, details=None):
-        """Завершить схватку"""
-        if not self.fight or self.fight.status != 'LIVE':
+        """Завершить схватку с определением победителя"""
+        try:
+            if not self.fight or self.fight.status != 'IN_PROGRESS':
+                return False
+
+            # Создаем результат если его нет
+            result = self.fight.result
+            if not result:
+                result = Result(fight_id=self.fight.id)
+                db.session.add(result)
+
+            # Устанавливаем результат
+            result.winner_id = winner_id
+            result.victory_type = victory_type
+            result.details = details
+            if self.fight.start_time:
+                result.fight_duration = (datetime.utcnow() - self.fight.start_time).total_seconds()
+
+            if self.fight.is_golden_score:
+                result.golden_score_time = self.fight.tournament.golden_score_duration - self.fight.timer_seconds
+
+            # Завершаем схватку
+            self.fight.status = 'COMPLETED'
+            self.fight.end_time = datetime.utcnow()
+            self.fight.timer_seconds = 0
+
+            # Сохраняем изменения
+            db.session.commit()
+
+            # Обновляем турнирную сетку
+            if hasattr(self.fight, 'bracket') and self.fight.bracket:
+                bracket_generator = BracketGenerator(self.fight.bracket)
+                bracket_generator.update_bracket(self.fight)
+
+            return True
+
+        except Exception as e:
+            print(f"Ошибка при завершении схватки с победителем: {str(e)}")
+            db.session.rollback()
             return False
-
-        # Создаем результат если его нет
-        result = self.fight.result
-        if not result:
-            result = Result(fight_id=self.fight.id)
-            db.session.add(result)
-
-        # Устанавливаем результат
-        result.winner_id = winner_id
-        result.victory_type = victory_type
-        result.details = details
-        result.fight_duration = (datetime.utcnow() - self.fight.start_time).total_seconds()
-
-        if self.fight.is_golden_score:
-            result.golden_score_time = self.fight.tournament.golden_score_duration - self.fight.timer_seconds
-
-        # Завершаем схватку
-        self.fight.status = 'COMPLETED'
-        self.fight.end_time = datetime.utcnow()
-        self.fight.timer_paused = True
-
-        # Сохраняем изменения
-        db.session.commit()
-
-        # Обновляем турнирную сетку
-        if self.fight.bracket:
-            bracket_generator = BracketGenerator(self.fight.bracket)
-            bracket_generator.update_bracket(self.fight)
-
-        return True
 
     def cancel_fight(self, reason):
         """Отменить схватку"""
-        if not self.fight or self.fight.status not in ['SCHEDULED', 'LIVE']:
+        try:
+            if not self.fight or self.fight.status not in ['SCHEDULED', 'IN_PROGRESS']:
+                return False
+
+            self.fight.status = 'CANCELLED'
+            self.fight.end_time = datetime.utcnow()
+
+            # Создаем запись об отмене
+            result = Result(
+                fight_id=self.fight.id,
+                victory_type='CANCELLED',
+                details=reason
+            )
+            db.session.add(result)
+            db.session.add(self.fight)
+            db.session.commit()
+
+            return True
+
+        except Exception as e:
+            print(f"Ошибка при отмене схватки: {str(e)}")
+            db.session.rollback()
             return False
-
-        self.fight.status = 'CANCELLED'
-        self.fight.end_time = datetime.utcnow()
-
-        # Создаем запись об отмене
-        result = Result(
-            fight_id=self.fight.id,
-            victory_type='CANCELLED',
-            details=reason
-        )
-        db.session.add(result)
-
-        return db.session.commit()
 
     def get_fight_status(self):
         """Получить статус схватки"""
@@ -166,7 +233,6 @@ class FightManager:
             'id': self.fight.id,
             'status': self.fight.status,
             'timer_seconds': self.fight.timer_seconds,
-            'timer_paused': self.fight.timer_paused,
             'is_golden_score': self.fight.is_golden_score,
             'white_athlete': None,
             'blue_athlete': None,
@@ -206,7 +272,7 @@ class FightManager:
     @classmethod
     def get_live_fights(cls, tournament_id=None, tatami=None):
         """Получить активные схватки"""
-        query = Fight.query.filter_by(status='LIVE')
+        query = Fight.query.filter_by(status='IN_PROGRESS')
 
         if tournament_id:
             query = query.filter_by(tournament_id=tournament_id)

@@ -108,3 +108,13 @@ class Result(db.Model):
         data['white_penalty_count'] = self.get_penalty_count('WHITE')
         data['blue_penalty_count'] = self.get_penalty_count('BLUE')
         return data
+
+    def save_to_db(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(e)
+            return False

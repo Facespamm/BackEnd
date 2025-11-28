@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required
 from databse.db import create_session
 from models.user import User
 from config import USER_ROLES
+
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
 
@@ -26,13 +27,17 @@ users_bp = Blueprint('users', __name__, url_prefix='/users')
                             'properties': {
                                 'id': {'type': 'integer'},
                                 'username': {'type': 'string'},
-                                'name': {'type': 'string'},
+                                'first_name': {'type': 'string'},
+                                'last_name': {'type': 'string'},
+                                'middle_name': {'type': 'string'},
                                 'email': {'type': 'string'},
                                 'phone': {'type': 'string'},
-                                'role': {'type': 'string'},
-                                'role_display': {'type': 'string'},
-                                'referee_level': {'type': 'string'},
-                                'tatami_assigned': {'type': 'integer'}
+                                'is_active': {'type': 'boolean'},
+                                'created_at': {'type': 'string'},
+                                'roles': {
+                                    'type': 'array',
+                                    'items': {'type': 'string'}
+                                }
                             }
                         }
                     },
@@ -52,16 +57,21 @@ def get_users():
 
         result = []
         for user in users:
+            # Получаем названия ролей пользователя
+            role_names = [role.name for role in user.roles] if user.roles else []
+
             result.append({
                 'id': user.id,
                 'username': user.username,
-                'name': user.name,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'middle_name': user.middle_name,
                 'email': user.email,
                 'phone': user.phone,
-                'role': user.role,
-                'role_display': user.role_display,
-                'referee_level': user.referee_level,
-                'tatami_assigned': user.tatami_assigned
+                'is_active': user.is_active,
+                'created_at': user.created_at.isoformat() if user.created_at else None,
+                'roles': role_names,
+                'full_name': f"{user.last_name} {user.first_name} {user.middle_name or ''}".strip()
             })
 
         return jsonify({
@@ -76,6 +86,121 @@ def get_users():
             'message': f'Ошибка при получении пользователей: {str(e)}'
         }), 500
 
+
+@users_bp.route('/<int:user_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Users'],
+    'summary': 'Получить пользователя по ID',
+    'description': 'Возвращает информацию о конкретном пользователе',
+    'parameters': [
+        {
+            'name': 'user_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID пользователя'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Данные пользователя получены успешно',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'user': {
+                        'type': 'object',
+                        'properties': {
+                            'id': {'type': 'integer'},
+                            'username': {'type': 'string'},
+                            'first_name': {'type': 'string'},
+                            'last_name': {'type': 'string'},
+                            'middle_name': {'type': 'string'},
+                            'email': {'type': 'string'},
+                            'phone': {'type': 'string'},
+                            'is_active': {'type': 'boolean'},
+                            'created_at': {'type': 'string'},
+                            'updated_at': {'type': 'string'},
+                            'roles': {
+                                'type': 'array',
+                                'items': {'type': 'string'}
+                            },
+                            'referees': {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'id': {'type': 'integer'},
+                                        'level': {'type': 'string'},
+                                        'category': {'type': 'string'}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'Пользователь не найден'
+        },
+        500: {
+            'description': 'Ошибка сервера'
+        }
+    }
+})
+def get_user_by_id(user_id: int):
+    """Получить пользователя по ID"""
+    try:
+        user = User.query.filter_by(id=user_id, is_active=True).first()
+
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'Пользователь не найден'
+            }), 404
+
+        # Получаем названия ролей пользователя
+        role_names = [role.name for role in user.roles] if user.roles else []
+
+        # Информация о судьях (если есть)
+        referees_info = []
+        if user.referees:
+            for referee in user.referees:
+                referees_info.append({
+                    'id': referee.id,
+                    'level': getattr(referee, 'level', None),
+                    'category': getattr(referee, 'category', None)
+                })
+
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'middle_name': user.middle_name,
+            'email': user.email,
+            'phone': user.phone,
+            'is_active': user.is_active,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'updated_at': user.updated_at.isoformat() if user.updated_at else None,
+            'roles': role_names,
+            'full_name': f"{user.last_name} {user.first_name} {user.middle_name or ''}".strip(),
+            'referees': referees_info
+        }
+
+        return jsonify({
+            'success': True,
+            'user': user_data
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при получении пользователя: {str(e)}'
+        }), 500
+
+
 @users_bp.route('/', methods=['POST'])
 @swag_from({
     'tags': ['Users'],
@@ -88,7 +213,7 @@ def get_users():
             'required': True,
             'schema': {
                 'type': 'object',
-                'required': ['username', 'password', 'name', 'role'],
+                'required': ['username', 'password', 'first_name', 'last_name'],
                 'properties': {
                     'username': {
                         'type': 'string',
@@ -98,9 +223,17 @@ def get_users():
                         'type': 'string',
                         'description': 'Пароль пользователя'
                     },
-                    'name': {
+                    'first_name': {
                         'type': 'string',
-                        'description': 'Полное имя пользователя'
+                        'description': 'Имя пользователя'
+                    },
+                    'last_name': {
+                        'type': 'string',
+                        'description': 'Фамилия пользователя'
+                    },
+                    'middle_name': {
+                        'type': 'string',
+                        'description': 'Отчество пользователя'
                     },
                     'email': {
                         'type': 'string',
@@ -109,20 +242,6 @@ def get_users():
                     'phone': {
                         'type': 'string',
                         'description': 'Телефон'
-                    },
-                    'role': {
-                        'type': 'string',
-                        'description': 'Роль пользователя',
-                        'enum': ['ADMIN', 'REFEREE', 'SECRETARY', 'VIEWER'],
-                        'default': 'VIEWER'
-                    },
-                    'referee_level': {
-                        'type': 'string',
-                        'description': 'Уровень судьи (для роли REFEREE)'
-                    },
-                    'tatami_assigned': {
-                        'type': 'integer',
-                        'description': 'Назначенное татами (для роли REFEREE)'
                     }
                 }
             }
@@ -160,10 +279,11 @@ def create_user():
                 'message': 'Не передан JSON'
             }), 400
 
-        if not data.get('username') or not data.get('password') or not data.get('name'):
+        if not data.get('username') or not data.get('password') or not data.get('first_name') or not data.get(
+                'last_name'):
             return jsonify({
                 'success': False,
-                'message': 'Обязательные поля: username, password, name'
+                'message': 'Обязательные поля: username, password, first_name, last_name'
             }), 400
 
         # Проверяем уникальность username
@@ -176,12 +296,11 @@ def create_user():
 
         user = User(
             username=data['username'],
-            name=data['name'],
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            middle_name=data.get('middle_name'),
             email=data.get('email'),
-            phone=data.get('phone'),
-            role=data.get('role', USER_ROLES['VIEWER']),
-            referee_level=data.get('referee_level', 0),
-            tatami_assigned=data.get('tatami_assigned', None)
+            phone=data.get('phone')
         )
 
         user.set_password(data['password'])
@@ -204,12 +323,14 @@ def create_user():
             'message': f'Ошибка при создании пользователя: {str(e)}'
         }), 500
 
-@users_bp.route('/<int:user_id>',  methods=['DELETE'])
+
+@users_bp.route('/<int:user_id>', methods=['PUT'])
 @jwt_required()
 def update_user(user_id: int):
     """Изменить информацию о пользователе"""
     session_factory = create_session()
     data = request.get_json()
+
     try:
         with session_factory() as session:
             user = session.get(User, user_id)
@@ -220,15 +341,67 @@ def update_user(user_id: int):
                     'message': 'Пользователь не найден'
                 }), 404
 
-            user.name = data['name', user.name]
-            user.email = data.get('email', user.email)
-            user.phone = data.get('phone', user.phone)
+            # Обновляем только переданные поля
+            if 'first_name' in data:
+                user.first_name = data['first_name']
+            if 'last_name' in data:
+                user.last_name = data['last_name']
+            if 'middle_name' in data:
+                user.middle_name = data['middle_name']
+            if 'email' in data:
+                user.email = data['email']
+            if 'phone' in data:
+                user.phone = data['phone']
+            if 'username' in data:
+                # Проверяем уникальность нового username
+                if data['username'] != user.username:
+                    existing = User.query.filter_by(username=data['username']).first()
+                    if existing:
+                        return jsonify({
+                            'success': False,
+                            'message': 'Пользователь с таким именем уже существует'
+                        }), 400
+                user.username = data['username']
+
+            session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Пользователь успешно обновлен'
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при обновлении пользователя: {str(e)}'
+        }), 500
+
+
+@users_bp.route('/<int:user_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user(user_id: int):
+    """Удалить пользователя"""
+    session_factory = create_session()
+
+    try:
+        with session_factory() as session:
+            user = session.get(User, user_id)
+
+            if not user:
+                return jsonify({
+                    'success': False,
+                    'message': 'Пользователь не найден'
+                }), 404
+
+            # Мягкое удаление
+            user.is_active = False
             session.commit()
 
         return jsonify({
             'success': True,
             'message': 'Пользователь успешно удален'
         }), 200
+
     except Exception as e:
         return jsonify({
             'success': False,
