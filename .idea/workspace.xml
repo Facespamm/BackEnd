@@ -5,11 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6559d010-01ce-415d-82f4-c262001ad7cb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/repository/tournament_repo.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/tournaments.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/tournaments.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/databse/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/databse/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/scores.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/scores.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/users.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/athlete.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/athlete.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/fight.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/fight.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/result.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/result.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/score_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/score_manager.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,6 +40,9 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HttpClientEndpointsTabState">
+    <option name="cachedRequestData" value="&lt;CachedHttpClientTabRequests&gt;&#10;  &lt;entry key=&quot;d0a0a9eddc56920c829e96bb06ce3471c0f2775a&quot; value=&quot;###&amp;#10;POST http://localhost:5000/auth/public/registrations/&quot; /&gt;&#10;&lt;/CachedHttpClientTabRequests&gt;" />
   </component>
   <component name="HttpClientOnboardingState">{
   &quot;isOnboardingCommentShown&quot;: true
@@ -169,7 +175,7 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -291,7 +297,6 @@
       <workItem from="1764143742825" duration="10614000" />
       <workItem from="1763718486144" duration="52013000" />
       <workItem from="1764230372836" duration="11223000" />
-      <workItem from="1764748654158" duration="4748000" />
     </task>
     <servers />
   </component>
@@ -302,37 +307,37 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/api/tournaments.py</url>
-          <line>488</line>
-          <option name="timeStamp" value="11" />
+          <url>file://$PROJECT_DIR$/repository/auth_repo.py</url>
+          <line>40</line>
+          <option name="timeStamp" value="2" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/repository/tournament_repo.py</url>
+          <url>file://$PROJECT_DIR$/api/auth.py</url>
+          <line>176</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/repository/auth_repo.py</url>
           <line>16</line>
-          <option name="timeStamp" value="12" />
+          <option name="timeStamp" value="5" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/api/tournaments.py</url>
-          <line>520</line>
-          <option name="timeStamp" value="13" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/api/athletes.py</url>
-          <line>94</line>
-          <option name="timeStamp" value="14" />
+          <url>file://$PROJECT_DIR$/api/auth.py</url>
+          <line>124</line>
+          <option name="timeStamp" value="6" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/BackEnd$db.coverage" NAME="db Coverage Results" MODIFIED="1763577493143" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/database" />
-    <SUITE FILE_PATH="coverage/testapi$Flask__app_py_.coverage" NAME="Flask (app.py) Coverage Results" MODIFIED="1763699832982" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="C:\Users\User\Desktop\testapi" />
-    <SUITE FILE_PATH="coverage/BackEnd$Flask__app_py_.coverage" NAME="Flask (app.py) Coverage Results" MODIFIED="1764750891099" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/BackEnd$Flask__run_api_py_.coverage" NAME="Flask (run_api.py) Coverage Results" MODIFIED="1763575614226" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
-    <SUITE FILE_PATH="coverage/BackEnd$BackEnd.coverage" NAME="BackEnd Coverage Results" MODIFIED="1763720043310" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
-    <SUITE FILE_PATH="coverage/BackEnd$Flask__test_simple_py_.coverage" NAME="Flask (test_simple.py) Coverage Results" MODIFIED="1763615148594" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/BackEnd$run.coverage" NAME="run Coverage Results" MODIFIED="1763578032403" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BackEnd$Flask__run_api_py_.coverage" NAME="Flask (run_api.py) Coverage Results" MODIFIED="1763575614226" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/BackEnd$Flask__run_py_.coverage" NAME="Flask (run.py) Coverage Results" MODIFIED="1763638420576" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BackEnd$BackEnd.coverage" NAME="BackEnd Coverage Results" MODIFIED="1763720043310" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/BackEnd$Flask__app_py_.coverage" NAME="Flask (app.py) Coverage Results" MODIFIED="1763617980528" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/BackEnd$db.coverage" NAME="db Coverage Results" MODIFIED="1763577493143" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/database" />
+    <SUITE FILE_PATH="coverage/BackEnd$Flask__test_simple_py_.coverage" NAME="Flask (test_simple.py) Coverage Results" MODIFIED="1763615148594" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/testapi$Flask__app_py_.coverage" NAME="Flask (app.py) Coverage Results" MODIFIED="1763699832982" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="C:\Users\User\Desktop\testapi" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

@@ -44,6 +44,9 @@ class Fight(db.Model):
     judge1 = db.Column(db.String(100))
     judge2 = db.Column(db.String(100))
 
+    # Журнал событий боя
+    events_log = db.Column(db.JSON, default=list)  # Все события боя в одном месте
+
     # Связи
     tournament = db.relationship('Tournament', back_populates='fights')
     bracket = db.relationship('Bracket', back_populates='fights')
@@ -106,18 +109,65 @@ class Fight(db.Model):
             self.timer_seconds = self.fight_minutes * 60
             self.is_golden_score = False
 
+            # Добавляем событие начала боя
+            self._add_initial_event()
+
             self.save()
             return True
         return False
+
+    def _add_initial_event(self):
+        """Добавить начальное событие боя"""
+        if not self.events_log:
+            self.events_log = []
+
+        initial_event = {
+            'id': 1,
+            'type': 'SYSTEM',
+            'subtype': 'FIGHT_START',
+            'description': 'Бой начат',
+            'match_time': '0:00',
+            'timestamp': datetime.utcnow().isoformat(),
+            'details': {
+                'fight_minutes': self.fight_minutes,
+                'white_athlete_id': self.white_athlete_id,
+                'blue_athlete_id': self.blue_athlete_id
+            }
+        }
+        self.events_log.append(initial_event)
 
     def enter_golden_score(self):
         """Перейти в золотой скор"""
         if self.status == 'LIVE' and self.timer_seconds <= 0:
             self.is_golden_score = True
             self.timer_seconds = self.golden_score_minutes * 60
+
+            # Добавляем событие перехода в золотой скор
+            golden_score_event = {
+                'id': len(self.events_log) + 1,
+                'type': 'SYSTEM',
+                'subtype': 'GOLDEN_SCORE_START',
+                'description': 'Переход в золотой скор',
+                'match_time': self._get_current_match_time(),
+                'timestamp': datetime.utcnow().isoformat(),
+                'details': {
+                    'golden_score_minutes': self.golden_score_minutes
+                }
+            }
+            self.events_log.append(golden_score_event)
+
             self.save()
             return True
         return False
+
+    def _get_current_match_time(self):
+        """Получить текущее время боя (минута:секунда)"""
+        if self.start_time:
+            elapsed = (datetime.utcnow() - self.start_time).total_seconds()
+            minutes = int(elapsed // 60)
+            seconds = int(elapsed % 60)
+            return f"{minutes}:{seconds:02d}"
+        return "0:00"
 
     def complete_fight(self, winner_id=None, victory_type=None, details=None):
         """Завершить схватку"""
@@ -147,6 +197,22 @@ class Fight(db.Model):
                 )
                 db.session.add(result)
 
+            # Добавляем событие завершения боя
+            end_event = {
+                'id': len(self.events_log) + 1,
+                'type': 'SYSTEM',
+                'subtype': 'FIGHT_END',
+                'description': f'Бой завершен. Победитель: {winner_id} ({victory_type})',
+                'match_time': self._get_current_match_time(),
+                'timestamp': datetime.utcnow().isoformat(),
+                'details': {
+                    'winner_id': winner_id,
+                    'victory_type': victory_type,
+                    'duration': self.duration
+                }
+            }
+            self.events_log.append(end_event)
+
             self.save()
             return True
         return False
@@ -164,6 +230,9 @@ class Fight(db.Model):
             self.end_time = None
             self.timer_seconds = self.fight_minutes * 60
             self.is_golden_score = False
+
+            # Очищаем журнал событий
+            self.events_log = []
 
             self.save()
             return True
@@ -211,6 +280,8 @@ class Fight(db.Model):
             'main_referee': self.main_referee,
             'judge1': self.judge1,
             'judge2': self.judge2,
+            'events_log': self.events_log,
+            'events_count': len(self.events_log) if self.events_log else 0,
             'duration': self.duration,
             'is_ready_to_start': self.is_ready_to_start,
             'has_active_osaekomi': self.has_active_osaekomi,

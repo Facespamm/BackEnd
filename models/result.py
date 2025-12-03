@@ -50,9 +50,6 @@ class Result(db.Model):
     is_ippon = db.Column(db.Boolean, default=False)
     is_wazaari = db.Column(db.Boolean, default=False)
 
-    # Журнал действий для отмены
-    action_log = db.Column(db.JSON, default=list)  # Лог всех действий
-
     # Связи
     winner = db.relationship('Athlete', foreign_keys=[winner_id])
     fight = db.relationship('Fight', back_populates='result')
@@ -115,24 +112,7 @@ class Result(db.Model):
 
     def add_score(self, athlete_color, score_type, technique=None):
         """Добавить оценку (ЮКО, ВАЗА-АРИ, ИППОН)"""
-        action = {
-            'type': 'score',
-            'athlete_color': athlete_color.upper(),
-            'score_type': score_type.upper(),
-            'technique': technique,
-            'timestamp': datetime.utcnow().isoformat(),
-            'before_state': {
-                'white_score': self.white_score,
-                'blue_score': self.blue_score,
-                'white_yuko': self.white_yuko,
-                'blue_yuko': self.blue_yuko,
-                'white_wazaari': self.white_wazaari,
-                'blue_wazaari': self.blue_wazaari,
-                'white_ippon': self.white_ippon,
-                'blue_ippon': self.blue_ippon
-            }
-        }
-
+        # Внутреннее действие без логирования в result
         score_value = SCORE_VALUES.get(score_type.upper(), 0)
 
         if athlete_color.upper() == 'WHITE':
@@ -173,23 +153,19 @@ class Result(db.Model):
             if self.fight:
                 self.winner_id = self.fight.blue_athlete_id
 
-        # Добавляем действие в лог
-        self.action_log.append(action)
-        return action
+        # Возвращаем информацию для ScoreManager
+        return {
+            'type': 'score',
+            'athlete_color': athlete_color.upper(),
+            'score_type': score_type.upper(),
+            'technique': technique,
+            'points': score_value,
+            'white_score': self.white_score,
+            'blue_score': self.blue_score
+        }
 
     def add_penalty(self, athlete_color, penalty_type):
         """Добавить штраф участнику"""
-        action = {
-            'type': 'penalty',
-            'athlete_color': athlete_color.upper(),
-            'penalty_type': penalty_type.upper(),
-            'timestamp': datetime.utcnow().isoformat(),
-            'before_state': {
-                'white_penalties': self.white_penalties,
-                'blue_penalties': self.blue_penalties
-            }
-        }
-
         if athlete_color.upper() == 'WHITE':
             current = self.white_penalties or ""
             penalties = current.split(',') if current else []
@@ -200,9 +176,6 @@ class Result(db.Model):
             penalties = current.split(',') if current else []
             penalties.append(penalty_type)
             self.blue_penalties = ','.join(penalties)
-
-        # Добавляем действие в лог
-        self.action_log.append(action)
 
         # Проверяем автоматическую победу по штрафам
         white_count = self.get_penalty_count('WHITE')
@@ -217,21 +190,26 @@ class Result(db.Model):
             if self.fight and self.fight.white_athlete_id:
                 self.winner_id = self.fight.white_athlete_id
 
-        return action
+        # Возвращаем информацию для ScoreManager
+        return {
+            'type': 'penalty',
+            'athlete_color': athlete_color.upper(),
+            'penalty_type': penalty_type.upper(),
+            'white_penalties': self.white_penalties,
+            'blue_penalties': self.blue_penalties
+        }
 
     def start_osaekomi(self, athlete_color):
         """Начать отсчет времени удержания"""
         self.osaekomi_start_time = datetime.utcnow()
         self.osaekomi_athlete_color = athlete_color.upper()
 
-        action = {
+        # Возвращаем информацию для ScoreManager
+        return {
             'type': 'osaekomi_start',
             'athlete_color': athlete_color.upper(),
-            'timestamp': datetime.utcnow().isoformat()
+            'start_time': self.osaekomi_start_time
         }
-
-        self.action_log.append(action)
-        return action
 
     def stop_osaekomi(self):
         """Остановить отсчет времени удержания"""
@@ -239,28 +217,27 @@ class Result(db.Model):
             duration = int((datetime.utcnow() - self.osaekomi_start_time).total_seconds())
             self.osaekomi_duration += duration
 
-            action = {
-                'type': 'osaekomi_stop',
-                'duration': duration,
-                'timestamp': datetime.utcnow().isoformat(),
-                'before_state': {
-                    'white_score': self.white_score,
-                    'blue_score': self.blue_score
-                }
-            }
-
             # Начисляем оценку в зависимости от времени удержания
+            awarded_score = None
             if duration >= OSAEKOMI_TIMES['IPPON']:
+                awarded_score = 'IPPON'
                 self.add_score(self.osaekomi_athlete_color, 'IPPON', technique='OSAEKOMI')
             elif duration >= OSAEKOMI_TIMES['WAZAARI']:
+                awarded_score = 'WAZAARI'
                 self.add_score(self.osaekomi_athlete_color, 'WAZAARI', technique='OSAEKOMI')
 
+            previous_athlete_color = self.osaekomi_athlete_color
             self.osaekomi_start_time = None
             self.osaekomi_athlete_color = None
 
-            self.action_log.append(action)
-            return duration, action
-        return 0, None
+            return {
+                'duration': duration,
+                'awarded_score': awarded_score,
+                'athlete_color': previous_athlete_color,
+                'white_score': self.white_score,
+                'blue_score': self.blue_score
+            }
+        return None
 
     def get_penalty_count(self, athlete_color):
         """Получить количество штрафов участника"""
@@ -270,59 +247,10 @@ class Result(db.Model):
             return len(self.blue_penalties.split(',')) if self.blue_penalties else 0
 
     def undo_last_action(self):
-        """Отменить последнее действие"""
-        if not self.action_log:
-            return False, None
-
-        last_action = self.action_log.pop()
-
-        if last_action['type'] == 'score':
-            # Восстанавливаем предыдущее состояние оценок
-            before = last_action['before_state']
-            self.white_score = before['white_score']
-            self.blue_score = before['blue_score']
-            self.white_yuko = before['white_yuko']
-            self.blue_yuko = before['blue_yuko']
-            self.white_wazaari = before['white_wazaari']
-            self.blue_wazaari = before['blue_wazaari']
-            self.white_ippon = before['white_ippon']
-            self.blue_ippon = before['blue_ippon']
-            return True, last_action
-
-        elif last_action['type'] == 'penalty':
-            # Восстанавливаем предыдущее состояние штрафов
-            before = last_action['before_state']
-            self.white_penalties = before['white_penalties']
-            self.blue_penalties = before['blue_penalties']
-            return True, last_action
-
-        elif last_action['type'] == 'osaekomi_start':
-            # Отменяем начало осаекоми
-            self.osaekomi_start_time = None
-            self.osaekomi_athlete_color = None
-            return True, last_action
-
-        elif last_action['type'] == 'osaekomi_stop':
-            # Отменяем осаекоми и связанные оценки
-            before = last_action['before_state']
-            self.white_score = before['white_score']
-            self.blue_score = before['blue_score']
-            # Отменяем последнюю оценку (которая была добавлена при остановке осаекоми)
-            if len(self.action_log) > 0:
-                score_action = self.action_log[-1]
-                if score_action['type'] == 'score':
-                    self.action_log.pop()
-                    before_score = score_action['before_state']
-                    self.white_score = before_score['white_score']
-                    self.blue_score = before_score['blue_score']
-                    self.white_yuko = before_score['white_yuko']
-                    self.blue_yuko = before_score['blue_yuko']
-                    self.white_wazaari = before_score['white_wazaari']
-                    self.blue_wazaari = before_score['blue_wazaari']
-                    self.white_ippon = before_score['white_ippon']
-                    self.blue_ippon = before_score['blue_ippon']
-            return True, last_action
-
+        """Отменить последнее действие - ЗАГЛУШКА"""
+        # Теперь этот метод НЕ РАБОТАЕТ, потому что логирование
+        # перенесено в ScoreManager и fight.events_log
+        # Вся логика отмены теперь в ScoreManager.undo_last_action()
         return False, None
 
     def reset_scores(self):
@@ -344,7 +272,6 @@ class Result(db.Model):
         self.is_wazaari = False
         self.victory_type = None
         self.winner_id = None
-        self.action_log = []
         self.technique_used = None
 
     def to_dict(self):
