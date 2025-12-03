@@ -77,6 +77,230 @@ def add_yuko(fight_id):
             'message': f'Ошибка: {str(e)}'
         }), 500
 
+@scores_bp.route('/fight/<int:fight_id>/events/batch', methods=['POST'])
+@swag_from({
+    'tags': ['Scores'],
+    'summary': 'Сохранить события боя пачкой',
+    'description': 'Сохраняет все события боя одним запросом',
+    'parameters': [
+        {
+            'name': 'fight_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID схватки'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'required': ['events'],
+                'properties': {
+                    'events': {
+                        'type': 'array',
+                        'description': 'Список событий боя',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'type': {
+                                    'type': 'string',
+                                    'enum': ['SCORE', 'PENALTY', 'OSAEKOMI', 'TIMER', 'OTHER']
+                                },
+                                'subtype': {'type': 'string'},
+                                'athlete_color': {
+                                    'type': 'string',
+                                    'enum': ['WHITE', 'BLUE', 'BOTH']
+                                },
+                                'timestamp': {'type': 'string'},
+                                'match_time': {'type': 'string'},
+                                'description': {'type': 'string'},
+                                'details': {'type': 'object'}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'События сохранены',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'total_events': {'type': 'integer'}
+                }
+            }
+        },
+        400: {
+            'description': 'Ошибка валидации'
+        },
+        404: {
+            'description': 'Схватка не найдена'
+        },
+        500: {
+            'description': 'Ошибка сервера'
+        }
+    }
+})
+def save_events_batch(fight_id):
+    """Сохранить события боя пачкой"""
+    try:
+        data = request.get_json()
+
+        if not data or 'events' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'Отсутствует список событий'
+            }), 400
+
+        score_manager = ScoreManager(fight_id)
+        result = score_manager.save_fight_events(data['events'])
+
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка: {str(e)}'
+        }), 500
+
+
+@scores_bp.route('/fight/<int:fight_id>/timeline', methods=['GET'])
+@swag_from({
+    'tags': ['Scores'],
+    'summary': 'Получить хронологию боя',
+    'description': 'Возвращает всю хронологию событий в бою',
+    'parameters': [
+        {
+            'name': 'fight_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID схватки'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Хронология боя',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'fight_id': {'type': 'integer'},
+                    'events': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'id': {'type': 'integer'},
+                                'type': {'type': 'string'},
+                                'subtype': {'type': 'string'},
+                                'athlete_color': {'type': 'string'},
+                                'timestamp': {'type': 'string'},
+                                'match_time': {'type': 'string'},
+                                'description': {'type': 'string'},
+                                'details': {'type': 'object'}
+                            }
+                        }
+                    },
+                    'summary': {'type': 'object'}
+                }
+            }
+        },
+        404: {
+            'description': 'Схватка не найдена'
+        }
+    }
+})
+def get_fight_timeline(fight_id):
+    """Получить хронологию боя"""
+    try:
+        score_manager = ScoreManager(fight_id)
+        result = score_manager.get_fight_timeline()
+
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка: {str(e)}'
+        }), 500
+
+
+@scores_bp.route('/fight/<int:fight_id>/summary', methods=['GET'])
+@swag_from({
+    'tags': ['Scores'],
+    'summary': 'Получить сводку матча',
+    'description': 'Возвращает сводку матча с группировкой по спортсменам',
+    'parameters': [
+        {
+            'name': 'fight_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID схватки'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Сводка матча',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'fight_id': {'type': 'integer'},
+                    'summary': {
+                        'type': 'object',
+                        'properties': {
+                            'white': {'type': 'object'},
+                            'blue': {'type': 'object'},
+                            'match_events': {'type': 'array'},
+                            'timeline': {'type': 'array'}
+                        }
+                    },
+                    'victory_type': {'type': 'string'},
+                    'winner_id': {'type': 'integer'}
+                }
+            }
+        },
+        404: {
+            'description': 'Схватка не найдена'
+        }
+    }
+})
+def get_match_summary(fight_id):
+    """Получить сводку матча"""
+    try:
+        score_manager = ScoreManager(fight_id)
+        result = score_manager.get_match_summary()
+
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка: {str(e)}'
+        }), 500
 
 @scores_bp.route('/fight/<int:fight_id>/wazaari', methods=['POST'])
 @swag_from({

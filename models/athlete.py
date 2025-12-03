@@ -37,14 +37,14 @@ class Athlete(db.Model):
                                      back_populates='blue_athlete')
 
     def __repr__(self):
-        return f'<Athlete {self.user.first_name} {self.user.last_name}>'
+        return f'<Athlete {self.first_name} {self.last_name}>'
 
     @property
     def full_name(self):
         """Полное имя участника"""
-        if self.user.middle_name:
-            return f"{self.user.last_name} {self.user.first_name} {self.user.middle_name}"
-        return f"{self.user.last_name} {self.user.first_name}"
+        if self.middle_name:
+            return f"{self.last_name} {self.first_name} {self.middle_name}"
+        return f"{self.last_name} {self.first_name}"
 
     @property
     def age(self):
