@@ -1,6 +1,7 @@
 from datetime import datetime
 from databse.db import db
 
+
 class Fight(db.Model):
     """
     Модель схватки
@@ -25,15 +26,18 @@ class Fight(db.Model):
     fight_number = db.Column(db.Integer)  # Номер схватки
     scheduled_time = db.Column(db.DateTime)
 
+    # Время боя (только для отображения, управляется на клиенте)
+    fight_minutes = db.Column(db.Integer, default=4)  # Длительность боя в минутах (4, 3, 2)
+    golden_score_minutes = db.Column(db.Integer, default=3)  # Длительность золотого скора
+
     # Статус схватки
-    status = db.Column(db.String(20), default='SCHEDULED')  # SCHEDULED, LIVE, COMPLETED, CANCELLED
+    status = db.Column(db.String(20), default='SCHEDULED')  # SCHEDULED, LIVE, COMPLETED, CANCELLED, REPLAY
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
 
-    # Таймер
+    # Таймер (только для хранения состояния, управляется на клиенте)
     timer_seconds = db.Column(db.Integer, default=0)
     is_golden_score = db.Column(db.Boolean, default=False)
-    timer_paused = db.Column(db.Boolean, default=True)
 
     # Судьи
     main_referee = db.Column(db.String(100))
@@ -44,7 +48,7 @@ class Fight(db.Model):
     tournament = db.relationship('Tournament', back_populates='fights')
     bracket = db.relationship('Bracket', back_populates='fights')
     category = db.relationship('Category', back_populates='fights')
-    result = db.relationship('Result', back_populates='fight')
+    result = db.relationship('Result', back_populates='fight', uselist=False, cascade='all, delete-orphan')
 
     white_athlete = db.relationship('Athlete',
                                     foreign_keys=[white_athlete_id],
@@ -58,19 +62,30 @@ class Fight(db.Model):
 
     @property
     def duration(self):
-        """Длительность схватки"""
+        """Длительность схватки в секундах (только для завершенных)"""
         if self.start_time and self.end_time:
-            return (self.end_time - self.start_time).total_seconds()
+            return int((self.end_time - self.start_time).total_seconds())
         return 0
 
     @property
     def is_ready_to_start(self):
         """Готова ли схватка к началу"""
-        return (self.white_athlete_id is not None and 
-                self.blue_athlete_id is not None and 
+        return (self.white_athlete_id is not None and
+                self.blue_athlete_id is not None and
                 self.status == 'SCHEDULED')
 
     @property
+    def has_active_osaekomi(self):
+        """Есть ли активное осаекоми"""
+        return self.result and self.result.osaekomi_start_time is not None
+
+    @property
+    def osaekomi_time(self):
+        """Время текущего осаекоми"""
+        if self.has_active_osaekomi:
+            return self.result.osaekomi_time
+        return 0
+
     def next_fight(self):
         """Следующая схватка в сетке"""
         if self.bracket_id:
@@ -86,24 +101,11 @@ class Fight(db.Model):
         if self.status == 'SCHEDULED':
             self.status = 'LIVE'
             self.start_time = datetime.utcnow()
-            self.timer_seconds = self.tournament.fight_duration
-            self.timer_paused = False
-            self.save()
-            return True
-        return False
 
-    def pause_fight(self):
-        """Приостановить схватку"""
-        if self.status == 'LIVE':
-            self.timer_paused = True
-            self.save()
-            return True
-        return False
+            # Инициализируем таймер с начальным значением
+            self.timer_seconds = self.fight_minutes * 60
+            self.is_golden_score = False
 
-    def resume_fight(self):
-        """Возобновить схватку"""
-        if self.status == 'LIVE' and self.timer_paused:
-            self.timer_paused = False
             self.save()
             return True
         return False
@@ -112,13 +114,12 @@ class Fight(db.Model):
         """Перейти в золотой скор"""
         if self.status == 'LIVE' and self.timer_seconds <= 0:
             self.is_golden_score = True
-            self.timer_seconds = self.tournament.golden_score_duration
-            self.timer_paused = False
+            self.timer_seconds = self.golden_score_minutes * 60
             self.save()
             return True
         return False
 
-    def complete_fight(self, winner_id, victory_type, details=None):
+    def complete_fight(self, winner_id=None, victory_type=None, details=None):
         """Завершить схватку"""
         if self.status == 'LIVE':
             from models.result import Result
@@ -126,30 +127,62 @@ class Fight(db.Model):
             self.status = 'COMPLETED'
             self.end_time = datetime.utcnow()
 
-            # Создаем результат
-            result = Result(
-                fight_id=self.id,
-                winner_id=winner_id,
-                victory_type=victory_type,
-                details=details,
-                fight_duration=self.duration
-            )
+            # Если результат уже есть (например, при иппоне), обновляем его
+            if self.result:
+                self.result.fight_duration = self.duration
+                if winner_id:
+                    self.result.winner_id = winner_id
+                if victory_type:
+                    self.result.victory_type = victory_type
+                if details:
+                    self.result.details = details
+            else:
+                # Создаем новый результат
+                result = Result(
+                    fight_id=self.id,
+                    winner_id=winner_id,
+                    victory_type=victory_type,
+                    details=details,
+                    fight_duration=self.duration
+                )
+                db.session.add(result)
 
-            db.session.add(result)
+            self.save()
+            return True
+        return False
+
+    def reset_fight(self, reason=None):
+        """Сбросить схватку для переигровки"""
+        if self.status in ['COMPLETED', 'LIVE']:
+            # Удаляем результат, если есть
+            if self.result:
+                db.session.delete(self.result)
+
+            # Сбрасываем статус
+            self.status = 'REPLAY'
+            self.start_time = None
+            self.end_time = None
+            self.timer_seconds = self.fight_minutes * 60
+            self.is_golden_score = False
+
             self.save()
             return True
         return False
 
     def get_winner(self):
         """Получить победителя"""
-        if self.result:
-            return self.result.winner
+        if self.result and self.result.winner_id:
+            if self.result.winner_id == self.white_athlete_id:
+                return self.white_athlete
+            elif self.result.winner_id == self.blue_athlete_id:
+                return self.blue_athlete
         return None
 
     def get_loser(self):
         """Получить проигравшего"""
-        if self.result:
-            if self.result.winner_id == self.white_athlete_id:
+        winner = self.get_winner()
+        if winner:
+            if winner.id == self.white_athlete_id:
                 return self.blue_athlete
             else:
                 return self.white_athlete
@@ -157,18 +190,66 @@ class Fight(db.Model):
 
     def to_dict(self):
         """Преобразовать в словарь для API"""
-        data = super().to_dict()
-        data['white_athlete'] = self.white_athlete.full_name if self.white_athlete else None
-        data['blue_athlete'] = self.blue_athlete.full_name if self.blue_athlete else None
-        data['result'] = self.result.to_dict() if self.result else None
+        data = {
+            'id': self.id,
+            'tournament_id': self.tournament_id,
+            'bracket_id': self.bracket_id,
+            'category_id': self.category_id,
+            'white_athlete_id': self.white_athlete_id,
+            'blue_athlete_id': self.blue_athlete_id,
+            'tatami': self.tatami,
+            'round_number': self.round_number,
+            'fight_number': self.fight_number,
+            'scheduled_time': self.scheduled_time.isoformat() if self.scheduled_time else None,
+            'fight_minutes': self.fight_minutes,
+            'golden_score_minutes': self.golden_score_minutes,
+            'status': self.status,
+            'start_time': self.start_time.isoformat() if self.start_time else None,
+            'end_time': self.end_time.isoformat() if self.end_time else None,
+            'timer_seconds': self.timer_seconds,
+            'is_golden_score': self.is_golden_score,
+            'main_referee': self.main_referee,
+            'judge1': self.judge1,
+            'judge2': self.judge2,
+            'duration': self.duration,
+            'is_ready_to_start': self.is_ready_to_start,
+            'has_active_osaekomi': self.has_active_osaekomi,
+            'osaekomi_time': self.osaekomi_time,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+        if self.white_athlete:
+            data['white_athlete'] = {
+                'id': self.white_athlete.id,
+                'full_name': self.white_athlete.full_name,
+                'club_name': self.white_athlete.club.name if self.white_athlete.club else None
+            }
+
+        if self.blue_athlete:
+            data['blue_athlete'] = {
+                'id': self.blue_athlete.id,
+                'full_name': self.blue_athlete.full_name,
+                'club_name': self.blue_athlete.club.name if self.blue_athlete.club else None
+            }
+
+        if self.result:
+            data['result'] = self.result.to_dict()
+
         return data
 
-    def save_to_db(self):
+    def save(self):
+        """Сохранить изменения"""
         try:
+            self.updated_at = datetime.utcnow()
             db.session.add(self)
             db.session.commit()
             return True
         except Exception as e:
             db.session.rollback()
-            print(e)
+            print(f"Error saving fight: {e}")
             return False
+
+    def save_to_db(self):
+        """Алиас для совместимости"""
+        return self.save()

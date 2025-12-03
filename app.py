@@ -65,6 +65,8 @@ from api.weighing import weighing_bp
 from api.categories import categories_bp
 from api.registrations import registrations_bp
 from api.users import users_bp
+from api.dan import dans_bp
+from api.scores import scores_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(tournaments_bp)
 app.register_blueprint(athletes_bp)
@@ -76,6 +78,8 @@ app.register_blueprint(weighing_bp)
 app.register_blueprint(categories_bp)
 app.register_blueprint(registrations_bp)
 app.register_blueprint(users_bp)
+app.register_blueprint(dans_bp)
+app.register_blueprint(scores_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

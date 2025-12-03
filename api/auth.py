@@ -11,10 +11,10 @@ from utils.security import hash_password
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')  # исправил имя с 'clubs' на 'auth'
 
 
-@auth_bp.route('/login', methods=['POST'])
+@auth_bp.route('/public/registrations/', methods=['POST'])
 @swag_from({
-    "summary": "Аутентификация пользователя",
-    "description": "Возвращает JWT-токен и информацию о пользователе при успешном логине",
+    "summary": "Публичная регистрация пользователя",
+    "description": "Регистрация нового пользователя. Возвращает JWT-токен при успешной регистрации.",
     "tags": ["Аутентификация"],
     "requestBody": {
         "required": True,
@@ -23,143 +23,188 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')  # исправил и
                 "schema": {
                     "type": "object",
                     "properties": {
-                        "username": {"type": "string", "example": "admin"},
-                        "password": {"type": "string", "example": "secret123"}
+                        "username": {
+                            "type": "string",
+                            "example": "ivanov_ivan",
+                            "description": "Уникальный логин пользователя"
+                        },
+                        "password": {
+                            "type": "string",
+                            "format": "password",
+                            "example": "MyPass123!",
+                            "description": "Пароль"
+                        },
+                        "first_name": {
+                            "type": "string",
+                            "example": "Иван",
+                            "description": "Имя"
+                        },
+                        "last_name": {
+                            "type": "string",
+                            "example": "Иванов",
+                            "description": "Фамилия"
+                        },
+                        "email": {
+                            "type": "string",
+                            "format": "email",
+                            "example": "ivanov@example.com",
+                            "description": "Электронная почта"
+                        },
+                        "phone": {
+                            "type": "string",
+                            "example": "+79991234567",
+                            "description": "Номер телефона"
+                        },
+                        "role": {
+                            "type": "string",
+                            "enum": ["ATHLETE", "REFEREE", "VIEWER"],
+                            "example": "ATHLETE",
+                            "description": "Роль пользователя"
+                        }
                     },
-                    "required": ["username", "password"]
+                    "required": ["username", "password", "first_name", "last_name", "email", "phone", "role"]
+                },
+                "example": {
+                    "username": "ivanov_ivan",
+                    "password": "MyPass123!",
+                    "first_name": "Иван",
+                    "last_name": "Иванов",
+                    "email": "ivanov@example.com",
+                    "phone": "+79991234567",
+                    "role": "ATHLETE"
                 }
             }
         }
     },
     "responses": {
-        "200": {
-            "description": "Успешный вход",
+        "201": {
+            "description": "Пользователь успешно зарегистрирован",
             "content": {
                 "application/json": {
                     "schema": {
                         "type": "object",
                         "properties": {
                             "success": {"type": "boolean", "example": True},
-                            "token": {"type": "string"},
-                            "user": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {"type": "integer"},
-                                    "username": {"type": "string"},
-                                    "name": {"type": "string"},
-                                    "role": {"type": "string"},
-                                    "referee_level": {"type": "string", "nullable": True},
-                                    "tatami_assigned": {"type": "integer", "nullable": True}
-                                }
-                            }
+                            "message": {"type": "string", "example": "Регистрация успешно создана"},
+                            "token": {"type": "string", "description": "JWT токен для аутентификации"},
+                            "role": {"type": "string", "example": "ATHLETE"}
                         }
                     },
                     "example": {
                         "success": True,
+                        "message": "Регистрация успешно создана",
                         "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxx",
-                        "user": {
-                            "id": 1,
-                            "username": "admin",
-                            "name": "Администратор",
-                            "role": "admin",
-                            "referee_level": None,
-                            "tatami_assigned": None
-                        }
+                        "role": "ATHLETE"
                     }
                 }
             }
         },
-        "401": {
-            "description": "Неверные учетные данные",
+        "400": {
+            "description": "Ошибка валидации",
             "content": {
                 "application/json": {
-                    "example": {"success": False, "message": "Неверные учетные данные"}
+                    "examples": {
+                        "missing_field": {
+                            "value": {
+                                "success": False,
+                                "message": "Поле username обязательно"
+                            }
+                        },
+                        "user_exists": {
+                            "value": {
+                                "success": False,
+                                "message": "Пользователь с таким логином уже существует"
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 })
-def login():
-    """Аутентификация пользователя"""
-    data = request.get_json(silent=True) or {}
-    username = data.get('username')
-    password = data.get('password')
-
-    if not username or not password:
-        return jsonify({'success': False, 'message': 'Логин и пароль обязательны'}), 400
-
-    user = User.query.filter_by(username=username, is_active=True).first()
-
-    auth_repo = AuthRepository()
-    user_role = auth_repo.get_role_by_user(user.id) if user else None
-
-    if user_role is None:
-        return jsonify({'success': False, 'message': 'Роль пользователя не найдена'}), 401
-
-    if user and user.check_password(password):
-        payload = {
-            'role': user_role.name,
-            'exp': datetime.now(timezone.utc) + timedelta(hours=24)
-        }
-
-        token = create_access_token(
-            identity=user.id,
-            additional_claims=payload,
-            expires_delta=timedelta(hours=24),
-        )
-
-        return jsonify({
-            'success': True,
-            'token': token,
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'name': user.first_name + ' '+ user.middle_name + ' ' + user.last_name,
-                'role': user_role.name
-            }
-        }), 200
-    else:
-        return jsonify({'success': False, 'message': 'Неверные учетные данные'}), 401
-
-@auth_bp.route('/public/registrations/', methods=['POST'])
 def public_registration():
     """Публичная регистрация участника"""
     data = request.get_json(silent=True) or {}
 
-    required_fields = ['login', 'fullname', 'email', 'phone', 'password','role']
+    required_fields = ['username', 'password', 'first_name', 'last_name', 'email', 'phone', 'role']
+
+    # Проверяем обязательные поля
     for field in required_fields:
         if field not in data:
-            return jsonify({'success': False, 'message': f'Поле {field} обязательно'}), 400
+            return jsonify({
+                'success': False,
+                'message': f'Поле {field} обязательно'
+            }), 400
 
-    existing_user = User.query.filter_by(username=data['login']).first()
-
+    # Проверяем существование пользователя
+    existing_user = User.query.filter_by(username=data['username']).first()
     if existing_user:
-        return jsonify({'success': False, 'message': 'Пользователь с таким логином уже существует'}), 400
+        return jsonify({
+            'success': False,
+            'message': 'Пользователь с таким логином уже существует'
+        }), 400
 
-    names = data['fullname'].strip().split(' ')
-
+    # Создаем пользователя с полями из модели User
     new_user = User(
-        username=data['login'],
-        password_hash = hash_password(data['password']),
-        first_name=names[0],
-        middle_name=names[1] if len(names) > 1 else '',
-        last_name=names[2] if len(names) > 1 else '',
+        username=data['username'],
+        password_hash=hash_password(data['password']),
+        first_name=data['first_name'],
+        last_name=data['last_name'],
         email=data['email'],
         phone=data['phone'],
         is_active=True,
     )
 
-    auth_repo = AuthRepository()
-    user_id = auth_repo.create_user(new_user)
-    role_id = auth_repo.get_role_id(data['role'])
-    is_added = auth_repo.set_user_role(user_id, role_id)
-    print(f'User_role is added : {is_added}')
-    user_role = auth_repo.get_role_by_user(user_id)
+    try:
+        auth_repo = AuthRepository()
+        user_id = auth_repo.create_user(new_user)
 
-    token = create_access_token(identity=user_id, additional_claims={'role': user_role.name})
+        if not user_id:
+            return jsonify({
+                'success': False,
+                'message': 'Не удалось создать пользователя'
+            }), 500
 
-    return jsonify({'success': True,
-                    'message': 'Регистрация успешно создана',
-                    'token': token,
-                    'role': data['role'],
-                    }), 201
+        role_id = auth_repo.get_role_id(data['role'])
+
+        if not role_id:
+            return jsonify({
+                'success': False,
+                'message': f'Роль "{data["role"]}" не найдена'
+            }), 400
+
+        is_added = auth_repo.set_user_role(user_id, role_id)
+
+        if not is_added:
+            return jsonify({
+                'success': False,
+                'message': 'Не удалось установить роль пользователя'
+            }), 500
+
+        user_role = auth_repo.get_role_by_user(user_id)
+
+        if not user_role:
+            return jsonify({
+                'success': False,
+                'message': 'Не удалось получить роль пользователя'
+            }), 500
+
+        token = create_access_token(
+            identity=user_id,
+            additional_claims={'role': user_role.name}
+        )
+
+        return jsonify({
+            'success': True,
+            'message': 'Регистрация успешно создана',
+            'token': token,
+            'role': data['role'],
+            'user_id': user_id
+        }), 201
+
+    except Exception as e:
+        print(f"Ошибка при регистрации: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Внутренняя ошибка сервера при регистрации'
+        }), 500

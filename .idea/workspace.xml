@@ -5,14 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6559d010-01ce-415d-82f4-c262001ad7cb" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/athletes.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/athletes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/auth.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/fights.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/fights.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/results.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/results.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/users.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/athlete.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/athlete.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/fight.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/fight.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/result.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/result.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/fight_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/fight_manager.py" afterDir="false" />
     </list>
@@ -49,6 +47,9 @@
   <component name="HttpClientOnboardingState">{
   &quot;isOnboardingCommentShown&quot;: true
 }</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
 }</component>
@@ -96,6 +97,27 @@
     </key>
   </component>
   <component name="RunManager" selected="Flask server.Flask (app.py)">
+    <configuration default="true" type="DjangoTestsConfigurationType">
+      <module name="BackEnd" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="TARGET" value="" />
+      <option name="SETTINGS_FILE" value="" />
+      <option name="CUSTOM_SETTINGS" value="false" />
+      <option name="USE_OPTIONS" value="false" />
+      <option name="OPTIONS" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="generated-requests | #1" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" executionIdentifier="#1" runType="Run single request">
       <method v="2" />
     </configuration>
@@ -291,7 +313,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/api/auth.py</url>
-          <line>153</line>
+          <line>176</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -301,7 +323,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/api/auth.py</url>
-          <line>90</line>
+          <line>124</line>
           <option name="timeStamp" value="6" />
         </line-breakpoint>
       </breakpoints>

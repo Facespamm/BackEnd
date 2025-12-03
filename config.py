@@ -6,8 +6,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY') or 'judo-tournament-secret-key-2024'
 PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 UPLOAD_FOLDER = 'static/uploads'
-DEFAULT_FIGHT_DURATION = 300
-GOLDEN_SCORE_DURATION = 180
+DEFAULT_FIGHT_DURATION = 240  # 4 минуты в секундах
+GOLDEN_SCORE_DURATION = 180   # 3 минуты в секундах
+
+# Опции времени боя (в минутах)
+FIGHT_TIME_OPTIONS = [2, 3, 4]
 
 AGE_CATEGORIES = {
     'U10': (8, 10),
@@ -40,20 +43,101 @@ WEIGHT_CATEGORIES = {
     }
 }
 
+# Типы оценок (по правилам дзюдо IJF)
+SCORE_TYPES = {
+    'IPPON': 'Иппон',
+    'WAZAARI': 'Ваза-ари',
+    'YUKO': 'Юко',
+    'WAZAARI_AWASETE_IPPON': 'Два ваза-ари = иппон'
+}
+
+# Баллы за каждую оценку
+SCORE_VALUES = {
+    'YUKO': 1,
+    'WAZAARI': 2,
+    'IPPON': 10
+}
+
+# Время осаекоми для оценок (в секундах)
+OSAEKOMI_TIMES = {
+    'WAZAARI': 10,    # 10-19 секунд = ваза-ари
+    'IPPON': 20       # 20+ секунд = иппон
+}
+
 VICTORY_TYPES = {
     'IPPON': 'Иппон',
     'WAZAARI': 'Ваза-ари',
-    'WAZAARI_AWASETE_IPPON': 'Ваза-ари авасетэ иппон',
+    'WAZAARI_AWASETE_IPPON': 'Два ваза-ари = иппон',
+    'YUKO': 'Победа по юко',
     'SHIDO': 'Победа по штрафам',
-    'HANSOKU_MAKE': 'Хансоку-маке',
+    'HANSOKU_MAKE': 'Хансоку-маке (дисквалификация)',
+    'DECISION': 'Решение судей',
+    'FORFEIT': 'Неявка',
+    'DISQUALIFICATION': 'Дисквалификация',
     'FUSEN_GACHI': 'Фусэн-гати (неявка)',
     'KIKEN_GACHI': 'Кикэн-гати (отказ)'
 }
 
-USER_ROLES: dict[str, str] = {
+# Типы штрафов
+PENALTY_TYPES = {
+    'SHIDO': 'Шидо (легкое нарушение)',
+    'HANSOKU_MAKE': 'Хансоку-маке (дисквалификация)'
+}
+
+# Максимальное количество штрафов перед дисквалификацией
+MAX_PENALTIES = {
+    'SHIDO': 3,  # 3 шидо = дисквалификация
+    'HANSOKU_MAKE': 1  # 1 хансоку-маке = дисквалификация
+}
+
+USER_ROLES = {
     'ADMIN': 'Администратор',
     'REFEREE': 'Судья',
     'SCOREBOARD': 'Табло',
     'VIEWER': 'Зритель',
     'ATHLETE': 'Участник'
+}
+
+# Техники для журналирования
+TECHNIQUES = {
+    'THROW': {
+        'SEOI_NAGE': 'Сэой-нагэ',
+        'O_UCHI_GARI': 'О-учи-гари',
+        'KO_UCHI_GARI': 'Ко-учи-гари',
+        'UCHI_MATA': 'Учи-мата',
+        'HARAI_GOSHI': 'Харай-госи',
+        'SASAE_TSUKIKOMI_ASHI': 'Сасаэ-цукикоми-аси',
+        'TAI_OTOSHI': 'Тай-отоси',
+        'IPPON_SEOI_NAGE': 'Иппон-сэой-нагэ'
+    },
+    'OSAEKOMI': {
+        'KESA_GATAME': 'Кэса-гатамэ',
+        'KAMI_SHIHO_GATAME': 'Ками-сихо-гатамэ',
+        'YOKO_SHIHO_GATAME': 'Ёко-сихо-гатамэ',
+        'TATE_SHIHO_GATAME': 'Татэ-сихо-гатамэ'
+    },
+    'SHIME_WAZA': {
+        'HADAKA_JIME': 'Хадака-дзимэ',
+        'KATA_JUJI_JIME': 'Ката-дзюдзи-дзимэ'
+    },
+    'KANSETSU_WAZA': {
+        'UDE_GARAMI': 'Удэ-гарами',
+        'JUJI_GATAME': 'Дзюдзи-гатамэ'
+    }
+}
+
+# Статусы схватки
+FIGHT_STATUSES = {
+    'SCHEDULED': 'Запланирована',
+    'LIVE': 'В процессе',
+    'PAUSED': 'Приостановлена',
+    'COMPLETED': 'Завершена',
+    'CANCELLED': 'Отменена',
+    'REPLAY': 'Переигровка'
+}
+
+# Цвета спортсменов
+ATHLETE_COLORS = {
+    'WHITE': 'Белый',
+    'BLUE': 'Синий'
 }

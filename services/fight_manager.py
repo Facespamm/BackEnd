@@ -33,8 +33,8 @@ class FightManager:
                 print(f"Невозможно начать схватку со статусом: {self.fight.status}")
                 return False
 
-            # Используем IN_PROGRESS вместо LIVE для соответствия API
-            self.fight.status = 'IN_PROGRESS'
+            # Используем LIVE вместо LIVE для соответствия API
+            self.fight.status = 'LIVE'
             self.fight.start_time = datetime.utcnow()
 
             # Устанавливаем время боя из настроек турнира
@@ -63,7 +63,7 @@ class FightManager:
     def finish_fight(self):
         """Завершить схватку (без определения победителя)"""
         try:
-            if not self.fight or self.fight.status != 'IN_PROGRESS':
+            if not self.fight or self.fight.status != 'LIVE':
                 print(f"Невозможно завершить схватку со статусом: {self.fight.status if self.fight else 'None'}")
                 return False
 
@@ -85,7 +85,7 @@ class FightManager:
     def update_timer(self, seconds):
         """Обновить таймер"""
         try:
-            if not self.fight or self.fight.status != 'IN_PROGRESS':
+            if not self.fight or self.fight.status != 'LIVE':
                 return False
 
             self.fight.timer_seconds = seconds
@@ -101,7 +101,7 @@ class FightManager:
     def add_score(self, athlete_color, score_type):
         """Добавить оценку участнику"""
         try:
-            if not self.fight or self.fight.status != 'IN_PROGRESS':
+            if not self.fight or self.fight.status != 'LIVE':
                 return False
 
             # Создаем или получаем результат
@@ -159,7 +159,7 @@ class FightManager:
     def complete_fight(self, winner_id, victory_type, details=None):
         """Завершить схватку с определением победителя"""
         try:
-            if not self.fight or self.fight.status != 'IN_PROGRESS':
+            if not self.fight or self.fight.status != 'LIVE':
                 return False
 
             # Создаем результат если его нет
@@ -201,7 +201,7 @@ class FightManager:
     def cancel_fight(self, reason):
         """Отменить схватку"""
         try:
-            if not self.fight or self.fight.status not in ['SCHEDULED', 'IN_PROGRESS']:
+            if not self.fight or self.fight.status not in ['SCHEDULED', 'LIVE']:
                 return False
 
             self.fight.status = 'CANCELLED'
@@ -272,7 +272,7 @@ class FightManager:
     @classmethod
     def get_live_fights(cls, tournament_id=None, tatami=None):
         """Получить активные схватки"""
-        query = Fight.query.filter_by(status='IN_PROGRESS')
+        query = Fight.query.filter_by(status='LIVE')
 
         if tournament_id:
             query = query.filter_by(tournament_id=tournament_id)
@@ -282,6 +282,59 @@ class FightManager:
 
         return query.all()
 
+    # В fight_manager.py добавляем два новых метода в класс FightManager:
+
+
+    def reset_fight(self):
+        """Полный сброс схватки для переигровки - САМЫЙ ПРОСТОЙ ВАРИАНТ"""
+        try:
+            if not self.fight:
+                return {'success': False, 'error': 'Схватка не найдена'}
+
+            fight_id = self.fight.id
+
+            # НЕ удаляем результат, а очищаем его
+            if self.fight.result:
+                result = self.fight.result
+                # Очищаем все поля результата
+                result.winner_id = None
+                result.victory_type = None
+                result.details = None
+                result.white_score = 0
+                result.blue_score = 0
+                result.white_penalties = None
+                result.blue_penalties = None
+                result.fight_duration = None
+                result.golden_score_time = None
+                result.technique_used = None
+                result.is_ippon = False
+                result.is_wazaari = False
+                # Добавляем если есть юко
+                if hasattr(result, 'white_yuko'):
+                    result.white_yuko = 0
+                    result.blue_yuko = 0
+
+            # Сбрасываем статус схватки
+            self.fight.status = 'SCHEDULED'
+            self.fight.start_time = None
+            self.fight.end_time = None
+            self.fight.timer_seconds = self.fight.tournament.fight_duration if self.fight.tournament else 300
+            self.fight.is_golden_score = False
+            self.fight.timer_paused = True
+
+            db.session.commit()
+
+            return {
+                'success': True,
+                'message': 'Схватка сброшена для переигровки',
+                'fight_id': fight_id,
+                'new_status': 'SCHEDULED'
+            }
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Ошибка в reset_fight: {str(e)}")
+            return {'success': False, 'error': f"Ошибка сброса: {str(e)}"}
     @classmethod
     def get_scheduled_fights(cls, tournament_id=None, tatami=None):
         """Получить запланированные схватки"""

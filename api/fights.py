@@ -29,7 +29,7 @@ fights_bp = Blueprint('fights', __name__, url_prefix='/fights')
             'type': 'string',
             'required': False,
             'description': 'Статус схватки',
-            'enum': ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
+            'enum': ['SCHEDULED', 'LIVE', 'COMPLETED', 'CANCELLED']
         },
         {
             'name': 'tatami',
@@ -479,7 +479,6 @@ def start_fight(fight_id):
         }), 500
 
 
-
 @fights_bp.route('/<int:fight_id>/finish', methods=['POST'])
 @swag_from({
     'tags': ['Fights'],
@@ -533,4 +532,89 @@ def finish_fight(fight_id):
         return jsonify({
             'success': False,
             'message': f'Ошибка при завершении схватки: {str(e)}'
+        }), 500
+
+
+@fights_bp.route('/<int:fight_id>/reset', methods=['POST'])
+@swag_from({
+    'tags': ['Fights'],
+    'summary': 'Сбросить схватку для переигровки',
+    'description': 'Полный сброс схватки со всеми оценками и результатами',
+    'parameters': [
+        {
+            'name': 'fight_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID схватки'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': False,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'reason': {
+                        'type': 'string',
+                        'description': 'Причина переигровки'
+                    },
+                    'reset_bracket': {
+                        'type': 'boolean',
+                        'description': 'Сбросить зависимые схватки в сетке',
+                        'default': True
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Схватка сброшена',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'fight_id': {'type': 'integer'},
+                    'new_status': {'type': 'string'}
+                }
+            }
+        },
+        400: {
+            'description': 'Не удалось сбросить схватку'
+        },
+        404: {
+            'description': 'Схватка не найдена'
+        },
+        500: {
+            'description': 'Ошибка сервера'
+        }
+    }
+})
+def reset_fight(fight_id):
+    """Сбросить схватку для переигровки"""
+    try:
+        data = request.get_json() or {}
+
+        fight_manager = FightManager(fight_id)
+        result = fight_manager.reset_fight()
+
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': result['message'],
+                'fight_id': result['fight_id'],
+                'new_status': result['new_status']
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': result['error']
+            }), 400
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при сбросе схватки: {str(e)}'
         }), 500
