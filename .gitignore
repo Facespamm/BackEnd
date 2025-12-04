@@ -182,3 +182,4 @@ cython_debug/
 .cursorindexingignore
 .idea/workspace.xml
 .idea/workspace.xml
+/.idea
