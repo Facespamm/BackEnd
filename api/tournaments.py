@@ -1,7 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from datetime import datetime
+
+from flask_jwt_extended import jwt_required
+
 from models.tournament import Tournament
+from repository.tournament_repo import TournamentRepository
 
 tournaments_bp = Blueprint('tournaments', __name__, url_prefix='/tournaments')
 
@@ -477,4 +481,68 @@ def get_tournament_categories(tournament_id):
         return jsonify({
             'success': False,
             'message': f'Ошибка при получении категорий: {str(e)}'
+        }), 500
+
+@tournaments_bp.route('/<int:tournament_id>/add-club',  methods=['POST'])
+def add_club_to_tournament(tournament_id):
+    """Добавить клуб к турниру"""
+    club_id =request.args.get('club_id')
+
+    if not club_id:
+        return jsonify({
+            'success': False,
+            'message': 'Не передан клуб'
+        }), 400
+
+    if not tournament_id:
+        return jsonify({
+            'success': False,
+
+            'message': 'Не передан турнир'
+        }), 400
+
+    tournament= TournamentRepository()
+    try:
+        tournament.add_club_to_tournament(tournament_id, club_id)
+        return jsonify({
+            'success': True,
+            'message': f'Клуб {club_id} добавлен к турниру {tournament_id}'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при добавлении клуба к турниру: {str(e)}'
+        }), 500
+
+
+@tournaments_bp.route('/<int:tournament_id>/add-athletes', methods=['POST'])
+def add_athletes_to_tournament(tournament_id):
+    """Добавить участников к турниру"""
+    athlete_ids = request.get_json().get('athlete_ids')
+
+    if not athlete_ids or not isinstance(athlete_ids, list):
+        return jsonify({
+            'success': False,
+            'message': 'Не переданы участники или неверный формат'
+        }), 400
+
+    if not tournament_id:
+        return jsonify({
+            'success': False,
+            'message': 'Не передан турнир'
+        }), 400
+
+    tournament = TournamentRepository()
+    try:
+        for athlete_id in athlete_ids:
+            tournament.add_athlete_to_tournament(tournament_id, athlete_id)
+
+        return jsonify({
+            'success': True,
+            'message': f'Участники добавлены к турниру {tournament_id}'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при добавлении участников к турниру: {str(e)}'
         }), 500
