@@ -5,14 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6559d010-01ce-415d-82f4-c262001ad7cb" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/auth.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/scores.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/scores.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/users.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/weighing.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/weighing.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/athlete.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/athlete.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/fight.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/fight.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/result.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/result.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/score_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/score_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/weighing_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/weighing_service.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -313,7 +311,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/api/auth.py</url>
-          <line>176</line>
+          <line>157</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">

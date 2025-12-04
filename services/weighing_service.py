@@ -13,7 +13,33 @@ class WeighingService:
     def __init__(self, tournament_id):
         self.tournament_id = tournament_id
 
-    def register_weighing(self, athlete_id, weight, notes=None):
+    def toggle_validation_status(self, weighing_id):
+        """Изменить статус валидации взвешивания (валидно/невалидно)"""
+        weighing = Weighing.query.get(weighing_id)
+        if not weighing:
+            return {
+                'success': False,
+                'message': 'Взвешивание не найдено'
+            }
+
+        # Меняем статус на противоположный
+        weighing.is_valid = not weighing.is_valid
+
+        try:
+            db.session.commit()
+            return {
+                'success': True,
+                'message': f'Статус валидации изменен на {"валидно" if weighing.is_valid else "невалидно"}',
+                'is_valid': weighing.is_valid
+            }
+        except Exception as e:
+            db.session.rollback()
+            return {
+                'success': False,
+                'message': f'Ошибка при изменении статуса: {str(e)}'
+            }
+
+    def register_weighing(self, athlete_id, weight, weight_category=None, notes=None):
         """Зарегистрировать взвешивание"""
         # Проверяем существующее взвешивание
         existing = Weighing.query.filter_by(
@@ -25,7 +51,13 @@ class WeighingService:
             # Обновляем существующее
             existing.weight = weight
             existing.notes = notes
-            existing.determine_category()
+
+            # Если указана категория вручную - используем ее
+            if weight_category:
+                existing.weight_category = weight_category
+            else:
+                existing.determine_category()
+
             return existing.save()
         else:
             # Создаем новое
@@ -36,12 +68,15 @@ class WeighingService:
                 notes=notes
             )
 
-            # Определяем категорию
-            weighing.determine_category()
+            # Если указана категория вручную - используем ее
+            if weight_category:
+                weighing.weight_category = weight_category
+            else:
+                # Определяем категорию автоматически
+                weighing.determine_category()
 
             db.session.add(weighing)
             return weighing.save()
-
     def assign_to_categories(self):
         """Автоматическое распределение участников по категориям"""
         weighings = Weighing.query.filter_by(

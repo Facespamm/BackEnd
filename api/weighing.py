@@ -102,6 +102,184 @@ def get_weighings():
         }), 500
 
 
+@weighing_bp.route('/<int:weighing_id>/toggle-validation', methods=['PATCH'])
+@swag_from({
+    'tags': ['Weighing'],
+    'summary': 'Изменить статус валидации взвешивания',
+    'description': 'Переключает статус валидации взвешивания (валидно/невалидно)',
+    'parameters': [
+        {
+            'name': 'weighing_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID взвешивания'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Статус успешно изменен',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'is_valid': {'type': 'boolean'}
+                }
+            }
+        },
+        404: {
+            'description': 'Взвешивание не найдено'
+        },
+        500: {
+            'description': 'Ошибка сервера'
+        }
+    }
+})
+def toggle_weighing_validation(weighing_id):
+    """Изменить статус валидации взвешивания"""
+    try:
+        weighing = Weighing.query.get(weighing_id)
+
+        if not weighing:
+            return jsonify({
+                'success': False,
+                'message': 'Взвешивание не найдено'
+            }), 404
+
+        # Меняем статус на противоположный
+        weighing.is_valid = not weighing.is_valid
+
+        if weighing.save_to_db():
+            return jsonify({
+                'success': True,
+                'message': f'Статус валидации изменен на {"валидно" if weighing.is_valid else "невалидно"}',
+                'is_valid': weighing.is_valid,
+                'status_display': weighing.status_display
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Ошибка при сохранении изменений'
+            }), 500
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при изменении статуса валидации: {str(e)}'
+        }), 500
+
+
+@weighing_bp.route('/<int:weighing_id>', methods=['PUT'])
+@swag_from({
+    'tags': ['Weighing'],
+    'summary': 'Обновить запись о взвешивании',
+    'description': 'Обновляет существующую запись о взвешивании',
+    'parameters': [
+        {
+            'name': 'weighing_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID взвешивания'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'weight': {
+                        'type': 'number',
+                        'format': 'float',
+                        'description': 'Вес спортсмена в кг'
+                    },
+                    'weight_category': {
+                        'type': 'string',
+                        'description': 'Весовая категория'
+                    },
+                    'is_valid': {
+                        'type': 'boolean',
+                        'description': 'Статус валидации'
+                    },
+                    'notes': {
+                        'type': 'string',
+                        'description': 'Дополнительные заметки'
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Взвешивание успешно обновлено',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'weight_category': {'type': 'string'},
+                    'status': {'type': 'string'}
+                }
+            }
+        },
+        404: {
+            'description': 'Взвешивание не найдено'
+        },
+        500: {
+            'description': 'Ошибка сервера'
+        }
+    }
+})
+def update_weighing(weighing_id):
+    """Обновить запись о взвешивании"""
+    try:
+        weighing = Weighing.query.get(weighing_id)
+
+        if not weighing:
+            return jsonify({
+                'success': False,
+                'message': 'Взвешивание не найдено'
+            }), 404
+
+        data = request.get_json()
+
+        if 'weight' in data:
+            weighing.weight = data['weight']
+            # Если вес изменился и категория не указана вручную - переопределяем категорию
+            if 'weight_category' not in data:
+                weighing.determine_category()
+
+        if 'weight_category' in data:
+            weighing.weight_category = data['weight_category']
+
+        if 'is_valid' in data:
+            weighing.is_valid = data['is_valid']
+
+        if 'notes' in data:
+            weighing.notes = data['notes']
+
+        if weighing.save_to_db():
+            return jsonify({
+                'success': True,
+                'message': 'Взвешивание успешно обновлено',
+                'weight_category': weighing.weight_category,
+                'status': weighing.status_display,
+                'is_valid': weighing.is_valid
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Ошибка при сохранении изменений'
+            }), 500
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при обновлении взвешивания: {str(e)}'
+        }), 500
+
 @weighing_bp.route('/', methods=['POST'])
 @swag_from({
     'tags': ['Weighing'],
@@ -128,6 +306,10 @@ def get_weighings():
                         'type': 'number',
                         'format': 'float',
                         'description': 'Вес спортсмена в кг'
+                    },
+                    'weight_category': {
+                        'type': 'string',
+                        'description': 'Весовая категория (если указана, будет использована вместо автоматического определения)'
                     },
                     'notes': {
                         'type': 'string',
@@ -202,8 +384,12 @@ def create_weighing():
             notes=data.get('notes')
         )
 
-        # Определяем категорию
-        weighing.determine_category()
+        # Если указана весовая категория вручную - используем ее
+        if data.get('weight_category'):
+            weighing.weight_category = data['weight_category']
+        else:
+            # Иначе определяем категорию автоматически
+            weighing.determine_category()
 
         # ИСПРАВЛЕНО: используем save_to_db() вместо save()
         if weighing.save_to_db():

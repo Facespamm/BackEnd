@@ -1,8 +1,19 @@
-from flask import Blueprint, request, jsonify
+# scores.py
+from flask import Blueprint, request, jsonify, Response
 from flasgger import swag_from
 from services.score_manager import ScoreManager
+import json  # Добавляем импорт
 
 scores_bp = Blueprint('scores', __name__, url_prefix='/api/scores')
+
+# Создаем кастомную функцию для ответа с JSON
+def json_response(data, status=200):
+    """Вернуть JSON ответ с правильной кодировкой"""
+    return Response(
+        json.dumps(data, ensure_ascii=False),
+        status=status,
+        mimetype='application/json; charset=utf-8'
+    )
 
 
 @scores_bp.route('/fight/<int:fight_id>/yuko', methods=['POST'])
@@ -56,26 +67,26 @@ def add_yuko(fight_id):
         data = request.get_json()
 
         if not data or 'athlete_color' not in data:
-            return jsonify({
+            return json_response({
                 'success': False,
                 'message': 'Отсутствует athlete_color'
-            }), 400
+            }, 400)
 
         score_manager = ScoreManager(fight_id)
         result = score_manager.add_yuko(data['athlete_color'])
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 @scores_bp.route('/fight/<int:fight_id>/events/batch', methods=['POST'])
 @swag_from({
@@ -153,26 +164,26 @@ def save_events_batch(fight_id):
         data = request.get_json()
 
         if not data or 'events' not in data:
-            return jsonify({
+            return json_response({
                 'success': False,
                 'message': 'Отсутствует список событий'
-            }), 400
+            }, 400)
 
         score_manager = ScoreManager(fight_id)
         result = score_manager.save_fight_events(data['events'])
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/timeline', methods=['GET'])
@@ -228,18 +239,18 @@ def get_fight_timeline(fight_id):
         score_manager = ScoreManager(fight_id)
         result = score_manager.get_fight_timeline()
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/summary', methods=['GET'])
@@ -289,18 +300,18 @@ def get_match_summary(fight_id):
         score_manager = ScoreManager(fight_id)
         result = score_manager.get_match_summary()
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 @scores_bp.route('/fight/<int:fight_id>/wazaari', methods=['POST'])
 @swag_from({
@@ -357,10 +368,10 @@ def add_wazaari(fight_id):
         data = request.get_json()
 
         if not data or 'athlete_color' not in data:
-            return jsonify({
+            return json_response({
                 'success': False,
                 'message': 'Отсутствует athlete_color'
-            }), 400
+            }, 400)
 
         score_manager = ScoreManager(fight_id)
         result = score_manager.add_wazaari(
@@ -368,18 +379,18 @@ def add_wazaari(fight_id):
             data.get('technique')
         )
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/ippon', methods=['POST'])
@@ -437,10 +448,10 @@ def add_ippon(fight_id):
         data = request.get_json()
 
         if not data or 'athlete_color' not in data:
-            return jsonify({
+            return json_response({
                 'success': False,
                 'message': 'Отсутствует athlete_color'
-            }), 400
+            }, 400)
 
         score_manager = ScoreManager(fight_id)
         result = score_manager.add_ippon(
@@ -448,18 +459,18 @@ def add_ippon(fight_id):
             data.get('technique')
         )
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/osaekomi/start', methods=['POST'])
@@ -513,26 +524,26 @@ def start_osaekomi(fight_id):
         data = request.get_json()
 
         if not data or 'athlete_color' not in data:
-            return jsonify({
+            return json_response({
                 'success': False,
                 'message': 'Отсутствует athlete_color'
-            }), 400
+            }, 400)
 
         score_manager = ScoreManager(fight_id)
         result = score_manager.start_osaekomi(data['athlete_color'])
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/osaekomi/stop', methods=['POST'])
@@ -570,18 +581,18 @@ def stop_osaekomi(fight_id):
         score_manager = ScoreManager(fight_id)
         result = score_manager.stop_osaekomi()
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/penalty', methods=['POST'])
@@ -640,26 +651,26 @@ def add_penalty(fight_id):
         data = request.get_json()
 
         if not data or 'athlete_color' not in data or 'penalty_type' not in data:
-            return jsonify({
+            return json_response({
                 'success': False,
                 'message': 'Отсутствует athlete_color или penalty_type'
-            }), 400
+            }, 400)
 
         score_manager = ScoreManager(fight_id)
         result = score_manager.add_penalty(data['athlete_color'], data['penalty_type'])
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/undo', methods=['POST'])
@@ -697,18 +708,18 @@ def undo_action(fight_id):
         score_manager = ScoreManager(fight_id)
         result = score_manager.undo_last_action()
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/reset', methods=['POST'])
@@ -746,18 +757,18 @@ def reset_scores(fight_id):
         score_manager = ScoreManager(fight_id)
         result = score_manager.reset_scores()
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/current', methods=['GET'])
@@ -826,18 +837,18 @@ def get_current_scores(fight_id):
         score_manager = ScoreManager(fight_id)
         result = score_manager.get_current_scores()
 
-        return jsonify(result), 200
+        return json_response(result, 200)
 
     except ValueError as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': str(e)
-        }), 404
+        }, 404)
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)
 
 
 @scores_bp.route('/fight/<int:fight_id>/golden-score', methods=['POST'])
@@ -876,26 +887,26 @@ def enter_golden_score(fight_id):
 
         fight = Fight.query.get(fight_id)
         if not fight:
-            return jsonify({
+            return json_response({
                 'success': False,
                 'message': 'Схватка не найдена'
-            }), 404
+            }, 404)
 
         if fight.enter_golden_score():
-            return jsonify({
+            return json_response({
                 'success': True,
                 'message': 'Переход в золотой скор выполнен',
                 'timer_seconds': fight.timer_seconds,
                 'is_golden_score': fight.is_golden_score
-            }), 200
+            }, 200)
         else:
-            return jsonify({
+            return json_response({
                 'success': False,
                 'message': 'Не удалось перейти в золотой скор. Проверьте статус схватки и время.'
-            }), 400
+            }, 400)
 
     except Exception as e:
-        return jsonify({
+        return json_response({
             'success': False,
             'message': f'Ошибка: {str(e)}'
-        }), 500
+        }, 500)

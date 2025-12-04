@@ -2,6 +2,7 @@ from datetime import datetime
 from databse.db import db
 from models.fight import Fight
 
+
 class Athlete(db.Model):
     """
     Модель участника турнира
@@ -36,22 +37,53 @@ class Athlete(db.Model):
                                      foreign_keys='Fight.blue_athlete_id',
                                      back_populates='blue_athlete')
 
+    # Свойства для доступа к данным пользователя
+    @property
+    def first_name(self):
+        """Имя участника (из связанного пользователя)"""
+        return self.user.first_name if self.user else None
+
+    @property
+    def last_name(self):
+        """Фамилия участника (из связанного пользователя)"""
+        return self.user.last_name if self.user else None
+
+    @property
+    def middle_name(self):
+        """Отчество участника (из связанного пользователя)"""
+        return self.user.middle_name if self.user else None
+
     def __repr__(self):
-        return f'<Athlete {self.first_name} {self.last_name}>'
+        """Безопасное строковое представление"""
+        if self.user:
+            return f'<Athlete {self.last_name} {self.first_name}>'
+        return f'<Athlete id:{self.id}>'
 
     @property
     def full_name(self):
         """Полное имя участника"""
+        if not self.user:
+            return "Неизвестный участник"
+
+        parts = []
+        if self.last_name:
+            parts.append(self.last_name)
+        if self.first_name:
+            parts.append(self.first_name)
         if self.middle_name:
-            return f"{self.last_name} {self.first_name} {self.middle_name}"
-        return f"{self.last_name} {self.first_name}"
+            parts.append(self.middle_name)
+
+        return " ".join(parts) if parts else "Без имени"
 
     @property
     def age(self):
         """Возраст участника"""
+        if not self.birth_date:
+            return None
+
         today = datetime.today()
         return today.year - self.birth_date.year - (
-            (today.month, today.day) < (self.birth_date.month, self.birth_date.day)
+                (today.month, today.day) < (self.birth_date.month, self.birth_date.day)
         )
 
     def get_current_weight(self, tournament_id=None):
