@@ -3,6 +3,9 @@
 """
 
 from datetime import datetime
+
+from sqlalchemy.orm.sync import update
+
 from databse.db import db
 from models.fight import Fight
 from models.result import Result
@@ -33,7 +36,7 @@ class FightManager:
                 print(f"Невозможно начать схватку со статусом: {self.fight.status}")
                 return False
 
-            # Используем LIVE вместо LIVE для соответствия API
+            # Используем LIVE для соответствия API
             self.fight.status = 'LIVE'
             self.fight.start_time = datetime.utcnow()
 
@@ -67,12 +70,14 @@ class FightManager:
                 print(f"Невозможно завершить схватку со статусом: {self.fight.status if self.fight else 'None'}")
                 return False
 
-            self.fight.status = 'COMPLETED'
-            self.fight.end_time = datetime.utcnow()
-            self.fight.timer_seconds = 0
-
-            db.session.add(self.fight)
+            query = (
+                update(Fight)
+                .value(status='COMPLETED',end_time=datetime.utcnow(),timer_seconds=0)
+                .fiter_by(id=Fight.id)
+            )
+            db.session.execute(query)
             db.session.commit()
+
 
             print("Схватка успешно завершена")
             return True

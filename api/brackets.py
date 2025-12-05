@@ -7,67 +7,18 @@ brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
 
 @brackets_bp.route('/', methods=['GET'])
 def get_brackets_list():
-    """Получить список сеток
-    ---
-    tags:
-      - Brackets
-    parameters:
-      - name: tournament_id
-        in: query
-        type: integer
-        required: false
-        description: ID турнира
-      - name: category_id
-        in: query
-        type: integer
-        required: false
-        description: ID категории
-    responses:
-      200:
-        description: Список сеток успешно получен
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-            brackets:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  name:
-                    type: string
-                  bracket_type:
-                    type: string
-                  status:
-                    type: string
-                  tournament_id:
-                    type: integer
-                  category_id:
-                    type: integer
-                  progress_percentage:
-                    type: number
-                  athletes_count:
-                    type: integer
-            total:
-              type: integer
-      500:
-        description: Ошибка сервера
-    """
+    """Получить список сеток"""
     try:
         tournament_id = request.args.get('tournament_id', type=int)
         category_id = request.args.get('category_id', type=int)
 
-        query = Bracket.query
+        if not tournament_id:
+            return jsonify({'success': False, 'message': 'Не вели турнир'}),400
 
-        if tournament_id:
-            query = query.filter_by(tournament_id=tournament_id)
-        if category_id:
-            query = query.filter_by(category_id=category_id)
+        if not category_id:
+            return jsonify({'success': False, 'message': 'Не вели категорию'}),400
 
-        brackets = query.all()
+        brackets = Bracket.query.filter_by(tournament_id=tournament_id,category_id=category_id).all()
 
         result = []
         for bracket in brackets:
@@ -94,111 +45,19 @@ def get_brackets_list():
             'message': f'Ошибка при получении сеток: {str(e)}'
         }), 500
 
-
-@brackets_bp.route('/<int:bracket_id>/generate', methods=['POST'])
-def generate_bracket(bracket_id):
-    """Сгенерировать схватки для сетки
-    ---
-    tags:
-      - Brackets
-    parameters:
-      - name: bracket_id
-        in: path
-        type: integer
-        required: true
-        description: ID сетки
-    responses:
-      200:
-        description: Сетка успешно сгенерирована
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-            message:
-              type: string
-            fights_count:
-              type: integer
-      400:
-        description: Недостаточно участников или ошибка генерации
-      404:
-        description: Сетка не найдена
-      500:
-        description: Ошибка сервера
-    """
-    try:
-        bracket = Bracket.query.get(bracket_id)
-        if not bracket:
-            return jsonify({'success': False, 'message': 'Сетка не найдена'}), 404
-
-        if bracket.athletes_count < 2:
-            return jsonify({'success': False, 'message': 'Для генерации сетки нужно минимум 2 участника'}), 400
-
-        generator = BracketGenerator(bracket)
-        fights = generator.generate()
-
-        if fights:
-            return jsonify({
-                'success': True,
-                'message': f'Сетка успешно сгенерирована. Создано {len(fights)} схваток.',
-                'fights_count': len(fights)
-            }), 200
-        else:
-            return jsonify({'success': False, 'message': 'Ошибка при генерации сетки'}), 400
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Ошибка при генерации сетки: {str(e)}'}), 500
-
-@brackets_bp.route('/', methods=['POST'])
-def create_bracket():
-    """Создать новую сетку
-    ---
-    tags:
-      - Brackets
-    parameters:
-      - name: body
-        in: body
-        required: true
-        schema:
-          type: object
-          required:
-            - name
-            - tournament_id
-            - category_id
-          properties:
-            name:
-              type: string
-              example: "Мужчины -73 кг"
-            tournament_id:
-              type: integer
-            category_id:
-              type: integer
-            bracket_type:
-              type: string
-              enum: ['single_elimination', 'double_elimination']
-              default: 'single_elimination'
-            has_consolation:
-              type: boolean
-              default: false
-    responses:
-      201:
-        description: Сетка успешно создана
-      400:
-        description: Неверные данные
-      404:
-        description: Турнир или категория не найдены
-      500:
-        description: Ошибка сервера
-    """
+@brackets_bp.route('/<int:tournament_id>', methods=['POST'])
+def create_bracket(tournament_id):
+    """Создать новую сетку"""
     try:
         data = request.get_json()
-        if not data or not data.get('name') or not data.get('tournament_id') or not data.get('category_id'):
+        if not data or not data.get('name') or not data.get('category_id') or not data.get(
+                'bracket_type') or 'has_consolation' not in data:
             return jsonify({'success': False, 'message': 'Отсутствуют обязательные поля'}), 400
 
         from models.tournament import Tournament
         from models.category import Category
 
-        tournament = Tournament.query.get(data['tournament_id'])
+        tournament = Tournament.query.get(tournament_id)
         category = Category.query.get(data['category_id'])
 
         if not tournament or not category:
@@ -206,13 +65,15 @@ def create_bracket():
 
         bracket = Bracket(
             name=data['name'],
-            tournament_id=data['tournament_id'],
+            tournament_id=tournament_id,
             category_id=data['category_id'],
             bracket_type=data.get('bracket_type', 'single_elimination'),
-            has_consolation=data.get('has_consolation', False),
-            status='DRAFT',
+            has_consolation=data.get('has_consolation', False)
         )
         bracket.save_to_db()
+
+        bracket_generator = BracketGenerator(bracket)
+        bracket_generator.generate()
 
         return jsonify({
             'success': True,
@@ -225,65 +86,7 @@ def create_bracket():
 
 @brackets_bp.route('/<int:bracket_id>/fights', methods=['GET'])
 def get_bracket_fights(bracket_id):
-    """Получить схватки сетки
-    ---
-    tags:
-      - Brackets
-    parameters:
-      - name: bracket_id
-        in: path
-        type: integer
-        required: true
-        description: ID сетки
-    responses:
-      200:
-        description: Схватки успешно получены
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-            bracket:
-              type: string
-            fights_by_round:
-              type: object
-              additionalProperties:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    fight_number:
-                      type: integer
-                    status:
-                      type: string
-                    white_athlete:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-                    blue_athlete:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-                    winner:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-      404:
-        description: Сетка не найдена
-      500:
-        description: Ошибка сервера
-    """
+    """Получить схватки сетки"""
     try:
         bracket = Bracket.query.get(bracket_id)
         if not bracket:

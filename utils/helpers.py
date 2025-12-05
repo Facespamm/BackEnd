@@ -197,6 +197,7 @@ def validate_license_number(license_number):
     if not license_number:
         return True
 
+    import re
     # Простая проверка формата: буквы и цифры, длина 6-20 символов
     pattern = r'^[A-Z0-9]{6,20}$'
     return bool(re.match(pattern, license_number.upper()))

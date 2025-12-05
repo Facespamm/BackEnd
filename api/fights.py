@@ -7,7 +7,7 @@ from models.athlete import Athlete
 from services.fight_manager import FightManager
 from sqlalchemy.exc import IntegrityError
 
-fights_bp = Blueprint('fights', __name__, url_prefix='/fights')
+fights_bp = Blueprint('fights', __name__, url_prefix='/api/fights')
 
 
 @fights_bp.route('/', methods=['GET'])
@@ -148,184 +148,184 @@ def get_fights():
             'message': f'Ошибка при получении схваток: {str(e)}'
         }), 500
 
-
-@fights_bp.route('/', methods=['POST'])
-@swag_from({
-    'tags': ['Fights'],
-    'summary': 'Создать схватку',
-    'description': 'Создает новую схватку',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'required': ['tournament_id'],
-                'properties': {
-                    'tournament_id': {
-                        'type': 'integer',
-                        'description': 'ID турнира'
-                    },
-                    'white_athlete_id': {
-                        'type': 'integer',
-                        'description': 'ID спортсмена в белом'
-                    },
-                    'blue_athlete_id': {
-                        'type': 'integer',
-                        'description': 'ID спортсмена в синем'
-                    },
-                    'tatami': {
-                        'type': 'integer',
-                        'description': 'Номер татами'
-                    },
-                    'scheduled_time': {
-                        'type': 'string',
-                        'format': 'date-time',
-                        'description': 'Запланированное время (ISO формат)'
-                    },
-                    'round_number': {
-                        'type': 'integer',
-                        'description': 'Номер раунда'
-                    },
-                    'fight_number': {
-                        'type': 'integer',
-                        'description': 'Номер схватки'
-                    }
-                }
-            }
-        }
-    ],
-    'responses': {
-        201: {
-            'description': 'Схватка успешно создана',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'message': {'type': 'string'},
-                    'fight_id': {'type': 'integer'}
-                }
-            }
-        },
-        400: {
-            'description': 'Ошибка валидации'
-        },
-        404: {
-            'description': 'Турнир или спортсмен не найден'
-        },
-        409: {
-            'description': 'Конфликт - схватка с такими параметрами уже существует'
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
-def create_fight():
-    """Создать схватку"""
-    try:
-        data = request.get_json()
-
-        if not data:
-            return jsonify({
-                'success': False,
-                'message': 'Не передан JSON'
-            }), 400
-
-        if not data.get('tournament_id'):
-            return jsonify({
-                'success': False,
-                'message': 'Обязательное поле: tournament_id'
-            }), 400
-
-        # Проверяем существование турнира
-        tournament = Tournament.query.get(data['tournament_id'])
-        if not tournament:
-            return jsonify({
-                'success': False,
-                'message': 'Турнир не найден'
-            }), 404
-
-        # Проверяем существование спортсменов
-        if data.get('white_athlete_id'):
-            white_athlete = Athlete.query.get(data['white_athlete_id'])
-            if not white_athlete:
-                return jsonify({
-                    'success': False,
-                    'message': f'Спортсмен с ID {data["white_athlete_id"]} не найден'
-                }), 404
-
-        if data.get('blue_athlete_id'):
-            blue_athlete = Athlete.query.get(data['blue_athlete_id'])
-            if not blue_athlete:
-                return jsonify({
-                    'success': False,
-                    'message': f'Спортсмен с ID {data["blue_athlete_id"]} не найден'
-                }), 404
-
-        # Проверяем, что один спортсмен не борется сам с собой
-        if (data.get('white_athlete_id') and data.get('blue_athlete_id') and
-                data['white_athlete_id'] == data['blue_athlete_id']):
-            return jsonify({
-                'success': False,
-                'message': 'Спортсмен не может бороться сам с собой'
-            }), 400
-
-        # Проверяем уникальность схватки (если есть tatami, round_number и fight_number)
-        if data.get('tatami') and data.get('round_number') and data.get('fight_number'):
-            existing_fight = Fight.query.filter_by(
-                tournament_id=data['tournament_id'],
-                tatami=data['tatami'],
-                round_number=data['round_number'],
-                fight_number=data['fight_number']
-            ).first()
-
-            if existing_fight:
-                return jsonify({
-                    'success': False,
-                    'message': f'Схватка с такими параметрами уже существует (ID: {existing_fight.id})'
-                }), 409
-
-        fight = Fight(
-            tournament_id=data['tournament_id'],
-            white_athlete_id=data.get('white_athlete_id'),
-            blue_athlete_id=data.get('blue_athlete_id'),
-            tatami=data.get('tatami'),
-            round_number=data.get('round_number'),
-            fight_number=data.get('fight_number')
-        )
-
-        if data.get('scheduled_time'):
-            fight.scheduled_time = datetime.fromisoformat(data['scheduled_time'])
-
-        if fight.save_to_db():
-            return jsonify({
-                'success': True,
-                'message': 'Схватка успешно создана',
-                'fight_id': fight.id
-            }), 201
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Ошибка при сохранении схватки'
-            }), 400
-
-    except IntegrityError as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка целостности данных: возможно схватка с такими параметрами уже существует'
-        }), 409
-    except ValueError as e:
-        return jsonify({
-            'success': False,
-            'message': f'Неверный формат данных: {str(e)}'
-        }), 400
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при создании схватки: {str(e)}'
-        }), 500
+#
+# @fights_bp.route('/', methods=['POST'])
+# @swag_from({
+#     'tags': ['Fights'],
+#     'summary': 'Создать схватку',
+#     'description': 'Создает новую схватку',
+#     'parameters': [
+#         {
+#             'name': 'body',
+#             'in': 'body',
+#             'required': True,
+#             'schema': {
+#                 'type': 'object',
+#                 'required': ['tournament_id'],
+#                 'properties': {
+#                     'tournament_id': {
+#                         'type': 'integer',
+#                         'description': 'ID турнира'
+#                     },
+#                     'white_athlete_id': {
+#                         'type': 'integer',
+#                         'description': 'ID спортсмена в белом'
+#                     },
+#                     'blue_athlete_id': {
+#                         'type': 'integer',
+#                         'description': 'ID спортсмена в синем'
+#                     },
+#                     'tatami': {
+#                         'type': 'integer',
+#                         'description': 'Номер татами'
+#                     },
+#                     'scheduled_time': {
+#                         'type': 'string',
+#                         'format': 'date-time',
+#                         'description': 'Запланированное время (ISO формат)'
+#                     },
+#                     'round_number': {
+#                         'type': 'integer',
+#                         'description': 'Номер раунда'
+#                     },
+#                     'fight_number': {
+#                         'type': 'integer',
+#                         'description': 'Номер схватки'
+#                     }
+#                 }
+#             }
+#         }
+#     ],
+#     'responses': {
+#         201: {
+#             'description': 'Схватка успешно создана',
+#             'schema': {
+#                 'type': 'object',
+#                 'properties': {
+#                     'success': {'type': 'boolean'},
+#                     'message': {'type': 'string'},
+#                     'fight_id': {'type': 'integer'}
+#                 }
+#             }
+#         },
+#         400: {
+#             'description': 'Ошибка валидации'
+#         },
+#         404: {
+#             'description': 'Турнир или спортсмен не найден'
+#         },
+#         409: {
+#             'description': 'Конфликт - схватка с такими параметрами уже существует'
+#         },
+#         500: {
+#             'description': 'Ошибка сервера'
+#         }
+#     }
+# })
+# def create_fight():
+#     """Создать схватку"""
+#     try:
+#         data = request.get_json()
+#
+#         if not data:
+#             return jsonify({
+#                 'success': False,
+#                 'message': 'Не передан JSON'
+#             }), 400
+#
+#         if not data.get('tournament_id'):
+#             return jsonify({
+#                 'success': False,
+#                 'message': 'Обязательное поле: tournament_id'
+#             }), 400
+#
+#         # Проверяем существование турнира
+#         tournament = Tournament.query.get(data['tournament_id'])
+#         if not tournament:
+#             return jsonify({
+#                 'success': False,
+#                 'message': 'Турнир не найден'
+#             }), 404
+#
+#         # Проверяем существование спортсменов
+#         if data.get('white_athlete_id'):
+#             white_athlete = Athlete.query.get(data['white_athlete_id'])
+#             if not white_athlete:
+#                 return jsonify({
+#                     'success': False,
+#                     'message': f'Спортсмен с ID {data["white_athlete_id"]} не найден'
+#                 }), 404
+#
+#         if data.get('blue_athlete_id'):
+#             blue_athlete = Athlete.query.get(data['blue_athlete_id'])
+#             if not blue_athlete:
+#                 return jsonify({
+#                     'success': False,
+#                     'message': f'Спортсмен с ID {data["blue_athlete_id"]} не найден'
+#                 }), 404
+#
+#         # Проверяем, что один спортсмен не борется сам с собой
+#         if (data.get('white_athlete_id') and data.get('blue_athlete_id') and
+#                 data['white_athlete_id'] == data['blue_athlete_id']):
+#             return jsonify({
+#                 'success': False,
+#                 'message': 'Спортсмен не может бороться сам с собой'
+#             }), 400
+#
+#         # Проверяем уникальность схватки (если есть tatami, round_number и fight_number)
+#         if data.get('tatami') and data.get('round_number') and data.get('fight_number'):
+#             existing_fight = Fight.query.filter_by(
+#                 tournament_id=data['tournament_id'],
+#                 tatami=data['tatami'],
+#                 round_number=data['round_number'],
+#                 fight_number=data['fight_number']
+#             ).first()
+#
+#             if existing_fight:
+#                 return jsonify({
+#                     'success': False,
+#                     'message': f'Схватка с такими параметрами уже существует (ID: {existing_fight.id})'
+#                 }), 409
+#
+#         fight = Fight(
+#             tournament_id=data['tournament_id'],
+#             white_athlete_id=data.get('white_athlete_id'),
+#             blue_athlete_id=data.get('blue_athlete_id'),
+#             tatami=data.get('tatami'),
+#             round_number=data.get('round_number'),
+#             fight_number=data.get('fight_number')
+#         )
+#
+#         if data.get('scheduled_time'):
+#             fight.scheduled_time = datetime.fromisoformat(data['scheduled_time'])
+#
+#         if fight.save_to_db():
+#             return jsonify({
+#                 'success': True,
+#                 'message': 'Схватка успешно создана',
+#                 'fight_id': fight.id
+#             }), 201
+#         else:
+#             return jsonify({
+#                 'success': False,
+#                 'message': 'Ошибка при сохранении схватки'
+#             }), 400
+#
+#     except IntegrityError as e:
+#         return jsonify({
+#             'success': False,
+#             'message': f'Ошибка целостности данных: возможно схватка с такими параметрами уже существует'
+#         }), 409
+#     except ValueError as e:
+#         return jsonify({
+#             'success': False,
+#             'message': f'Неверный формат данных: {str(e)}'
+#         }), 400
+#     except Exception as e:
+#         return jsonify({
+#             'success': False,
+#             'message': f'Ошибка при создании схватки: {str(e)}'
+#         }), 500
 
 
 @fights_bp.route('/<int:fight_id>', methods=['GET'])
