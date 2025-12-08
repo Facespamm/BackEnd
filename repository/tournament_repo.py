@@ -19,22 +19,24 @@ class TournamentRepository:
                 print(f"Tournament with id {tournament_id} not found")
                 raise Exception("Tournament not found")
 
-            categories = self.session.query(Category).filter_by(tournament_id=tournament.id).all()
+            #categories = self.session.query(Category).filter_by(tournament_id=tournament.id).all()
 
-            category_ids = [cat.id for cat in categories]
-            if not category_ids:
-                print(f"No categories found for tournament {tournament_id}")
-                return False
+            #category_ids = [cat.id for cat in categories]
+            #if not category_ids:
+            #    print(f"No categories found for tournament {tournament_id}")
+            #    return False
 
-            query = (
-                select(Athlete)
-                .join(category_athletes, Athlete.id == category_athletes.c.athlete_id)
-                .where(category_athletes.c.category_id.in_(category_ids),
-                       Athlete.club_id == club_id,
-                       Athlete.is_active == True)
-            )
+            #query = (
+            #    select(Athlete)
+            #    .join(category_athletes, Athlete.id == category_athletes.c.athlete_id)
+            #    .where(category_athletes.c.category_id.in_(category_ids),
+            #           Athlete.club_id == club_id,
+            #           Athlete.is_active == True)
+            #)
 
-            athletes =  self.session.execute(query).scalars().all()
+            #athletes =  self.session.execute(query).scalars().all()
+
+            athletes = self.session.query(Athlete).filter_by(club_id=club_id, is_active = True).all()
 
             if not athletes:
                 print(f"No eligible athletes found for club {club_id}")
@@ -82,14 +84,14 @@ class TournamentRepository:
                 print(f"Athlete {athlete_id} already registered for tournament {tournament_id}")
                 return False
 
-            categories = self.get_tournament_categories(tournament_id)
-            athlete_categories = [
-                category for category in categories if athlete in category.athletes
-            ]
+            #categories = self.get_tournament_categories(tournament_id)
+            #athlete_categories = [
+            #    category for category in categories if athlete in category.athletes
+            #]
 
-            if not athlete_categories:
-                print(f"Athlete {athlete_id} does not belong to any category in tournament {tournament_id}")
-                return False
+            #if not athlete_categories:
+            #    print(f"Athlete {athlete_id} does not belong to any category in tournament {tournament_id}")
+            #    return False
 
             tournament.athletes.append(athlete)
             self.session.commit()

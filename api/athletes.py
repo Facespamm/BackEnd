@@ -1,11 +1,12 @@
 from flask import request, Blueprint, jsonify
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
-
 from databse.db import db
 from models.athlete import Athlete
 from models.user import User
 import datetime
+
+from repository.auth_repo import AuthRepository
 
 athletes_bp = Blueprint('athletes', __name__, url_prefix='/athletes')
 
@@ -90,7 +91,7 @@ def get_athletes():
         }), 500
 
 
-@athletes_bp.route('/', methods=['POST'])
+@athletes_bp.route('/<int:user_id>', methods=['POST'])
 @swag_from({
     "summary": "Создать нового участника",
     "tags": ["Участники"],
@@ -126,10 +127,13 @@ def get_athletes():
         }
     }
 })
-def create_athlete():
+def create_athlete(user_id):
     """Создать нового участника"""
     try:
         data = request.get_json() or {}
+
+        if not user_id:
+            return jsonify({'success': True,'message': f"нет user id"})
 
         # Нормализуем названия полей
         if 'birth_day' in data and 'birth_date' not in data:
@@ -140,7 +144,7 @@ def create_athlete():
             data['gender'] = gender_mapping.get(data['gender'].lower(), data['gender'])
 
         # Проверяем обязательные поля (только для атлета, без данных пользователя)
-        required = ['birth_date', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
+        required = ['birth_date', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number','age','weight']
         missing = [field for field in required if field not in data]
         if missing:
             return jsonify({
@@ -148,22 +152,9 @@ def create_athlete():
                 'message': f'Обязательные поля: {", ".join(missing)}'
             }), 400
 
-        # Создаем пользователя для участника с дефолтными значениями
-        username = f"athlete_{datetime.datetime.now().timestamp()}"
-        user = User(
-            username=username,
-            first_name="Имя",  # Дефолтные значения
-            last_name="Фамилия",  # Дефолтные значения
-            is_active=True
-        )
-        user.set_password('defaultpassword')
-
-        db.session.add(user)
-        db.session.flush()
-
         # Создаем профиль участника
         athlete = Athlete(
-            user_id=user.id,
+            user_id=user_id,
             birth_date=datetime.datetime.fromisoformat(data['birth_date']).date(),
             gender=data['gender'],
             club_id=data['club_id'],
@@ -174,12 +165,16 @@ def create_athlete():
             is_active=True
         )
 
+        auth_repo = AuthRepository()
+        role_id = auth_repo.get_role_id('ATHLETE')
+        auth_repo.set_user_role(user_id, role_id)
+
         if athlete.save_to_db():
             return jsonify({
                 'success': True,
                 'message': 'Участник успешно создан',
                 'athlete_id': athlete.id,
-                'user_id': user.id
+                'user_id': user_id
             }), 201
         else:
             return jsonify({

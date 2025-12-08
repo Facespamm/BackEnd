@@ -7,6 +7,8 @@ from flask_restx import Api
 from databse.db import init_db
 from flasgger import Swagger
 
+from init_database.init_db import init_roles, init_dans
+
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:okjtt@192.168.7.82:5432/judo_tournament?client_encoding=utf8'
@@ -18,6 +20,10 @@ jwt = JWTManager(app)
 
 # Инициализация базы данных
 init_db(app)
+
+with app.app_context():
+    init_dans()
+    init_roles()
 
 swagger_config = {
     "headers": [],

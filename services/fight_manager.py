@@ -192,7 +192,7 @@ class FightManager:
             db.session.commit()
 
             # Обновляем турнирную сетку
-            if hasattr(self.fight, 'bracket') and self.fight.bracket:
+            if self.fight.bracket:
                 bracket_generator = BracketGenerator(self.fight.bracket)
                 bracket_generator.update_bracket(self.fight)
 
