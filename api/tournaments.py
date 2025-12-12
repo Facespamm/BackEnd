@@ -515,6 +515,354 @@ def add_club_to_tournament(tournament_id):
         }), 500
 
 
+@tournaments_bp.route('/search-athlete', methods=['GET'])
+@swag_from({
+    'tags': ['Tournaments'],
+    'summary': 'Поиск участника по ФИО',
+    'description': 'Поиск участника для получения его ID при регистрации на турнир',
+    'parameters': [
+        {
+            'name': 'last_name',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'description': 'Фамилия участника'
+        },
+        {
+            'name': 'first_name',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'description': 'Имя участника'
+        },
+        {
+            'name': 'middle_name',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'description': 'Отчество участника'
+        },
+        {
+            'name': 'club_id',
+            'in': 'query',
+            'type': 'integer',
+            'required': False,
+            'description': 'ID клуба для фильтрации'
+        },
+        {
+            'name': 'is_active',
+            'in': 'query',
+            'type': 'boolean',
+            'required': False,
+            'description': 'Фильтр по активности участника',
+            'default': True
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Список найденных участников',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'id': {'type': 'integer'},
+                        'user_id': {'type': 'integer'},
+                        'last_name': {'type': 'string'},
+                        'first_name': {'type': 'string'},
+                        'middle_name': {'type': 'string'},
+                        'full_name': {'type': 'string'},
+                        'birth_date': {'type': 'string', 'format': 'date'},
+                        'age': {'type': 'integer'},
+                        'gender': {'type': 'string'},
+                        'club_id': {'type': 'integer'},
+                        'club_name': {'type': 'string'},
+                        'rank': {'type': 'string'},
+                        'license_number': {'type': 'string'},
+                        'is_active': {'type': 'boolean'}
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Не указаны параметры поиска'
+        }
+    }
+})
+def search_athlete():
+    """Поиск участника по ФИО для получения его ID"""
+    try:
+        from models.athlete import Athlete
+        from models.user import User
+
+        # Получаем параметры поиска
+        last_name = request.args.get('last_name', '').strip()
+        first_name = request.args.get('first_name', '').strip()
+        middle_name = request.args.get('middle_name', '').strip()
+        club_id = request.args.get('club_id')
+        is_active = request.args.get('is_active', 'true').lower() == 'true'
+
+        # Проверяем, что хотя бы один параметр передан
+        if not any([last_name, first_name, middle_name, club_id]):
+            return jsonify({
+                'success': False,
+                'message': 'Укажите хотя бы один параметр поиска (last_name, first_name, middle_name или club_id)'
+            }), 400
+
+        # Формируем запрос
+        query = Athlete.query.filter_by(is_active=is_active)
+
+        # Фильтр по клубу
+        if club_id:
+            try:
+                query = query.filter_by(club_id=int(club_id))
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'message': 'Неверный формат club_id'
+                }), 400
+
+        # Выполняем запрос и фильтруем по ФИО на уровне Python
+        athletes = query.all()
+        result = []
+
+        for athlete in athletes:
+            # Фильтрация по ФИО (частичное совпадение)
+            matches = True
+
+            if last_name and last_name.lower() not in (athlete.last_name or '').lower():
+                matches = False
+            if first_name and first_name.lower() not in (athlete.first_name or '').lower():
+                matches = False
+            if middle_name and middle_name.lower() not in (athlete.middle_name or '').lower():
+                matches = False
+
+            if matches:
+                # Получаем имя ранга безопасно
+                rank_display = None
+                if athlete.rank:
+                    # Проверяем, какие атрибуты есть у модели Dan
+                    if hasattr(athlete.rank, 'name'):
+                        rank_display = athlete.rank.name
+                    elif hasattr(athlete.rank, 'title'):
+                        rank_display = athlete.rank.title
+                    elif hasattr(athlete.rank, 'level'):
+                        rank_display = f"Дан {athlete.rank.level}"
+
+                result.append({
+                    'id': athlete.id,
+                    'user_id': athlete.user_id,
+                    'last_name': athlete.last_name,
+                    'first_name': athlete.first_name,
+                    'middle_name': athlete.middle_name,
+                    'full_name': athlete.full_name,
+                    'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
+                    'age': athlete.age,
+                    'gender': athlete.gender,
+                    'club_id': athlete.club_id,
+                    'club_name': athlete.club.name if athlete.club else None,
+                    'rank': rank_display,
+                    'license_number': athlete.license_number,
+                    'is_active': athlete.is_active
+                })
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при поиске участника: {str(e)}'
+        }), 500
+
+
+@tournaments_bp.route('/club-athletes', methods=['GET'])
+@swag_from({
+    'tags': ['Tournaments'],
+    'summary': 'Получить всех участников клуба',
+    'description': 'Возвращает список всех активных участников указанного клуба',
+    'parameters': [
+        {
+            'name': 'club_id',
+            'in': 'query',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID клуба'
+        },
+        {
+            'name': 'only_active',
+            'in': 'query',
+            'type': 'boolean',
+            'required': False,
+            'description': 'Только активные участники',
+            'default': True
+        },
+        {
+            'name': 'include_tournament_info',
+            'in': 'query',
+            'type': 'boolean',
+            'required': False,
+            'description': 'Включить информацию о турнирах участника',
+            'default': False
+        },
+        {
+            'name': 'tournament_id',
+            'in': 'query',
+            'type': 'integer',
+            'required': False,
+            'description': 'Фильтр по конкретному турниру'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Список участников клуба',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'club_id': {'type': 'integer'},
+                    'club_name': {'type': 'string'},
+                    'athletes_count': {'type': 'integer'},
+                    'athletes': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'id': {'type': 'integer'},
+                                'user_id': {'type': 'integer'},
+                                'last_name': {'type': 'string'},
+                                'first_name': {'type': 'string'},
+                                'middle_name': {'type': 'string'},
+                                'full_name': {'type': 'string'},
+                                'birth_date': {'type': 'string', 'format': 'date'},
+                                'age': {'type': 'integer'},
+                                'gender': {'type': 'string'},
+                                'rank': {'type': 'string'},
+                                'license_number': {'type': 'string'},
+                                'medical_check': {'type': 'boolean'},
+                                'insurance_number': {'type': 'string'},
+                                'is_active': {'type': 'boolean'},
+                                'tournaments': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'object',
+                                        'properties': {
+                                            'tournament_id': {'type': 'integer'},
+                                            'tournament_name': {'type': 'string'}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Не указан club_id'
+        },
+        404: {
+            'description': 'Клуб не найден'
+        }
+    }
+})
+def get_club_athletes():
+    """Получить всех участников клуба"""
+    try:
+        from models.athlete import Athlete
+        from models.club import Club
+
+        # Получаем параметры
+        club_id = request.args.get('club_id')
+        only_active = request.args.get('only_active', 'true').lower() == 'true'
+        include_tournament_info = request.args.get('include_tournament_info', 'false').lower() == 'true'
+        tournament_id = request.args.get('tournament_id')
+
+        if not club_id:
+            return jsonify({
+                'success': False,
+                'message': 'Не указан club_id'
+            }), 400
+
+        # Проверяем существование клуба
+        club = Club.query.get(club_id)
+        if not club:
+            return jsonify({
+                'success': False,
+                'message': f'Клуб с ID {club_id} не найден'
+            }), 404
+
+        # Формируем запрос
+        query = Athlete.query.filter_by(club_id=club_id)
+
+        if only_active:
+            query = query.filter_by(is_active=True)
+
+        # Фильтр по турниру
+        if tournament_id:
+            # Используем отношение tournament, которое определено в модели Athlete
+            query = query.filter(Athlete.tournament.any(id=int(tournament_id)))
+
+        athletes = query.all()
+
+        # Формируем результат
+        result = []
+        for athlete in athletes:
+            # Получаем имя ранга безопасно
+            rank_display = None
+            if athlete.rank:
+                if hasattr(athlete.rank, 'name'):
+                    rank_display = athlete.rank.name
+                elif hasattr(athlete.rank, 'title'):
+                    rank_display = athlete.rank.title
+                elif hasattr(athlete.rank, 'level'):
+                    rank_display = f"Дан {athlete.rank.level}"
+
+            athlete_data = {
+                'id': athlete.id,
+                'user_id': athlete.user_id,
+                'last_name': athlete.last_name,
+                'first_name': athlete.first_name,
+                'middle_name': athlete.middle_name,
+                'full_name': athlete.full_name,
+                'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
+                'age': athlete.age,
+                'gender': athlete.gender,
+                'rank': rank_display,
+                'license_number': athlete.license_number,
+                'medical_check': athlete.medical_check,
+                'insurance_number': athlete.insurance_number,
+                'is_active': athlete.is_active
+            }
+
+            # Добавляем информацию о турнирах
+            if include_tournament_info:
+                tournaments = []
+                for tournament in athlete.tournament:
+                    tournament_data = {
+                        'tournament_id': tournament.id,
+                        'tournament_name': tournament.name
+                    }
+                    tournaments.append(tournament_data)
+                athlete_data['tournaments'] = tournaments
+
+            result.append(athlete_data)
+
+        return jsonify({
+            'club_id': club.id,
+            'club_name': club.name,
+            'athletes_count': len(result),
+            'athletes': result
+        }), 200
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': f'Неверный формат параметров: {str(e)}'
+        }), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при получении участников клуба: {str(e)}'
+        }), 500
 @tournaments_bp.route('/<int:tournament_id>/add-athletes', methods=['POST'])
 def add_athletes_to_tournament(tournament_id):
     """Добавить участников к турниру"""
