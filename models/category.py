@@ -1,5 +1,6 @@
 from datetime import datetime
 from databse.db import db
+from models.Enums import Gender
 from models.associations import category_athletes  # Импортируем таблицу связи
 
 class Category(db.Model):
@@ -9,14 +10,14 @@ class Category(db.Model):
     __tablename__ = 'categories'
 
     # Связь с турниром
-    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
+    #tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
 
     # Информация о категории
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     name = db.Column(db.String(50), nullable=False)
-    gender = db.Column(db.String(10), nullable=False)
+    gender = db.Column(db.Enum(Gender), nullable=False)
     min_weight = db.Column(db.Float)
     max_weight = db.Column(db.Float)
     min_age = db.Column(db.Integer)

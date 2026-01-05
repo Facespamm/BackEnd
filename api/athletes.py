@@ -2,11 +2,13 @@ from flask import request, Blueprint, jsonify
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from databse.db import db
+from models.Enums import translate_gender
 from models.athlete import Athlete
 from models.user import User
 import datetime
 
 from repository.auth_repo import AuthRepository
+from repository.category_repo import CategoryRepository
 
 athletes_bp = Blueprint('athletes', __name__, url_prefix='/athletes')
 
@@ -133,15 +135,14 @@ def create_athlete(user_id):
         data = request.get_json() or {}
 
         if not user_id:
-            return jsonify({'success': True,'message': f"нет user id"})
+            return jsonify({'success': False,'message': f"Нет user id"})
 
         # Нормализуем названия полей
         if 'birth_day' in data and 'birth_date' not in data:
             data['birth_date'] = data['birth_day']
 
         if 'gender' in data:
-            gender_mapping = {'male': 'М', 'female': 'Ж', 'мужской': 'М', 'женский': 'Ж'}
-            data['gender'] = gender_mapping.get(data['gender'].lower(), data['gender'])
+            data['gender'] = translate_gender(data['gender'])
 
         # Проверяем обязательные поля (только для атлета, без данных пользователя)
         required = ['birth_date', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number','age','weight']
@@ -167,20 +168,32 @@ def create_athlete(user_id):
 
         auth_repo = AuthRepository()
         role_id = auth_repo.get_role_id('ATHLETE')
-        auth_repo.set_user_role(user_id, role_id)
+        auth_repo.update_user_role(user_id, role_id)
 
-        if athlete.save_to_db():
+        athlete_is_added = athlete.save_to_db()
+
+        if not athlete_is_added:
+            return jsonify({
+                'success': False,
+                'message': 'Ошибка при сохранении участника'
+            }), 400
+
+        category_repo = CategoryRepository()
+        category_added = category_repo.add_athlete_to_category(athlete)
+
+        if category_added:
             return jsonify({
                 'success': True,
-                'message': 'Участник успешно создан',
+                'message': 'Участник успешно создан, добавлен в категорию',
                 'athlete_id': athlete.id,
                 'user_id': user_id
             }), 201
         else:
             return jsonify({
                 'success': False,
-                'message': 'Ошибка при сохранении участника'
+                'message': 'Ошибка при сохранении участника в категорию'
             }), 400
+
 
     except Exception as e:
         db.session.rollback()

@@ -28,7 +28,6 @@ class Athlete(db.Model):
     club = db.relationship('Club', backref=db.backref('athletes', lazy=True))
     weighings = db.relationship('Weighing', back_populates='athlete', lazy=True)
     rank = db.relationship('Dan', back_populates='athletes')
-    tournament = db.relationship('Tournament', secondary='athlete_tournament', back_populates='athletes')
 
     fights_as_white = db.relationship('Fight',
                                       foreign_keys='Fight.white_athlete_id',

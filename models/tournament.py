@@ -47,7 +47,6 @@ class Tournament(db.Model):
     categories = db.relationship('Category', back_populates='tournament', lazy=True, cascade='all, delete-orphan')
     fights = db.relationship('Fight', back_populates='tournament', lazy=True)
     brackets = db.relationship('Bracket', back_populates='tournament')
-    athletes = db.relationship('Athlete', secondary=athlete_tournament,back_populates='tournament')
     referees = db.relationship('Referee', secondary='referee_tournament', back_populates='tournaments')
 
     def __repr__(self):

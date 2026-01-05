@@ -21,14 +21,6 @@ user_roles = Table(
     Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
 )
 
-athlete_tournament = Table(
-    'athlete_tournament',
-    db.metadata,
-    Column('athlete_id', Integer, ForeignKey('athletes.id'), primary_key=True),
-    Column('tournament_id', Integer, ForeignKey('tournaments.id'), primary_key=True),
-    Column('registered_at', DateTime, default=datetime.utcnow),
-)
-
 referee_tournament = Table(
     'referee_tournament',
     db.metadata,

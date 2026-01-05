@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
+
+from models.Enums import translate_gender
 from models.category import Category
 from models.tournament import Tournament
+from repository.category_repo import CategoryRepository
 
 categories_bp = Blueprint('categories', __name__, url_prefix='/categories')
 
@@ -171,22 +174,22 @@ def create_category():
                 'message': 'Не передан JSON'
             }), 400
 
-        if not data.get('name') or not data.get('tournament_id') or not data.get('gender'):
+        if not data.get('name') or not data.get('gender'):
             return jsonify({
                 'success': False,
                 'message': 'Обязательные поля: name, tournament_id, gender'
             }), 400
 
         # Проверяем существование турнира
-        tournament = Tournament.query.get(data['tournament_id'])
-        if not tournament:
-            return jsonify({
-                'success': False,
-                'message': 'Турнир не найден'
-            }), 404
+        #tournament = Tournament.query.get(data['tournament_id'])
+        #if not tournament:
+        #    return jsonify({
+        #        'success': False,
+        #        'message': 'Турнир не найден'
+        #    }), 404
 
         category = Category(
-            tournament_id=data['tournament_id'],
+            #tournament_id=data['tournament_id'],
             name=data['name'],
             gender=data['gender'],
             min_weight=data.get('min_weight'),
@@ -206,7 +209,6 @@ def create_category():
                 'success': False,
                 'message': 'Ошибка при сохранении категории'
             }), 400
-
     except Exception as e:
         return jsonify({
             'success': False,
@@ -267,7 +269,7 @@ def get_category(category_id):
         return jsonify({
             'id': category.id,
             'name': category.name,
-            'gender': category.gender,
+            'gender': translate_gender(category.gender),
             'min_weight': category.min_weight,
             'max_weight': category.max_weight,
             'min_age': category.min_age,
@@ -330,14 +332,6 @@ def get_category(category_id):
 def update_category(category_id):
     """Обновить категорию"""
     try:
-        category = Category.query.get(category_id)
-
-        if not category:
-            return jsonify({
-                'success': False,
-                'message': 'Категория не найдена'
-            }), 404
-
         data = request.get_json()
 
         if not data:
@@ -346,23 +340,25 @@ def update_category(category_id):
                 'message': 'Не передан JSON'
             }), 400
 
-        # Обновляем поля
-        for key, value in data.items():
-            if hasattr(category, key):
-                setattr(category, key, value)
+        list_of_fields = ['name', 'min_weight', 'max_weight', 'min_age', 'max_age']
+        for field in list_of_fields:
+            if field not in data:
+                return jsonify({'success': False, 'message': f'Поле {field} обязательно'}), 400
 
-        if category.save():
+        category_repo = CategoryRepository()
+        is_update = category_repo.update_category(category_id, data)
+
+        if is_update():
             return jsonify({
                 'success': True,
                 'message': 'Категория успешно обновлена',
-                'category_id': category.id
+                'category_id': category_id
             }), 200
         else:
             return jsonify({
                 'success': False,
                 'message': 'Ошибка при обновлении категории'
             }), 400
-
     except Exception as e:
         return jsonify({
             'success': False,
