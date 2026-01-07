@@ -36,10 +36,6 @@ class Result(db.Model):
     white_penalties = db.Column(db.String(100))  # Штрафы белого (например: "SHIDO,SHIDO")
     blue_penalties = db.Column(db.String(100))  # Штрафы синего
 
-    # Время
-    fight_duration = db.Column(db.Integer)  # Длительность в секундах
-    golden_score_time = db.Column(db.Integer)  # Время в золотом скоре
-
     # Осаекоми
     osaekomi_start_time = db.Column(db.DateTime)  # Время начала удержания
     osaekomi_athlete_color = db.Column(db.String(10))  # Цвет атакующего (WHITE/BLUE)

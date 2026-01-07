@@ -26,18 +26,10 @@ class Fight(db.Model):
     fight_number = db.Column(db.Integer)  # Номер схватки
     scheduled_time = db.Column(db.DateTime)
 
-    # Время боя (только для отображения, управляется на клиенте)
-    fight_minutes = db.Column(db.Integer, default=4)  # Длительность боя в минутах (4, 3, 2)
-    golden_score_minutes = db.Column(db.Integer, default=3)  # Длительность золотого скора
-
     # Статус схватки
     status = db.Column(db.String(20), default='SCHEDULED')  # SCHEDULED, LIVE, COMPLETED, CANCELLED, REPLAY
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
-
-    # Таймер (только для хранения состояния, управляется на клиенте)
-    timer_seconds = db.Column(db.Integer, default=0)
-    is_golden_score = db.Column(db.Boolean, default=False)
 
     # Судьи
     main_referee = db.Column(db.String(100))
@@ -51,7 +43,7 @@ class Fight(db.Model):
     tournament = db.relationship('Tournament', back_populates='fights')
     bracket = db.relationship('Bracket', back_populates='fights')
     category = db.relationship('Category', back_populates='fights')
-    result = db.relationship('Result', back_populates='fight', uselist=False, cascade='all, delete-orphan')
+    result = db.relationship('Result', back_populates='fight', cascade='all, delete-orphan')
 
     white_athlete = db.relationship('Athlete',
                                     foreign_keys=[white_athlete_id],

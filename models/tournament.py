@@ -1,6 +1,5 @@
 from datetime import datetime
-from databse.db import db, create_session
-from models.associations import athlete_tournament
+from databse.db import db
 from models.fight import Fight
 
 class Tournament(db.Model):
