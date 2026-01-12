@@ -148,10 +148,10 @@ def public_registration():
         phone=data['phone'],
         is_active=True,
     )
-
+    role_name = data['role']
     auth_repo = AuthRepository()
     user_id = auth_repo.create_user(new_user)
-    role_id = auth_repo.get_role_id(data['role'])
+    role_id = auth_repo.get_role_id(role_name)
     is_added = auth_repo.set_user_role(user_id, role_id)
     print(f'User_role is added : {is_added}')
     user_role = auth_repo.get_role_by_user(user_id)

@@ -28,6 +28,6 @@ class UserNew(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
     # Связи
-    referees = db.relationship('Referee', back_populates='user')
-    roles = db.relationship('Role', secondary=new_user_roles, back_populates='users')
-    athlete_profile = db.relationship('Athlete', back_populates='user')
+    referees = db.relationship('RefereeNew', back_populates='user')
+    athlete_profile = db.relationship('AthleteNew', back_populates='user')
+    roles = db.relationship('RoleNew', secondary=new_user_roles, back_populates='users')

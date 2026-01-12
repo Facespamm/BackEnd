@@ -9,3 +9,6 @@ class RefereeNew(db.Model):
     certification_level = db.Column(db.String(50), nullable=True)  # NATIONAL, INTERNATIONAL, etc.
     tatami_assigned = db.Column(db.Integer, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    #связи
+    user = db.relationship('UserNew', back_populates='referees')

@@ -11,7 +11,6 @@ class CategoryNew(db.Model):
     # Связь с турниром
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
-    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
     gender = db.Column(db.Enum(Gender), nullable=False)
     min_weight = db.Column(db.Float)
     max_weight = db.Column(db.Float)
@@ -22,6 +21,7 @@ class CategoryNew(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # TODO добавить связи
+    tournaments = db.relationship('TournamentNew', back_populates='categories', lazy=True)
     athletes = db.relationship('AthleteNew',
                                secondary=new_category_athletes,  # Используем объект таблицы
                                lazy='subquery',

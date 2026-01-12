@@ -11,4 +11,4 @@ class RoleNew(db.Model):
     normalized_name = db.Column(db.String(50), unique=True, nullable=False)
 
     #связ
-    users = db.relationship('User', secondary=new_user_roles, back_populates='roles')
+    users = db.relationship('UserNew', secondary=new_user_roles, back_populates='roles')

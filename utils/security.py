@@ -108,32 +108,6 @@ def scoreboard_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def get_current_user():
-    """
-    Получить текущего пользователя из сессии
-    """
-    from models.user import User
-    if 'user_id' in session:
-        return User.query.get(session['user_id'])
-    return None
-
-def login_user(user):
-    """
-    Вход пользователя в систему
-    """
-    session['user_id'] = user.id
-    session['user_username'] = user.username
-    session['user_name'] = user.name
-    session['user_role'] = user.role
-    session['user_tatami'] = user.tatami_assigned
-    session.permanent = True
-
-def logout_user():
-    """
-    Выход пользователя из системы
-    """
-    session.clear()
-
 def check_tatami_access(tatami_number):
     """
     Проверка доступа судьи к татами
@@ -151,58 +125,3 @@ def check_tatami_access(tatami_number):
         return user.tatami_assigned == tatami_number
 
     return False
-
-def generate_password(length=8):
-    """
-    Генерация случайного пароля
-    """
-    characters = string.ascii_letters + string.digits + '!@#$%'
-    return ''.join(secrets.choice(characters) for _ in range(length))
-
-def validate_session():
-    """
-    Валидация сессии пользователя
-    """
-    if 'user_id' not in session:
-        return False
-
-    from models.user import User
-    user = User.query.get(session['user_id'])
-    if not user or not user.is_active:
-        logout_user()
-        return False
-
-    return True
-
-def require_tournament_access(tournament_id):
-    """
-    Декоратор для проверки доступа к турниру
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not validate_session():
-                flash('Требуется авторизация', 'warning')
-                return redirect(url_for('main.login'))
-
-            from models.tournament import Tournament
-            tournament = Tournament.query.get(tournament_id)
-
-            if not tournament:
-                flash('Турнир не найден', 'danger')
-                return redirect(url_for('admin.tournaments'))
-
-            # Админы имеют полный доступ
-            user = get_current_user()
-            if user.is_admin:
-                return f(*args, **kwargs)
-
-            # Для других ролей проверяем статус турнира
-            if tournament.status in ['LIVE', 'COMPLETED']:
-                return f(*args, **kwargs)
-
-            flash('Доступ к этому турниру ограничен', 'danger')
-            return redirect(url_for('main.dashboard'))
-
-        return decorated_function
-    return decorator

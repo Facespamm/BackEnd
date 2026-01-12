@@ -11,8 +11,7 @@ class TournamentNew(db.Model):
 
     # Основная информация
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
 
@@ -42,9 +41,11 @@ class TournamentNew(db.Model):
     chief_referee = db.Column(db.String(100))
     contact_phone = db.Column(db.String(20))
     contact_email = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Связи
-    categories = db.relationship('Category', back_populates='tournament', lazy=True, cascade='all, delete-orphan')
+    categories = db.relationship('CategoryNew', back_populates='tournaments', lazy=True)
     fights = db.relationship('Fight', back_populates='tournament', lazy=True)
     brackets = db.relationship('Bracket', back_populates='tournament')
     referees = db.relationship('Referee', secondary='referee_tournament', back_populates='tournaments')

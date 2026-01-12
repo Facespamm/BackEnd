@@ -1,5 +1,4 @@
 from sqlalchemy import select, insert
-from sqlalchemy.orm import selectinload
 
 from databse.db import create_session
 from models.associations import user_roles
@@ -35,7 +34,7 @@ class AuthRepository:
             self.session.rollback()
             print(f"Error creating user: {e}")
             return False
-
+    @staticmethod
     def get_role_id(role_name: str):
         """Получить роль пользователя по его имени"""
         try:
