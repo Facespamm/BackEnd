@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from databse.db import db
+from database.db import db
+from models.Enums import StatusTournament
 
 
 class TournamentNew(db.Model):
@@ -33,19 +34,19 @@ class TournamentNew(db.Model):
     golden_score_duration = db.Column(db.Integer, default=180)  # в секундах
 
     # Статус турнира
-    status = db.Column(db.String(20), default='PLANNED')  # PLANNED, REGISTRATION, WEIGHING, BRACKETS, LIVE, COMPLETED, CANCELLED
+    status = db.Column(db.Enum(StatusTournament), default=StatusTournament.PLANNED)
     is_public = db.Column(db.Boolean, default=True)
 
     # Организационная информация
     organizer = db.Column(db.String(100))
-    chief_referee = db.Column(db.String(100))
+    chief_referee_id = db.Column(db.Integer, db.ForeignKey('referees.id'))
     contact_phone = db.Column(db.String(20))
     contact_email = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Связи
-    categories = db.relationship('CategoryNew', back_populates='tournaments', lazy=True)
-    fights = db.relationship('Fight', back_populates='tournament', lazy=True)
-    brackets = db.relationship('Bracket', back_populates='tournament')
-    referees = db.relationship('Referee', secondary='referee_tournament', back_populates='tournaments')
+    category = db.relationship('CategoryNew', back_populates='tournaments')
+    fights = db.relationship('FightNew', back_populates='tournament')
+    weighings = db.relationship('WeighingNew', back_populates='tournament')
+    chief_referee = db.relationship('RefereeNew', back_populates='tournament')

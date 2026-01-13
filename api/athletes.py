@@ -1,7 +1,7 @@
 from flask import request, Blueprint, jsonify
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from databse.db import db
+from database.db import db
 from models.Enums import translate_gender
 from models.athlete import Athlete
 from models.user import User

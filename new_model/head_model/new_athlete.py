@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from databse.db import db
+from database.db import db
+from new_model.head_model.fight_new import FightNew
 from new_model.new_associations import new_category_athletes
 
 
@@ -20,11 +21,21 @@ class AthleteNew(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    #TODO добавить связи
+    #связи
     rank = db.relationship('DanNew')
     club = db.relationship('ClubNew', back_populates='athletes' )
     user = db.relationship('UserNew', back_populates='athlete_profile')
+    weighings = db.relationship('WeighingNew', back_populates='athlete')
+
+    white_fights = db.relationship('FightNew',
+                                   back_populates='white_athlete',
+                                   foreign_keys=[FightNew.white_athlete_id])
+
+    blue_fights = db.relationship('FightNew',
+                                  back_populates='blue_athlete',
+                                  foreign_keys=[FightNew.blue_athlete_id])
+
     categories = db.relationship('CategoryNew',
                                  secondary=new_category_athletes,  # Используем объект таблицы
-                                 lazy='subquery',
-                                 backref=db.backref('athletes', lazy=True))
+                                 lazy=True,
+                                 backref=db.backref('athletes'))

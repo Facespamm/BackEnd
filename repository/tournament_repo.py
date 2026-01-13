@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from databse.db import create_session
+from database.db import create_session
 from models.associations import category_athletes
 from models.athlete import Athlete
 from models.category import Category

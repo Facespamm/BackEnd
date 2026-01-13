@@ -4,7 +4,7 @@ from sqlalchemy import (
     Table, Column, Integer, String, DateTime,
     ForeignKey
 )
-from databse.db import db
+from database.db import db
 
 category_athletes = Table(
     'category_athletes',

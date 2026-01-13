@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from config import WEIGHT_CATEGORIES
-from databse.db import db
+from database.db import db
 
 class Weighing(db.Model):
     """

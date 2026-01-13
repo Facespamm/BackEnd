@@ -1,4 +1,5 @@
-from databse.db import db
+from database.db import db
+from models.Enums import VictoryType
 
 
 class ResultNew(db.Model):
@@ -7,7 +8,9 @@ class ResultNew(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fight_id = db.Column(db.Integer, db.ForeignKey('fights.id'), nullable=False)
     winner_id = db.Column(db.Integer, db.ForeignKey('athletes.id'), nullable=False)
-    victory_type = db.Column(db.String(100), nullable=False)
+    victory_type = db.Column(db.Enum(VictoryType), nullable=False)
     fight_duration = db.Column(db.Float, nullable=False)
 
     # TODO добавить связи
+    fight = db.relationship('FightNew', back_populates='result')
+    winner = db.relationship('AthleteNew')

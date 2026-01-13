@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from config import VICTORY_TYPES, SCORE_VALUES, OSAEKOMI_TIMES, MAX_PENALTIES
-from databse.db import db
+from database.db import db
 
 
 class Result(db.Model):

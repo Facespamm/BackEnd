@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from databse.db import db
+from database.db import db
 from models.Enums import Gender
 from new_model.new_associations import new_category_athletes
 
@@ -21,8 +21,8 @@ class CategoryNew(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # TODO добавить связи
-    tournaments = db.relationship('TournamentNew', back_populates='categories', lazy=True)
+    tournament = db.relationship('TournamentNew', back_populates='categories', lazy=True)
     athletes = db.relationship('AthleteNew',
                                secondary=new_category_athletes,  # Используем объект таблицы
-                               lazy='subquery',
-                               backref=db.backref('categories', lazy=True))
+                               lazy=True,
+                               backref=db.backref('categories'))

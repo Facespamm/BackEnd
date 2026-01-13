@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sqlalchemy.orm.sync import update
 
-from databse.db import db
+from database.db import db
 from models.fight import Fight
 from models.result import Result
 from services.bracket_generator import BracketGenerator

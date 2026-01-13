@@ -1,4 +1,4 @@
-from databse.db import create_session
+from database.db import create_session
 from models.athlete import Athlete
 from models.category import Category
 

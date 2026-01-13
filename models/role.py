@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from databse.db import db, create_session
+from database.db import db, create_session
 from models.associations import user_roles
 
 

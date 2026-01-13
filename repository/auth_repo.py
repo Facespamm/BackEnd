@@ -1,6 +1,6 @@
 from sqlalchemy import select, insert
 
-from databse.db import create_session
+from database.db import create_session
 from models.associations import user_roles
 from models.role import Role
 from models.user import User

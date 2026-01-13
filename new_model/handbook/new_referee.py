@@ -1,4 +1,5 @@
-from databse.db import db
+from database.db import db
+from new_model.new_associations import fight_referee
 
 
 class RefereeNew(db.Model):
@@ -12,3 +13,5 @@ class RefereeNew(db.Model):
 
     #связи
     user = db.relationship('UserNew', back_populates='referees')
+    fights = db.relationship('FightNew', secondary=fight_referee, back_populates='referees')
+    tournament = db.relationship('TournamentNew', back_populates='chief_referee')

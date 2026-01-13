@@ -1,4 +1,4 @@
-from databse.db import db
+from database.db import db
 from new_model.new_associations import new_user_roles
 
 

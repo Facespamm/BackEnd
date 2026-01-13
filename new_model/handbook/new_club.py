@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from databse.db import db
+from database.db import db
 
 
 class ClubNew(db.Model):

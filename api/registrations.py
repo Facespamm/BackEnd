@@ -4,7 +4,7 @@ from models.athlete import Athlete
 from models.tournament import Tournament
 from models.category import Category
 from models.associations import category_athletes
-from databse.db import db
+from database.db import db
 
 registrations_bp = Blueprint('registrations', __name__, url_prefix='/registrations')
 

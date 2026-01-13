@@ -1,7 +1,7 @@
 from datetime import datetime
 from models.result import Result
 from models.fight import Fight
-from databse.db import db
+from database.db import db
 from config import SCORE_VALUES, OSAEKOMI_TIMES, MAX_PENALTIES
 from sqlalchemy.orm.attributes import flag_modified
 

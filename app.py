@@ -4,7 +4,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_restx import Api
-from databse.db import init_db
+from database.db import init_db
 from flasgger import Swagger
 
 from init_database.init_db import init_roles, init_dans

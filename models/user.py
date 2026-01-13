@@ -1,5 +1,5 @@
 from datetime import datetime
-from databse.db import db
+from database.db import db
 from models.associations import user_roles
 from utils.security import hash_password, check_password
 

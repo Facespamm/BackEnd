@@ -1,5 +1,5 @@
 from datetime import datetime
-from databse.db import db
+from database.db import db
 from models.Enums import Gender
 from models.associations import category_athletes  # Импортируем таблицу связи
 

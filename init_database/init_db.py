@@ -1,5 +1,5 @@
 from config import USER_ROLES
-from databse.db import create_session
+from database.db import create_session
 from models.Dan import Dan
 from models.role import Role
 from utils.constants import JUDO_RANKS

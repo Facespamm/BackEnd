@@ -4,7 +4,7 @@
 
 import math
 import random
-from databse.db import db
+from database.db import db
 from models.fight import Fight
 from models.bracket import Bracket
 from utils.helpers import calculate_rounds, generate_bracket_positions

@@ -3,7 +3,7 @@
 """
 
 from config import Config
-from databse.db import db
+from database.db import db
 from models.weighing import Weighing
 
 

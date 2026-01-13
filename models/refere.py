@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm.sync import update
 
-from databse.db import db, create_session
+from database.db import db, create_session
 
 class Referee(db.Model):
     """Модель судьи"""

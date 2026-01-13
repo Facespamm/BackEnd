@@ -4,7 +4,52 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6559d010-01ce-415d-82f4-c262001ad7cb" name="Changes" comment="" />
+    <list default="true" id="6559d010-01ce-415d-82f4-c262001ad7cb" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/athletes.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/athletes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/registrations.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/registrations.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/users.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/databse/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/init_database/init_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/init_database/init_db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/Dan.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Dan.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/Enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Enums.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/associations.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/associations.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/athlete.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/athlete.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/bracket.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/bracket.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/category.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/category.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/club.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/club.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/fight.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/fight.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/refere.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/refere.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/result.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/result.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/role.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/role.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/tournament.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/tournament.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/user.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/weighing.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/weighing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/handbook/category_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/handbook/category_new.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/handbook/new_club.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/handbook/new_club.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/handbook/new_dan.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/handbook/new_dan.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/handbook/new_referee.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/handbook/new_referee.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/handbook/role_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/handbook/role_new.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/head_model/backet_new.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/head_model/fight_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/head_model/fight_new.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/head_model/new_athlete.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/head_model/new_athlete.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/head_model/new_user.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/head_model/new_user.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/head_model/tournament_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/head_model/tournament_new.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/new_associations.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/new_associations.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/result_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/result_new.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/score_event.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/score_event.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/new_model/weighing_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/weighing_new.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/auth_repo.py" beforeDir="false" afterPath="$PROJECT_DIR$/repository/auth_repo.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/category_repo.py" beforeDir="false" afterPath="$PROJECT_DIR$/repository/category_repo.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/tournament_repo.py" beforeDir="false" afterPath="$PROJECT_DIR$/repository/tournament_repo.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/bracket_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/bracket_generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/export_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/export_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/fight_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/fight_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/score_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/score_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/weighing_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/weighing_service.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -49,40 +94,40 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Flask server.Flask (app.py).executor": "Debug",
-    "HTTP Request.generated-requests | #1.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.BackEnd.executor": "Run",
-    "Python.db.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "ai.playground.ignore.import.keys.banner.in.settings": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "task__edit__bd",
-    "ignore.virus.scanning.warn.message": "true",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "C:/Users/User/Desktop/testapi",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "configurable.group.Jupyter Settings",
-    "to.speed.mode.migration.done": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Flask server.Flask (app.py).executor&quot;: &quot;Debug&quot;,
+    &quot;HTTP Request.generated-requests | #1.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.BackEnd.executor&quot;: &quot;Run&quot;,
+    &quot;Python.db.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;ai.playground.ignore.import.keys.banner.in.settings&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;task__edit__bd&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/User/Desktop/testapi&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.group.Jupyter Settings&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
-      "PLAIN_TEXT"
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;PLAIN_TEXT&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\User\Desktop\testapi" />
@@ -125,7 +170,7 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -142,7 +187,7 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -166,8 +211,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.29346.142" />
-        <option value="bundled-python-sdk-f2b7a9f6281b-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.142" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.29346.308" />
+        <option value="bundled-python-sdk-ca5e2b39c7df-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.308" />
       </set>
     </attachedChunks>
   </component>
@@ -194,6 +239,7 @@
       <workItem from="1765338210332" duration="1660000" />
       <workItem from="1765339997368" duration="15026000" />
       <workItem from="1767632967772" duration="15000" />
+      <workItem from="1768286698690" duration="373000" />
     </task>
     <servers />
   </component>
@@ -207,11 +253,6 @@
           <url>file://$PROJECT_DIR$/api/brackets.py</url>
           <line>51</line>
           <option name="timeStamp" value="8" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/services/bracket_generator.py</url>
-          <line>22</line>
-          <option name="timeStamp" value="9" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/services/bracket_generator.py</url>

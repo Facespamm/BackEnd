@@ -1,7 +1,7 @@
 from flasgger import swag_from
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from databse.db import create_session
+from database.db import create_session
 from models.user import User
 from config import USER_ROLES
 users_bp = Blueprint('users', __name__, url_prefix='/users')
