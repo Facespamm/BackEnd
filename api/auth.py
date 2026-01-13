@@ -8,8 +8,8 @@ from models.user import User
 from repository.auth_repo import AuthRepository
 from utils.security import hash_password
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')  # исправил имя с 'clubs' на 'auth'
-
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+auth_repo = AuthRepository()
 
 @auth_bp.route('/login', methods=['POST'])
 @swag_from({
@@ -90,7 +90,6 @@ def login():
 
     user = User.query.filter_by(username=username, is_active=True).first()
 
-    auth_repo = AuthRepository()
     user_role = auth_repo.get_role_by_user(user.id) if user else None
 
     if user_role is None:
@@ -149,7 +148,7 @@ def public_registration():
         is_active=True,
     )
     role_name = data['role']
-    auth_repo = AuthRepository()
+
     user_id = auth_repo.create_user(new_user)
     role_id = auth_repo.get_role_id(role_name)
     is_added = auth_repo.set_user_role(user_id, role_id)

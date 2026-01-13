@@ -34,6 +34,7 @@ class AuthRepository:
             self.session.rollback()
             print(f"Error creating user: {e}")
             return False
+
     @staticmethod
     def get_role_id(role_name: str):
         """Получить роль пользователя по его имени"""

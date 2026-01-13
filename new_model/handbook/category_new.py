@@ -20,7 +20,7 @@ class CategoryNew(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # TODO добавить связи
+    #связи
     tournament = db.relationship('TournamentNew', back_populates='categories', lazy=True)
     athletes = db.relationship('AthleteNew',
                                secondary=new_category_athletes,  # Используем объект таблицы

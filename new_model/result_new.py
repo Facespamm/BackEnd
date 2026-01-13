@@ -11,6 +11,6 @@ class ResultNew(db.Model):
     victory_type = db.Column(db.Enum(VictoryType), nullable=False)
     fight_duration = db.Column(db.Float, nullable=False)
 
-    # TODO добавить связи
+    #связи
     fight = db.relationship('FightNew', back_populates='result')
     winner = db.relationship('AthleteNew')
