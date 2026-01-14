@@ -2,16 +2,17 @@ from flask import request, Blueprint, jsonify
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from database.db import db
-from models.Enums import translate_gender
+from models.Enums import translate_gender, RoleName
 from models.athlete import Athlete
 from models.user import User
 import datetime
 
+from repository.athlete_repo import AthleteRepository
 from repository.auth_repo import AuthRepository
 from repository.category_repo import CategoryRepository
 
 athletes_bp = Blueprint('athletes', __name__, url_prefix='/athletes')
-
+athlete_repo = AthleteRepository()
 
 @athletes_bp.route('/', methods=['GET'])
 @swag_from({
@@ -45,20 +46,7 @@ def get_athletes():
         club_id = request.args.get('club_id', type=int)
         search = request.args.get('search', '').strip()
 
-        query = Athlete.query.filter_by(is_active=True).join(User)
-
-        if club_id:
-            query = query.filter(Athlete.club_id == club_id)
-
-        if search:
-            query = query.filter(
-                db.or_(
-                    User.last_name.ilike(f'%{search}%'),
-                    User.first_name.ilike(f'%{search}%')
-                )
-            )
-
-        athletes = query.order_by(User.last_name, User.first_name).all()
+        athletes = athlete_repo.get_athletes(club_id, search)
 
         result = []
         for athlete in athletes:
@@ -91,7 +79,6 @@ def get_athletes():
             'success': False,
             'message': f'Ошибка при получении участников: {str(e)}'
         }), 500
-
 
 @athletes_bp.route('/<int:user_id>', methods=['POST'])
 @swag_from({
@@ -167,10 +154,10 @@ def create_athlete(user_id):
         )
 
         auth_repo = AuthRepository()
-        role_id = auth_repo.get_role_id('ATHLETE')
+        role_id = auth_repo.get_role_id(RoleName.ATHLETE.value)
         auth_repo.update_user_role(user_id, role_id)
 
-        athlete_is_added = athlete.save_to_db()
+        athlete_is_added = athlete_repo.create_athlete(athlete)
 
         if not athlete_is_added:
             return jsonify({
@@ -227,7 +214,7 @@ def create_athlete(user_id):
 def get_athlete_by_id(athlete_id):
     """Получить информацию об участнике"""
     try:
-        athlete = Athlete.query.get(athlete_id)
+        athlete = athlete_repo.get_athlete_by_id(athlete_id)
         if not athlete or not athlete.is_active:
             return jsonify({
                 'success': False,
@@ -262,7 +249,6 @@ def get_athlete_by_id(athlete_id):
             'success': False,
             'message': f'Ошибка при получении участника: {str(e)}'
         }), 500
-
 
 @athletes_bp.route('/<int:athlete_id>', methods=['PUT'])
 @swag_from({
@@ -316,7 +302,7 @@ def get_athlete_by_id(athlete_id):
 def update_athlete(athlete_id):
     """Обновить информацию об участнике"""
     try:
-        athlete = Athlete.query.get(athlete_id)
+        athlete = athlete_repo.get_athlete_by_id(athlete_id)
         if not athlete or not athlete.is_active:
             return jsonify({
                 'success': False,
@@ -326,34 +312,20 @@ def update_athlete(athlete_id):
         data = request.get_json() or {}
 
         # Обновляем данные пользователя
-        user = athlete.user
         user_fields = ['first_name', 'last_name', 'middle_name', 'phone', 'email']
-        for field in user_fields:
-            if field in data:
-                value = data[field]
-                if isinstance(value, str):
-                    value = value.strip() if value else None
-                setattr(user, field, value)
-
         # Обновляем данные участника
         athlete_fields = ['birth_date', 'gender', 'club_id', 'rank_id',
                           'license_number', 'medical_check', 'insurance_number']
-        for field in athlete_fields:
-            if field in data:
-                value = data[field]
-                if field == 'birth_date' and isinstance(value, str):
-                    value = datetime.datetime.fromisoformat(value).date()
-                setattr(athlete, field, value)
 
-        try:
-            db.session.commit()
+        is_updated = athlete_repo.update_athlete(athlete, data, user_fields, athlete_fields,data)
+
+        if is_updated:
             return jsonify({
                 'success': True,
                 'message': 'Участник успешно обновлен',
                 'athlete_id': athlete.id
             }), 200
-        except Exception as e:
-            db.session.rollback()
+        else:
             return jsonify({
                 'success': False,
                 'message': f'Ошибка при сохранении: {str(e)}'
@@ -364,7 +336,6 @@ def update_athlete(athlete_id):
             'success': False,
             'message': f'Ошибка при обновлении участника: {str(e)}'
         }), 500
-
 
 @athletes_bp.route('/<int:athlete_id>', methods=['DELETE'])
 @swag_from({
@@ -394,7 +365,7 @@ def update_athlete(athlete_id):
 def delete_athlete(athlete_id):
     """Удалить участника (мягкое удаление)"""
     try:
-        athlete = Athlete.query.get(athlete_id)
+        athlete = athlete_repo.get_athlete_by_id(athlete_id)
         if not athlete or not athlete.is_active:
             return jsonify({
                 'success': False,
@@ -402,22 +373,18 @@ def delete_athlete(athlete_id):
             }), 404
 
         # Мягкое удаление - помечаем как неактивного
-        athlete.is_active = False
-        athlete.user.is_active = False
+        is_deleted = athlete_repo.delete_athlete_by_id(athlete_id)
 
-        try:
-            db.session.commit()
+        if is_deleted:
             return jsonify({
                 'success': True,
                 'message': 'Участник удален'
             }), 200
-        except Exception as e:
-            db.session.rollback()
+        else:
             return jsonify({
                 'success': False,
                 'message': f'Ошибка при удалении: {str(e)}'
             }), 400
-
     except Exception as e:
         return jsonify({
             'success': False,

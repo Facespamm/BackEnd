@@ -1,9 +1,12 @@
+import hashlib
+
 from sqlalchemy import select, insert
 
 from database.db import create_session
-from models.associations import user_roles
-from models.role import Role
-from models.user import User
+from new_model.handbook.role_new import RoleNew
+from new_model.head_model.new_user import UserNew
+from new_model.new_associations import new_user_roles
+from utils.security import hash_password
 
 
 class AuthRepository:
@@ -14,7 +17,7 @@ class AuthRepository:
         """Установить роль пользователя"""
         try:
             query =(
-                insert(user_roles)
+                insert(new_user_roles)
                 .values(user_id=user_id, role_id=role_id)
             )
             self.session.execute(query)
@@ -24,7 +27,7 @@ class AuthRepository:
             self.session.rollback()
             print(f"Error setting user role: {e}")
 
-    def create_user(self,  user: User):
+    def create_user(self,  user: UserNew):
         """Создать пользователя"""
         try:
             self.session.add(user)
@@ -39,7 +42,7 @@ class AuthRepository:
     def get_role_id(role_name: str):
         """Получить роль пользователя по его имени"""
         try:
-            return Role.query.filter_by(name=role_name).first().id
+            return RoleNew.query.filter_by(name=role_name).first().id
         except Exception as e:
             print(f"Error getting role id: {e}")
 
@@ -47,12 +50,12 @@ class AuthRepository:
         """Получить роль пользователя по его ID"""
         try:
             query = (
-                select(Role)
-                .join(user_roles, Role.id == user_roles.c.role_id)
-                .where(user_roles.c.user_id == user_id)
+                select(RoleNew)
+                .join(new_user_roles, RoleNew.id == new_user_roles.c.role_id)
+                .filter(new_user_roles.user_id == user_id)
                 .limit(1)
             )
-            role = self.session.execute(query).scalar_one_or_none()
+            role = self.session.execute(query).first()
             return role
 
         except Exception as e:
@@ -62,7 +65,7 @@ class AuthRepository:
     def update_user_role(self, user_id, user_role_id):
         """Обновить роль пользователя"""
         try:
-            user_role = self.session.query(user_roles).filter_by(user_id=user_id).first()
+            user_role = self.session.query(new_user_roles).filter_by(user_id=user_id).first()
 
             if user_role:
                 user_role.role_id = user_role_id
@@ -74,3 +77,12 @@ class AuthRepository:
             self.session.rollback()
             print(f"Error updating user role: {e}")
             return False
+
+    @staticmethod
+    def check_password(user: UserNew,password: str):
+        return user.password_hash == hash_password(password)
+
+    @staticmethod
+    def hash_password(password):
+        salt = 'judo_tournament_salt_2024'
+        return hashlib.sha256((password + salt).encode()).hexdigest()

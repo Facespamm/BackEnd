@@ -4,7 +4,9 @@ from flasgger import swag_from
 from flask import request, Blueprint, jsonify
 from flask_jwt_extended import create_access_token
 
+from models.Enums import RoleName
 from models.user import User
+from new_model.head_model.new_user import UserNew
 from repository.auth_repo import AuthRepository
 from utils.security import hash_password
 
@@ -83,19 +85,19 @@ def login():
     """Аутентификация пользователя"""
     data = request.get_json(silent=True) or {}
     username = data.get('username')
-    password = data.get('password')
+    password_enter = data.get('password')
 
-    if not username or not password:
+    if not username or not password_enter:
         return jsonify({'success': False, 'message': 'Логин и пароль обязательны'}), 400
 
-    user = User.query.filter_by(username=username, is_active=True).first()
+    user = UserNew.query.filter_by(username=username, is_active=True).first()
 
     user_role = auth_repo.get_role_by_user(user.id) if user else None
 
     if user_role is None:
         return jsonify({'success': False, 'message': 'Роль пользователя не найдена'}), 401
 
-    if user and user.check_password(password):
+    if user and auth_repo.check_password(user,password_enter):
         payload = {
             'role': user_role.name,
             'exp': datetime.now(timezone.utc) + timedelta(hours=24)
@@ -139,7 +141,7 @@ def public_registration():
 
     new_user = User(
         username=data['login'],
-        password_hash = hash_password(data['password']),
+        password_hash = auth_repo.hash_password(data['password']),
         first_name=names[0],
         middle_name=names[1] if len(names) > 1 else '',
         last_name=names[2] if len(names) > 1 else '',
@@ -147,14 +149,14 @@ def public_registration():
         phone=data['phone'],
         is_active=True,
     )
-    role_name = data['role']
 
+    role_name = data.get('role', RoleName.VIEWER.value)
     user_id = auth_repo.create_user(new_user)
     role_id = auth_repo.get_role_id(role_name)
     is_added = auth_repo.set_user_role(user_id, role_id)
     print(f'User_role is added : {is_added}')
-    user_role = auth_repo.get_role_by_user(user_id)
 
+    user_role = auth_repo.get_role_by_user(user_id)
     token = create_access_token(identity=user_id, additional_claims={'role': user_role.name})
 
     return jsonify({'success': True,

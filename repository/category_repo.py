@@ -1,21 +1,22 @@
 from database.db import create_session
-from models.athlete import Athlete
-from models.category import Category
+from new_model.handbook.category_new import CategoryNew
+from new_model.head_model.new_athlete import AthleteNew
+from new_model.head_model.tournament_new import TournamentNew
 
 
 class CategoryRepository:
     def __init__(self):
         self.session = create_session()
 
-    def add_athlete_to_category(self, athlete : Athlete):
+    def add_athlete_to_category(self, athlete : AthleteNew):
         """Добавить участника в категорию"""
         category = (
-            self.session.query(Category.id)
+            self.session.query(CategoryNew)
             .filter(
-                Category.min_weight >= athlete.weight,
-                Category.max_weight < athlete.weight,
-                Category.min_age >= athlete.age,
-                Category.max_age < athlete.age,
+                CategoryNew.min_weight >= athlete.weight,
+                CategoryNew.max_weight < athlete.weight,
+                CategoryNew.min_age >= athlete.age,
+                CategoryNew.max_age < athlete.age,
             ).first()
         )
 
@@ -29,7 +30,7 @@ class CategoryRepository:
     def update_category(self, category_id, category_data: dict):
         """Создать новую категорию"""
         try:
-            category = self.session.query(Category).first(category_id)
+            category = self.session.query(CategoryNew).first(category_id)
             if not category:
                 raise Exception("Category not found")
 
@@ -45,3 +46,9 @@ class CategoryRepository:
             self.session.rollback()
             print(f"Error updating category: {e}")
             return False
+
+    def get_categories(self, tournament_id:int):
+        query = self.session.query(CategoryNew).filter_by(is_active=True)
+        if tournament_id:
+            query = query.filter(CategoryNew.tournaments.any(TournamentNew.id == tournament_id))
+        return query.all()

@@ -4,47 +4,6 @@ from services.bracket_generator import BracketGenerator
 
 brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
 
-
-@brackets_bp.route('/', methods=['GET'])
-def get_brackets_list():
-    """Получить список сеток"""
-    try:
-        tournament_id = request.args.get('tournament_id', type=int)
-        category_id = request.args.get('category_id', type=int)
-
-        if not tournament_id:
-            return jsonify({'success': False, 'message': 'Не вели турнир'}),400
-
-        if not category_id:
-            return jsonify({'success': False, 'message': 'Не вели категорию'}),400
-
-        brackets = Bracket.query.filter_by(tournament_id=tournament_id,category_id=category_id).all()
-
-        result = []
-        for bracket in brackets:
-            result.append({
-                'id': bracket.id,
-                'name': bracket.name,
-                'bracket_type': bracket.bracket_type,
-                'status': bracket.status,
-                'tournament_id': bracket.tournament_id,
-                'category_id': bracket.category_id,
-                'progress_percentage': bracket.progress_percentage,
-                'athletes_count': bracket.athletes_count
-            })
-
-        return jsonify({
-            'success': True,
-            'brackets': result,
-            'total': len(result)
-        }), 200
-
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при получении сеток: {str(e)}'
-        }), 500
-
 @brackets_bp.route('/<int:tournament_id>', methods=['POST'])
 def create_bracket(tournament_id):
     """Создать новую сетку"""

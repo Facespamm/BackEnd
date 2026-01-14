@@ -7,7 +7,7 @@ from models.tournament import Tournament
 from repository.category_repo import CategoryRepository
 
 categories_bp = Blueprint('categories', __name__, url_prefix='/categories')
-
+category_repo = CategoryRepository()
 
 @categories_bp.route('/', methods=['GET'])
 @swag_from({
@@ -59,15 +59,12 @@ def get_categories():
     try:
         tournament_id = request.args.get('tournament_id', type=int)
 
-        query = Category.query
-
-        if tournament_id:
-            query = query.filter_by(tournament_id=tournament_id)
-
-        categories = query.filter_by(is_active=True).all()
+        categories =category_repo.get_categories(tournament_id)
 
         result = []
         for category in categories:
+            tournament_ids = [t.id for t in category.tournaments]
+
             result.append({
                 'id': category.id,
                 'name': category.name,
@@ -75,7 +72,7 @@ def get_categories():
                 'weight_range': category.weight_range,
                 'age_range': category.age_range,
                 'athletes_count': category.athletes_count,
-                'tournament_id': category.tournament_id
+                'tournament_id': tournament_ids
             })
 
         return jsonify({
