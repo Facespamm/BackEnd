@@ -39,3 +39,8 @@ class AthleteNew(db.Model):
                                  secondary=new_category_athletes,  # Используем объект таблицы
                                  lazy=True,
                                  backref=db.backref('athletes'))
+
+    tournaments = db.relationship('TournamentNew',
+                                  secondary='athlete_tournament',
+                                  lazy=True,
+                                  back_populates='athletes')

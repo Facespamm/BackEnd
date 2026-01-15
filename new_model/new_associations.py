@@ -33,3 +33,9 @@ fight_referee = db.Table('fight_referee',
     db.Column('referee_id', db.Integer, db.ForeignKey('referees.id')),
     db.Column('role', db.String(20))  # MAIN, SECOND, THIRD
 )
+
+athlete_tournament = db.Table('athlete_tournament',
+    db.Column('athlete_id', db.Integer, db.ForeignKey('athletes.id')),
+    db.Column('tournament_id', db.Integer, db.ForeignKey('tournaments.id')),
+    db.Column('registration_date', db.DateTime, default=datetime.utcnow)
+)

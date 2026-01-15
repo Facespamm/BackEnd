@@ -2,6 +2,7 @@ from flasgger import swag_from
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from database.db import create_session
+from models.Enums import RoleName
 from models.user import User
 from config import USER_ROLES
 users_bp = Blueprint('users', __name__, url_prefix='/users')
@@ -179,7 +180,7 @@ def create_user():
             name=data['name'],
             email=data.get('email'),
             phone=data.get('phone'),
-            role=data.get('role', USER_ROLES['VIEWER']),
+            role=data.get('role', RoleName.VIEWER.value),
             referee_level=data.get('referee_level', 0),
             tatami_assigned=data.get('tatami_assigned', None)
         )

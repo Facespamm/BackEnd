@@ -50,3 +50,7 @@ class TournamentNew(db.Model):
     fights = db.relationship('FightNew', back_populates='tournament')
     weighings = db.relationship('WeighingNew', back_populates='tournament')
     chief_referee = db.relationship('RefereeNew', back_populates='tournament')
+    athletes = db.relationship('AthleteNew',
+                               secondary='athlete_tournament',
+                               lazy=True,
+                               back_populates='tournaments')

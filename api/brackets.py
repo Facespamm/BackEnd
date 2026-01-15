@@ -1,5 +1,6 @@
 from flask import request, Blueprint, jsonify
 from models.bracket import Bracket
+from new_model.head_model.tournament_new import TournamentNew
 from services.bracket_generator import BracketGenerator
 
 brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
@@ -8,30 +9,15 @@ brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
 def create_bracket(tournament_id):
     """Создать новую сетку"""
     try:
-        data = request.get_json()
-        if not data or not data.get('name') or not data.get('category_id') or not data.get(
-                'bracket_type') or 'has_consolation' not in data:
-            return jsonify({'success': False, 'message': 'Отсутствуют обязательные поля'}), 400
+        if  not tournament_id:
+            return jsonify({'success': False, 'message': 'ID турнира не указан'}), 400
 
-        from models.tournament import Tournament
-        from models.category import Category
+        tournament = TournamentNew.query.get(tournament_id)
 
-        tournament = Tournament.query.get(tournament_id)
-        category = Category.query.get(data['category_id'])
-
-        if not tournament or not category:
+        if not tournament or not tournament.categories:
             return jsonify({'success': False, 'message': 'Турнир или категория не найдены'}), 404
 
-        bracket = Bracket(
-            name=data['name'],
-            tournament_id=tournament_id,
-            category_id=data['category_id'],
-            bracket_type=data.get('bracket_type', 'single_elimination'),
-            has_consolation=data.get('has_consolation', False)
-        )
-        bracket.save_to_db()
-
-        bracket_generator = BracketGenerator(bracket)
+        bracket_generator = BracketGenerator()
         bracket_generator.generate()
 
         return jsonify({

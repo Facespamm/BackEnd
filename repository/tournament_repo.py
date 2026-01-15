@@ -5,6 +5,7 @@ from models.associations import category_athletes
 from models.athlete import Athlete
 from models.category import Category
 from models.tournament import Tournament
+from new_model.head_model.tournament_new import TournamentNew
 
 
 class TournamentRepository:
@@ -101,3 +102,12 @@ class TournamentRepository:
             self.session.rollback()
             print(f"Error adding athlete {athlete_id} to tournament {tournament_id}: {e}")
             return False
+
+    def get_tournament_by_id(self, tournament_id):
+        """Получить турнир по ID"""
+        try:
+            tournament = self.session.query(TournamentNew).filter_by(id=tournament_id).first()
+            return tournament
+        except Exception as e:
+            print(f"Error getting tournament by id {tournament_id}: {e}")
+            return None

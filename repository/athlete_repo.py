@@ -28,6 +28,29 @@ class AthleteRepository:
         athletes = query.order_by(UserNew.last_name, UserNew.first_name).all()
         return athletes
 
+    def get_athletes_by_tournament(self, tournament_id:int):
+        query = self.session.query(AthleteNew).join(AthleteNew.tournaments).filter(
+            AthleteNew.is_active == True,
+            AthleteNew.tournaments.any(id=tournament_id)
+        )
+
+        athletes = query.order_by(AthleteNew.user.has().last_name, AthleteNew.user.has().first_name).all()
+        return athletes
+
+    def get_victory_count(self,  athlete_id:int, tournament_id = None):
+        from new_model.result_new import ResultNew
+        from new_model.head_model.fight_new import FightNew
+
+        count_query = self.session.query(ResultNew).join(FightNew, ResultNew.fight_id == FightNew.id).filter(
+            ResultNew.winner_id == athlete_id,
+        )
+
+        if tournament_id is not None:
+            count_query = count_query.filter(FightNew.tournament_id == tournament_id)
+
+        count = count_query.count()
+        return count
+
 
     def create_athlete(self, athlete:AthleteNew):
         try:

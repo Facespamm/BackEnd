@@ -4,35 +4,45 @@
 
 import math
 import random
-from database.db import db
+from database.db import db, create_session
+from models.Enums import FightStatus
 from models.fight import Fight
 from models.bracket import Bracket
+from models.tournament import Tournament
+from new_model.head_model.fight_new import FightNew
+from new_model.head_model.new_athlete import AthleteNew
+from repository.athlete_repo import AthleteRepository
+from repository.tournament_repo import TournamentRepository
 from utils.helpers import calculate_rounds, generate_bracket_positions
 
 class BracketGenerator:
     """Генератор турнирных сеток"""
 
-    def __init__(self, bracket):
+    def __init__(self, bracket, tournament_id):
+        self.session = create_session()
         self.bracket = bracket
         self.tournament = bracket.tournament
         self.category = bracket.category
-        self.athletes = bracket.category.athletes
+        self.tournament_id = tournament_id
 
-    def generate(self):
+    def generate(self, tournament_id: int):
         """Генерация сетки по олимпийской системе"""
-        if not self.athletes:
+
+        athlete_repo = AthleteRepository()
+        athletes = athlete_repo.get_athletes_by_tournament(tournament_id)
+
+        if not athletes:
             return []
 
-        athletes_count = len(self.athletes)
+        athletes_count = len(athletes)
         if athletes_count < 2:
             return []
 
         # Очищаем существующие схватки
-        Fight.query.filter_by(bracket_id=self.bracket.id).delete()
+        self.session.query(FightNew).filter_by(tournament_id=tournament_id).delete()
 
         # Определяем количество раундов
         total_rounds = calculate_rounds(athletes_count)
-        self.bracket.max_rounds = total_rounds
 
         # Seed участников (сильнейшие не встречаются в первых раундах)
         seeded_athletes = self._seed_athletes()
@@ -46,17 +56,19 @@ class BracketGenerator:
 
         return fights
 
-    def _seed_athletes(self):
+    @classmethod
+    def _seed_athletes(athletes : list[AthleteNew]):
         """Посев участников (сильнейшие распределяются)"""
-        athletes = list(self.athletes)
 
         # Сортируем по рейтингу (если есть) или случайно
         try:
+            athlete_repo = AthleteRepository()
             # Попытка сортировки по рейтингу (можно добавить логику рейтинга)
-            athletes.sort(key=lambda a: a.get_victories_count() if hasattr(a, 'get_victories_count') else 0, reverse=True)
-        except:
+            athletes.sort(key=lambda a: athlete_repo.get_victory_count(a), reverse=True)
+        except Exception as e:
             # Случайное перемешивание если нет данных
             random.shuffle(athletes)
+            print("Ошибка при сортировке по рейтингу, используется случайное перемешивание:", e)
 
         # Применяем seeding позиции
         positions = generate_bracket_positions(len(athletes))
@@ -81,10 +93,7 @@ class BracketGenerator:
         fights.extend(round_fights)
 
         # winners для следующего раунда
-        next_athletes = []
-        for fight in round_fights:
-            # Создаем "пустых" победителей для следующего раунда
-            next_athletes.append(None)
+        next_athletes = [None] * len(fights)
 
         fight_number += len(round_fights)
         current_round -= 1
@@ -110,10 +119,16 @@ class BracketGenerator:
 
         return fights
 
-    def _generate_round_fights(self, athletes, round_number, start_fight_number):
+    def _generate_round_fights(self,athletes, round_number, start_fight_number):
         """Генерация схваток для одного раунда"""
         fights = []
         fight_number = start_fight_number
+
+        tournament_repo = TournamentRepository()
+        tournament = tournament_repo.get_tournament_by_id(self.tournament_id) if athletes else None
+
+        if not tournament:
+            raise ValueError("Турнир не найден для генерации схваток.")
 
         for i in range(0, len(athletes), 2):
             white_athlete = athletes[i] if i < len(athletes) else None
@@ -123,15 +138,14 @@ class BracketGenerator:
             if not white_athlete and not blue_athlete:
                 continue
 
-            fight = Fight(
-                tournament_id=self.tournament.id,
-                bracket_id=self.bracket.id,
-                category_id=self.category.id,
+            fight = FightNew(
+                tournament_id=tournament.id,
+                category_id=tournament.category.id,
                 white_athlete_id=white_athlete.id if white_athlete else None,
                 blue_athlete_id=blue_athlete.id if blue_athlete else None,
                 round_number=round_number,
                 fight_number=fight_number,
-                status='SCHEDULED'
+                status=FightStatus.SCHEDULED
             )
 
             fights.append(fight)
