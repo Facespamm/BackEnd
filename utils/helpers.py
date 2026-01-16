@@ -44,15 +44,6 @@ def get_age_category(birth_date, categories_config):
 
     return None
 
-def calculate_rounds(participants_count):
-    """
-    Расчет количества раундов для сетки
-    """
-    if participants_count <= 0:
-        return 0
-
-    return math.ceil(math.log2(participants_count))
-
 def calculate_fights_count(participants_count, bracket_type='SINGLE_ELIMINATION'):
     """
     Расчет общего количества схваток
@@ -64,23 +55,6 @@ def calculate_fights_count(participants_count, bracket_type='SINGLE_ELIMINATION'
     else:  # ROUND_ROBIN
         return (participants_count * (participants_count - 1)) // 2
 
-def generate_bracket_positions(participants_count):
-    """
-    Генерация позиций в сетке
-    """
-    if participants_count <= 1:
-        return [1]
-
-    # Ближайшая степень двойки
-    next_power = 2 ** math.ceil(math.log2(participants_count))
-
-    positions = []
-    for i in range(participants_count):
-        # Алгоритм seeding для равномерного распределения сильных участников
-        pos = ((i * 2) % next_power) + ((i * 2) // next_power) + 1
-        positions.append(pos)
-
-    return positions[:participants_count]
 
 def calculate_ranking_points(victory_type, fight_duration=0):
     """

@@ -2,13 +2,11 @@ from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from datetime import datetime
 
-from flask_jwt_extended import jwt_required
-
 from models.tournament import Tournament
 from repository.tournament_repo import TournamentRepository
 
 tournaments_bp = Blueprint('tournaments', __name__, url_prefix='/tournaments')
-
+tournament_repo = TournamentRepository()
 
 @tournaments_bp.route('/', methods=['GET'])
 @swag_from({
@@ -233,7 +231,7 @@ def create_tournament():
 def get_tournament(tournament_id):
     """Получить информацию о турнире"""
     try:
-        tournament = Tournament.query.get(tournament_id)
+        tournament = tournament_repo.get_tournament_by_id(tournament_id)
 
         if not tournament:
             return jsonify({
@@ -514,7 +512,6 @@ def add_club_to_tournament(tournament_id):
             'message': f'Ошибка при добавлении клуба к турниру: {str(e)}'
         }), 500
 
-
 @tournaments_bp.route('/search-athlete', methods=['GET'])
 @swag_from({
     'tags': ['Tournaments'],
@@ -673,7 +670,6 @@ def search_athlete():
             'success': False,
             'message': f'Ошибка при поиске участника: {str(e)}'
         }), 500
-
 
 @tournaments_bp.route('/club-athletes', methods=['GET'])
 @swag_from({

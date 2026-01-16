@@ -37,6 +37,7 @@ class TournamentNew(db.Model):
     status = db.Column(db.Enum(StatusTournament), default=StatusTournament.PLANNED)
     is_public = db.Column(db.Boolean, default=True)
 
+    has_consolation_fights = db.Column(db.Boolean, default=False)
     # Организационная информация
     organizer = db.Column(db.String(100))
     chief_referee_id = db.Column(db.Integer, db.ForeignKey('referees.id'))

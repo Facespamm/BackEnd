@@ -14,7 +14,7 @@ class FightNew(db.Model):
     blue_athlete_id = db.Column(db.Integer, db.ForeignKey('athletes.id'))
 
     # Информация о схватке
-    tatami_number = db.Column(db.Integer, default=1)
+    tatami_number = db.Column(db.Integer, default=0)
     round_number = db.Column(db.Integer, default=1)  # Раунд в сетке
     fight_number = db.Column(db.Integer)  # Номер схватки
 

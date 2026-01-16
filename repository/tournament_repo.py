@@ -1,10 +1,4 @@
-from sqlalchemy import select
-
 from database.db import create_session
-from models.associations import category_athletes
-from models.athlete import Athlete
-from models.category import Category
-from models.tournament import Tournament
 from new_model.head_model.tournament_new import TournamentNew
 
 
@@ -106,8 +100,22 @@ class TournamentRepository:
     def get_tournament_by_id(self, tournament_id):
         """Получить турнир по ID"""
         try:
-            tournament = self.session.query(TournamentNew).filter_by(id=tournament_id).first()
+            tournament = self.session.query(TournamentNew).filter_by(id=tournament_id).one_or_none()
+
+            if not tournament:
+                print(f"Tournament with id {tournament_id} not found")
+                return None
+
             return tournament
         except Exception as e:
             print(f"Error getting tournament by id {tournament_id}: {e}")
             return None
+
+    def get_athletes_by_tournament(self, tournament_id):
+        tournament = self.get_tournament_by_id(tournament_id)
+
+        if not tournament:
+            return None
+
+        athletes = tournament.athletes
+        return athletes

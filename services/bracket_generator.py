@@ -1,65 +1,63 @@
 """
 Генератор турнирных сеток по правилам дзюдо
 """
-
 import math
 import random
-from database.db import db, create_session
+
+from database.db import create_session
 from models.Enums import FightStatus
-from models.fight import Fight
-from models.bracket import Bracket
-from models.tournament import Tournament
 from new_model.head_model.fight_new import FightNew
-from new_model.head_model.new_athlete import AthleteNew
 from repository.athlete_repo import AthleteRepository
+from repository.figth_repo import FightRepository
+from repository.result_repo import ResultRepository
 from repository.tournament_repo import TournamentRepository
-from utils.helpers import calculate_rounds, generate_bracket_positions
+
+tournament_repo = TournamentRepository()
 
 class BracketGenerator:
     """Генератор турнирных сеток"""
 
-    def __init__(self, bracket, tournament_id):
+    def __init__(self, tournament_id):
         self.session = create_session()
-        self.bracket = bracket
-        self.tournament = bracket.tournament
-        self.category = bracket.category
+        self.tournament = tournament_repo.get_tournament_by_id(tournament_id)
         self.tournament_id = tournament_id
 
-    def generate(self, tournament_id: int):
+    def generate(self):
         """Генерация сетки по олимпийской системе"""
+        try:
+            athlete_repo = AthleteRepository()
+            athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id)
 
-        athlete_repo = AthleteRepository()
-        athletes = athlete_repo.get_athletes_by_tournament(tournament_id)
+            if not athletes:
+                return []
 
-        if not athletes:
-            return []
+            athletes_count = len(athletes)
+            if athletes_count < 2:
+                return []
 
-        athletes_count = len(athletes)
-        if athletes_count < 2:
-            return []
+            # Очищаем существующие схватки
+            self.session.query(FightNew).filter_by(tournament_id=self.tournament_id).delete()
 
-        # Очищаем существующие схватки
-        self.session.query(FightNew).filter_by(tournament_id=tournament_id).delete()
+            # Определяем количество раундов
+            total_rounds = self._calculate_rounds(athletes_count)
 
-        # Определяем количество раундов
-        total_rounds = calculate_rounds(athletes_count)
+            if athletes_count == 0:
+                return False
 
-        # Seed участников (сильнейшие не встречаются в первых раундах)
-        seeded_athletes = self._seed_athletes()
+            # Seed участников (сильнейшие не встречаются в первых раундах)
+            seeded_athletes = self._seed_athletes(athletes)
 
-        # Генерируем схватки
-        fights = self._generate_fights(seeded_athletes, total_rounds)
+            # Генерируем схватки
+            self._generate_fights(seeded_athletes, total_rounds)
+            return True
+        except Exception as e:
+            print("❌ Exception: ", e)
+            return False
 
-        # Сохраняем сетку
-        self.bracket.status = 'GENERATED'
-        self.bracket.save_to_db()
-
-        return fights
-
-    @classmethod
-    def _seed_athletes(athletes : list[AthleteNew]):
+    def _seed_athletes(self,athletes : list):
         """Посев участников (сильнейшие распределяются)"""
 
+        athlete_count = len(athletes)
         # Сортируем по рейтингу (если есть) или случайно
         try:
             athlete_repo = AthleteRepository()
@@ -71,7 +69,7 @@ class BracketGenerator:
             print("Ошибка при сортировке по рейтингу, используется случайное перемешивание:", e)
 
         # Применяем seeding позиции
-        positions = generate_bracket_positions(len(athletes))
+        positions = self._generate_bracket_positions(athlete_count)
         seeded_athletes = [None] * len(positions)
 
         for i, pos in enumerate(positions):
@@ -83,48 +81,42 @@ class BracketGenerator:
 
     def _generate_fights(self, athletes, total_rounds):
         """Генерация схваток для всех раундов"""
-        fights = []
-        current_round = total_rounds
-        current_athletes = athletes.copy()
-        fight_number = 1
+        try:
+            fights = []
+            current_round = total_rounds
+            current_athletes = athletes.copy()
+            fight_number = 1
 
-        # Генерация первого раунда
-        round_fights = self._generate_round_fights(current_athletes, current_round, fight_number)
-        fights.extend(round_fights)
-
-        # winners для следующего раунда
-        next_athletes = [None] * len(fights)
-
-        fight_number += len(round_fights)
-        current_round -= 1
-
-        # Генерация последующих раундов
-        while current_round > 0:
-            round_fights = self._generate_round_fights(next_athletes, current_round, fight_number)
+            # Генерация первого раунда
+            round_fights = self._generate_round_fights(current_athletes, current_round, fight_number)
             fights.extend(round_fights)
 
-            # Обновляем next_athletes для следующего раунда
-            next_athletes = [None] * (len(round_fights) // 2)
+            # winners для следующего раунда
+            next_athletes = [None] * len(fights)
             fight_number += len(round_fights)
             current_round -= 1
 
-        # Утешительные схватки за 3 место
-        if self.bracket.has_consolation and len(athletes) >= 4:
-            consolation_fights = self._generate_consolation_fights(fights, fight_number)
-            fights.extend(consolation_fights)
+            # Генерация последующих раундов
+            while current_round > 0:
+                round_fights = self._generate_round_fights(next_athletes, current_round, fight_number)
+                fights.extend(round_fights)
 
-        # Сохраняем все схватки
-        for fight in fights:
-            fight.save_to_db()
+                # Обновляем next_athletes для следующего раунда
+                next_athletes = [None] * (len(round_fights) // 2)
+                fight_number += len(round_fights)
+                current_round -= 1
 
-        return fights
+            # Утешительные схватки за 3 место
+            if self.tournament.has_consolation and len(athletes) >= 4:
+                self._generate_consolation_fights(fights, fight_number)
+        except Exception as e:
+            print(print("❌ Exception: ", e))
 
     def _generate_round_fights(self,athletes, round_number, start_fight_number):
         """Генерация схваток для одного раунда"""
         fights = []
         fight_number = start_fight_number
 
-        tournament_repo = TournamentRepository()
         tournament = tournament_repo.get_tournament_by_id(self.tournament_id) if athletes else None
 
         if not tournament:
@@ -140,13 +132,16 @@ class BracketGenerator:
 
             fight = FightNew(
                 tournament_id=tournament.id,
-                category_id=tournament.category.id,
                 white_athlete_id=white_athlete.id if white_athlete else None,
                 blue_athlete_id=blue_athlete.id if blue_athlete else None,
                 round_number=round_number,
                 fight_number=fight_number,
                 status=FightStatus.SCHEDULED
             )
+
+            #сохроняем бой
+            fight_repo = FightRepository()
+            fight_repo.create_figth(fight)
 
             fights.append(fight)
             fight_number += 1
@@ -166,81 +161,112 @@ class BracketGenerator:
         consolation_fights = []
         fight_number = start_fight_number
 
+        result_repo = ResultRepository()
+
         # Схватка за 3 место между проигравшими в полуфиналах
         losers = []
         for fight in semifinal_fights:
-            if fight.result:
-                loser = fight.get_loser()
-                if loser:
-                    losers.append(loser)
+            loser = result_repo.get_loser(fight.id)
+            if loser:
+                losers.append(loser)
 
-        if len(losers) == 2:
-            fight = Fight(
+        length_losers = len(losers)
+
+        if length_losers == 2:
+            fight = FightNew(
                 tournament_id=self.tournament.id,
-                bracket_id=self.bracket.id,
-                category_id=self.category.id,
                 white_athlete_id=losers[0].id,
                 blue_athlete_id=losers[1].id,
                 round_number=2,  # Утешительный раунд
                 fight_number=fight_number,
-                status='SCHEDULED'
+                status=FightStatus.SCHEDULED
             )
-            consolation_fights.append(fight)
+
+            fight_repo = FightRepository()
+            fight_repo.create_figth(fight)
 
         return consolation_fights
 
-    def update_bracket(self, completed_fight):
-        """Обновление сетки после завершения схватки"""
-        if not completed_fight.result:
-            return
+    # TODO переписать методы
+    # def update_bracket(self, completed_fight):
+    #     """Обновление сетки после завершения схватки"""
+    #     if not completed_fight.result:
+    #         return
+    #
+    #     winner = completed_fight.result.winner
+    #     round_number = completed_fight.round_number
+    #
+    #     # Если это не финал, находим следующую схватку для победителя
+    #     if round_number > 1:
+    #         next_round = round_number - 1
+    #         next_fight_number = (completed_fight.fight_number + 1) // 2
+    #
+    #         next_fight = Fight.query.filter_by(
+    #             bracket_id=self.bracket.id,
+    #             round_number=next_round,
+    #             fight_number=next_fight_number
+    #         ).first()
+    #
+    #         if next_fight:
+    #             # Определяем позицию в следующей схватке
+    #             if completed_fight.fight_number % 2 == 1:  # Нечетная схватка -> белый
+    #                 next_fight.white_athlete_id = winner.id
+    #             else:  # Четная схватка -> синий
+    #                 next_fight.blue_athlete_id = winner.id
+    #
+    #             next_fight.save()
+    #
+    #     # Проверяем завершение сетки
+    #     self._check_bracket_completion()
+    #
+    # def _check_bracket_completion(self):
+    #     """Проверка завершения всей сетки"""
+    #     incomplete_fights = Fight.query.filter_by(
+    #         bracket_id=self.bracket.id,
+    #         status='SCHEDULED'
+    #     ).count()
+    #
+    #     if incomplete_fights == 0:
+    #         self.bracket.status = 'COMPLETED'
+    #         self.bracket.save()
+    #
+    #         # Обновляем статус турнира если все сетки завершены
+    #         self._update_tournament_status()
+    #
+    # def _update_tournament_status(self):
+    #     """Обновление статуса турнира"""
+    #     incomplete_brackets = Bracket.query.filter_by(
+    #         tournament_id=self.tournament.id,
+    #         status='GENERATED'
+    #     ).count()
+    #
+    #     if incomplete_brackets == 0:
+    #         self.tournament.status = 'COMPLETED'
+    #         self.tournament.save()
 
-        winner = completed_fight.result.winner
-        round_number = completed_fight.round_number
+    def _generate_bracket_positions(self,participants_count):
+        """
+        Генерация позиций в сетке
+        """
+        if participants_count <= 1:
+            return [1]
 
-        # Если это не финал, находим следующую схватку для победителя
-        if round_number > 1:
-            next_round = round_number - 1
-            next_fight_number = (completed_fight.fight_number + 1) // 2
+        # Ближайшая степень двойки
+        next_power = 2 ** math.ceil(math.log2(participants_count))
 
-            next_fight = Fight.query.filter_by(
-                bracket_id=self.bracket.id,
-                round_number=next_round,
-                fight_number=next_fight_number
-            ).first()
+        positions = []
+        for i in range(participants_count):
+            # Алгоритм seeding для равномерного распределения сильных участников
+            pos = ((i * 2) % next_power) + ((i * 2) // next_power) + 1
+            positions.append(pos)
 
-            if next_fight:
-                # Определяем позицию в следующей схватке
-                if completed_fight.fight_number % 2 == 1:  # Нечетная схватка -> белый
-                    next_fight.white_athlete_id = winner.id
-                else:  # Четная схватка -> синий
-                    next_fight.blue_athlete_id = winner.id
+        return positions[:participants_count]
 
-                next_fight.save()
+    def _calculate_rounds(self,participants_count):
+        """
+        Расчет количества раундов для сетки
+        """
+        if participants_count <= 0:
+            return 0
 
-        # Проверяем завершение сетки
-        self._check_bracket_completion()
-
-    def _check_bracket_completion(self):
-        """Проверка завершения всей сетки"""
-        incomplete_fights = Fight.query.filter_by(
-            bracket_id=self.bracket.id,
-            status='SCHEDULED'
-        ).count()
-
-        if incomplete_fights == 0:
-            self.bracket.status = 'COMPLETED'
-            self.bracket.save()
-
-            # Обновляем статус турнира если все сетки завершены
-            self._update_tournament_status()
-
-    def _update_tournament_status(self):
-        """Обновление статуса турнира"""
-        incomplete_brackets = Bracket.query.filter_by(
-            tournament_id=self.tournament.id,
-            status='GENERATED'
-        ).count()
-
-        if incomplete_brackets == 0:
-            self.tournament.status = 'COMPLETED'
-            self.tournament.save()
+        return math.ceil(math.log2(participants_count))

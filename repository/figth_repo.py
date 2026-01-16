@@ -1,7 +1,9 @@
 from sqlalchemy import select, update, insert, delete
 
 from database.db import create_session
+from new_model.head_model.fight_new import FightNew
 from new_model.new_associations import fight_referee
+from repository.tournament_repo import TournamentRepository
 
 
 class FightRepository:
@@ -49,3 +51,11 @@ class FightRepository:
         )
         self.session.execute(delete_query)
         self.session.commit()
+
+    def create_fight(self, fight):
+        self.session.add(fight)
+        self.session.commit()
+
+    def get_fight_by_tournament(self, tournament_id):
+        fight = self.session.query(FightNew).filter_by(tournament_id = tournament_id).all()
+        return fight
