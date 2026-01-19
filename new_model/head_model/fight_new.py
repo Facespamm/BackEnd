@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from database.db import db
-from models.Enums import FightStatus
+from new_model.Enums import FightStatus
 from new_model.new_associations import fight_referee
 
 

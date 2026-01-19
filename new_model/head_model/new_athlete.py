@@ -2,7 +2,7 @@ from datetime import datetime
 
 from database.db import db
 from new_model.head_model.fight_new import FightNew
-from new_model.new_associations import new_category_athletes
+from new_model.new_associations import new_category_athletes, athlete_tournament
 
 
 class AthleteNew(db.Model):
@@ -38,9 +38,9 @@ class AthleteNew(db.Model):
     categories = db.relationship('CategoryNew',
                                  secondary=new_category_athletes,  # Используем объект таблицы
                                  lazy=True,
-                                 backref=db.backref('athletes'))
+                                 back_populates='athletes')
 
     tournaments = db.relationship('TournamentNew',
-                                  secondary='athlete_tournament',
+                                  secondary=athlete_tournament,
                                   lazy=True,
                                   back_populates='athletes')

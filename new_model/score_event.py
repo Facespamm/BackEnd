@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from database.db import db
-from models.Enums import AthleteColor, EventType, ScoreType
+from new_model.Enums import AthleteColor, EventType, ScoreType
 
 
 class ScoreEvent(db.Model):

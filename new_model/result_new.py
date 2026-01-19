@@ -1,5 +1,5 @@
 from database.db import db
-from models.Enums import VictoryType
+from new_model.Enums import VictoryType
 
 
 class ResultNew(db.Model):

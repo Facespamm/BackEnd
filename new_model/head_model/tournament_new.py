@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from database.db import db
-from models.Enums import StatusTournament
+from new_model.Enums import StatusTournament
+from new_model.new_associations import tournament_categories, athlete_tournament
 
 
 class TournamentNew(db.Model):
@@ -12,7 +13,7 @@ class TournamentNew(db.Model):
 
     # Основная информация
     id = db.Column(db.Integer, primary_key=True)
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
+    #category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
 
@@ -47,11 +48,14 @@ class TournamentNew(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Связи
-    category = db.relationship('CategoryNew', back_populates='tournaments')
+    categories = db.relationship('CategoryNew',
+        secondary=tournament_categories,
+        lazy=True,
+        back_populates='tournaments')
     fights = db.relationship('FightNew', back_populates='tournament')
     weighings = db.relationship('WeighingNew', back_populates='tournament')
     chief_referee = db.relationship('RefereeNew', back_populates='tournament')
     athletes = db.relationship('AthleteNew',
-                               secondary='athlete_tournament',
+                               secondary=athlete_tournament,
                                lazy=True,
                                back_populates='tournaments')

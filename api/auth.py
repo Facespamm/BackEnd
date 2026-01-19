@@ -4,8 +4,7 @@ from flasgger import swag_from
 from flask import request, Blueprint, jsonify
 from flask_jwt_extended import create_access_token
 
-from models.Enums import RoleName
-from models.user import User
+from new_model.Enums import RoleName
 from new_model.head_model.new_user import UserNew
 from repository.auth_repo import AuthRepository
 from utils.security import hash_password
