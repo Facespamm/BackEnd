@@ -1,6 +1,4 @@
 from flask import request, Blueprint, jsonify
-from models.bracket import Bracket
-from new_model.head_model.tournament_new import TournamentNew
 from repository.figth_repo import FightRepository
 from repository.tournament_repo import TournamentRepository
 from services.bracket_generator import BracketGenerator

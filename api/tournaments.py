@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from datetime import datetime
 
-from models.tournament import Tournament
+from new_model.head_model.tournament_new import TournamentNew
 from repository.tournament_repo import TournamentRepository
 
 tournaments_bp = Blueprint('tournaments', __name__, url_prefix='/tournaments')
@@ -54,11 +54,7 @@ def get_tournaments():
     try:
         status = request.args.get('status')
 
-        query = Tournament.query
-        if status:
-            query = query.filter_by(status=status)
-
-        tournaments = query.order_by(Tournament.start_date.desc()).all()
+        tournaments = tournament_repo.get_all_tournaments(status)
 
         result = []
         for tournament in tournaments:
@@ -151,7 +147,7 @@ def create_tournament():
                 'message': 'Обязательные поля: name, start_date, end_date'
             }), 400
 
-        tournament = Tournament(
+        tournament_new = TournamentNew(
             name=data['name'],
             description=data.get('description'),
             start_date=datetime.fromisoformat(data['start_date']),
@@ -162,13 +158,13 @@ def create_tournament():
             tatami_count=data.get('tatami_count', 1)
         )
 
-        if tournament.save_to_db():
+        if tournament_repo.create_tournament(tournament_new):
             return jsonify({
-                'id': tournament.id,
-                'name': tournament.name,
-                'start_date': tournament.start_date.isoformat(),
-                'end_date': tournament.end_date.isoformat(),
-                'status': tournament.status
+                'id': tournament_new.id,
+                'name': tournament_new.name,
+                'start_date': tournament_new.start_date.isoformat(),
+                'end_date': tournament_new.end_date.isoformat(),
+                'status': tournament_new.status
             }), 201
         else:
             return jsonify({
@@ -309,7 +305,7 @@ def get_tournament(tournament_id):
 def update_tournament(tournament_id):
     """Обновить информацию о турнире"""
     try:
-        tournament = Tournament.query.get(tournament_id)
+        tournament = tournament_repo.get_tournament_by_id(tournament_id)
 
         if not tournament:
             return jsonify({
@@ -384,7 +380,7 @@ def update_tournament(tournament_id):
 def delete_tournament(tournament_id):
     """Удалить турнир"""
     try:
-        tournament = Tournament.query.get(tournament_id)
+        tournament = tournament_repo.get_tournament_by_id(tournament_id)
 
         if not tournament:
             return jsonify({
@@ -392,7 +388,7 @@ def delete_tournament(tournament_id):
                 'message': 'Турнир не найден'
             }), 404
 
-        if tournament.delete():
+        if tournament_repo.delete_tournament(tournament):
             return jsonify({
                 'success': True,
                 'message': 'Турнир удален'
@@ -452,7 +448,7 @@ def delete_tournament(tournament_id):
 def get_tournament_categories(tournament_id):
     """Получить категории турнира"""
     try:
-        tournament = Tournament.query.get(tournament_id)
+        tournament = tournament_repo.get_tournament_by_id(tournament_id)
 
         if not tournament:
             return jsonify({
@@ -481,6 +477,7 @@ def get_tournament_categories(tournament_id):
             'message': f'Ошибка при получении категорий: {str(e)}'
         }), 500
 
+# TODO переделать вот эти эндпоинты
 @tournaments_bp.route('/<int:tournament_id>/add-club',  methods=['POST'])
 def add_club_to_tournament(tournament_id):
     """Добавить клуб к турниру"""
@@ -859,6 +856,7 @@ def get_club_athletes():
             'success': False,
             'message': f'Ошибка при получении участников клуба: {str(e)}'
         }), 500
+
 @tournaments_bp.route('/<int:tournament_id>/add-athletes', methods=['POST'])
 def add_athletes_to_tournament(tournament_id):
     """Добавить участников к турниру"""

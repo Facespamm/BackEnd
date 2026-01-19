@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
-from models.club import Club
+
+from repository.club_repo import ClubRepository
 
 clubs_bp = Blueprint('clubs', __name__, url_prefix='/clubs')
-
+club_repo = ClubRepository()
 
 @clubs_bp.route('/', methods=['GET'])
 @swag_from({
@@ -44,7 +45,7 @@ clubs_bp = Blueprint('clubs', __name__, url_prefix='/clubs')
 def get_clubs():
     """Получить список клубов"""
     try:
-        clubs = Club.query.filter_by(is_active=True).order_by(Club.name).all()
+        clubs = club_repo.get_clubs()
 
         result = []
         for club in clubs:
@@ -125,27 +126,17 @@ def create_club():
         if not data.get('name'):
             return jsonify({"success": False, "message": "Название клуба обязательно"}), 400
 
-        if Club.query.filter_by(name=data['name'].strip()).first():
+        existing_club = club_repo.get_club_by_name(data['name'].strip())
+
+        if existing_club:
             return jsonify({"success": False, "message": "Клуб с таким названием уже существует"}), 400
 
-        club = Club(
-            name=data['name'].strip(),
-            short_name=data.get('short_name'),
-            city=data.get('city'),
-            country=data.get('country', 'Россия'),
-            address=data.get('address'),
-            phone=data.get('phone'),
-            email=data.get('email'),
-            website=data.get('website'),
-            coach_name=data.get('coach_name'),
-            founded_year=data.get('founded_year')
-        )
+        is_create = club_repo.create_club(data)
 
-        if club.save_to_db():
+        if is_create:
             return jsonify({
                 "success": True,
-                "message": "Клуб успешно создан",
-                "club_id": club.id
+                "message": "Клуб успешно создан"
             }), 201
         else:
             return jsonify({"success": False, "message": "Ошибка при сохранении в базу"}), 400
