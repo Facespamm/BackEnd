@@ -2,11 +2,10 @@ from flask import request, Blueprint, jsonify
 from flasgger import swag_from
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from database.db import db
-from models.Enums import translate_gender, RoleName
-from models.athlete import Athlete
-from models.user import User
+from new_model.Enums import translate_gender, RoleName
 import datetime
 
+from new_model.head_model.new_athlete import AthleteNew
 from repository.athlete_repo import AthleteRepository
 from repository.auth_repo import AuthRepository
 from repository.category_repo import CategoryRepository
@@ -141,7 +140,7 @@ def create_athlete(user_id):
             }), 400
 
         # Создаем профиль участника
-        athlete = Athlete(
+        athlete = AthleteNew(
             user_id=user_id,
             birth_date=datetime.datetime.fromisoformat(data['birth_date']).date(),
             gender=data['gender'],
@@ -328,7 +327,7 @@ def update_athlete(athlete_id):
         else:
             return jsonify({
                 'success': False,
-                'message': f'Ошибка при сохранении: {str(e)}'
+                'message': f'Ошибка при сохранении'
             }), 400
 
     except Exception as e:
@@ -383,7 +382,7 @@ def delete_athlete(athlete_id):
         else:
             return jsonify({
                 'success': False,
-                'message': f'Ошибка при удалении: {str(e)}'
+                'message': f'Ошибка при удалении'
             }), 400
     except Exception as e:
         return jsonify({

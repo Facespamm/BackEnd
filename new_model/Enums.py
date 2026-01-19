@@ -50,10 +50,10 @@ class FightStatus(Enum):
     REPLAY = 'REPLAY'
 
 class RoleName(Enum):
-    ADMIN ='Администратор',
-    REFEREE = 'Судья',
-    SCOREBOARD = 'Табло',
-    VIEWER = 'Зритель',
+    ADMIN ='Администратор'
+    REFEREE = 'Судья'
+    SCOREBOARD = 'Табло'
+    VIEWER = 'Зритель'
     ATHLETE = 'Участник'
 
 def translate_gender(gender):

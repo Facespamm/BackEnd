@@ -21,9 +21,9 @@ jwt = JWTManager(app)
 # Инициализация базы данных
 init_db(app)
 
-# with app.app_context():
-#     init_dans_new()
-#     init_roles_new()
+with app.app_context():
+    init_dans_new()
+    init_roles_new()
 
 swagger_config = {
     "headers": [],
@@ -60,12 +60,12 @@ swagger_template = {
 swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
 # # Регистрация namespace'ов
-# from api.auth import auth_bp
-# from api.tournaments import tournaments_bp
-# from api.athletes import athletes_bp
-# from api.clubs import clubs_bp
+from api.auth import auth_bp
+from api.tournaments import tournaments_bp
+from api.athletes import athletes_bp
+from api.clubs import clubs_bp
 # from api.fights import fights_bp
-# from api.brackets import brackets_bp
+from api.brackets import brackets_bp
 # from api.results import results_bp
 # from api.weighing import weighing_bp
 # from api.categories import categories_bp
@@ -73,12 +73,13 @@ swagger = Swagger(app, config=swagger_config, template=swagger_template)
 # from api.users import users_bp
 # from api.dan import dans_bp
 # from api.scores import scores_bp
-# app.register_blueprint(auth_bp)
-# app.register_blueprint(tournaments_bp)
-# app.register_blueprint(athletes_bp)
-# app.register_blueprint(clubs_bp)
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(tournaments_bp)
+app.register_blueprint(athletes_bp)
+app.register_blueprint(clubs_bp)
 # app.register_blueprint(fights_bp)
-# app.register_blueprint(brackets_bp)
+app.register_blueprint(brackets_bp)
 # app.register_blueprint(results_bp)
 # app.register_blueprint(weighing_bp)
 # app.register_blueprint(categories_bp)

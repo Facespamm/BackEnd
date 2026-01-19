@@ -7,7 +7,6 @@ from flask_jwt_extended import create_access_token
 from new_model.Enums import RoleName
 from new_model.head_model.new_user import UserNew
 from repository.auth_repo import AuthRepository
-from utils.security import hash_password
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 auth_repo = AuthRepository()
@@ -89,7 +88,7 @@ def login():
     if not username or not password_enter:
         return jsonify({'success': False, 'message': 'Логин и пароль обязательны'}), 400
 
-    user = UserNew.query.filter_by(username=username, is_active=True).first()
+    user = auth_repo.get_user_by_username(username)
 
     user_role = auth_repo.get_role_by_user(user.id) if user else None
 
@@ -131,14 +130,14 @@ def public_registration():
         if field not in data:
             return jsonify({'success': False, 'message': f'Поле {field} обязательно'}), 400
 
-    existing_user = User.query.filter_by(username=data['login']).first()
+    existing_user = auth_repo.get_user_by_username(data['login'])
 
     if existing_user:
         return jsonify({'success': False, 'message': 'Пользователь с таким логином уже существует'}), 400
 
     names = data['fullname'].strip().split(' ')
 
-    new_user = User(
+    new_user = UserNew(
         username=data['login'],
         password_hash = auth_repo.hash_password(data['password']),
         first_name=names[0],

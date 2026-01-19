@@ -65,7 +65,7 @@ class AuthRepository:
     def update_user_role(self, user_id, user_role_id):
         """Обновить роль пользователя"""
         try:
-            user_role = self.session.query(new_user_roles).filter_by(user_id=user_id).first()
+            user_role = self.session.query(new_user_roles).filter_by(user_id=user_id, is_active=True).first()
 
             if user_role:
                 user_role.role_id = user_role_id
@@ -78,11 +78,17 @@ class AuthRepository:
             print(f"Error updating user role: {e}")
             return False
 
-    @staticmethod
-    def check_password(user: UserNew,password: str):
+    def get_user_by_username(self, username: str):
+        """Получить пользователя по его имени"""
+        try:
+            return self.session.query(UserNew).filter_by(username=username, is_active=True).first()
+        except Exception as e:
+            print(f"Error getting user by username: {e}")
+            return None
+
+    def check_password(self,user: UserNew,password: str):
         return user.password_hash == hash_password(password)
 
-    @staticmethod
-    def hash_password(password):
+    def hash_password(self, password):
         salt = 'judo_tournament_salt_2024'
         return hashlib.sha256((password + salt).encode()).hexdigest()

@@ -5,7 +5,7 @@ import math
 import random
 
 from database.db import create_session
-from models.Enums import FightStatus
+from new_model.Enums import FightStatus
 from new_model.head_model.fight_new import FightNew
 from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
