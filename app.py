@@ -3,11 +3,10 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from flask_restx import Api
 from database.db import init_db
 from flasgger import Swagger
 
-from init_database.init_db import init_roles, init_dans
+from init_database.init_db import init_roles, init_dans, init_roles_new, init_dans_new
 
 app = Flask(__name__)
 
@@ -22,8 +21,8 @@ jwt = JWTManager(app)
 init_db(app)
 
 with app.app_context():
-    init_dans()
-    init_roles()
+    init_dans_new()
+    init_roles_new()
 
 swagger_config = {
     "headers": [],

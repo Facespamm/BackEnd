@@ -3,6 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 
+
+
 db = SQLAlchemy()
 
 # Используйте одну строку подключения
@@ -18,18 +20,18 @@ def init_db(app):
 
     db.init_app(app)
     with app.app_context():
-        from models.athlete import Athlete
-        from models.club import Club
-        from models.tournament import Tournament
-        from models.category import Category
-        from models.fight import Fight
-        from models.bracket import Bracket
-        from models.result import Result
-        from models.weighing import Weighing
-        from models.user import User
-        from models.role import Role
-        from models.refere import Referee
-        from models.Dan import Dan
+        from new_model.head_model.new_athlete import AthleteNew
+        from new_model.head_model.fight_new import FightNew
+        from new_model.head_model.new_user import UserNew
+        from new_model.head_model.tournament_new import TournamentNew
+        from new_model.handbook.category_new import CategoryNew
+        from new_model.handbook.new_club import ClubNew
+        from new_model.handbook.new_dan import DanNew
+        from new_model.handbook.new_referee import RefereeNew
+        from new_model.handbook.role_new import RoleNew
+        from new_model.result_new import ResultNew
+        from new_model.score_event import ScoreEvent
+        from new_model.weighing_new import WeighingNew
         db.create_all()
 
 def create_session():
