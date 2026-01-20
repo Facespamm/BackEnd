@@ -59,7 +59,7 @@ def init_roles_new():
 
     roles = []
     for role in RoleName:
-        new_role = RoleNew(name=role.value, normalized_name=role.value[0].upper())
+        new_role = RoleNew(name=role.value, normalized_name=role.value.upper())
 
         if new_role.name in existing_role:
             continue

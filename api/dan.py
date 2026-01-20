@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
-from models.Dan import Dan
+
+from new_model.handbook.new_dan import DanNew
+from repository.dan_repo import DanRepository
 
 dans_bp = Blueprint('dans', __name__, url_prefix='/dans')
-
+dan_repo = DanRepository()
 
 @dans_bp.route('/', methods=['GET'])
 @swag_from({
@@ -41,7 +43,7 @@ dans_bp = Blueprint('dans', __name__, url_prefix='/dans')
 def get_dans():
     """Получить список данов"""
     try:
-        dans = Dan.query.order_by(Dan.level).all()
+        dans = dan_repo.get_dans()
 
         result = []
         for dan in dans:
@@ -49,7 +51,7 @@ def get_dans():
                 'id': dan.id,
                 'level': dan.level,
                 'description': dan.description,
-                'athletes_count': dan.athletes.count() if dan.athletes else 0
+                'athletes_count': dan.athlete_count
             })
 
         return jsonify({
@@ -111,19 +113,21 @@ def create_dan():
         if not data.get('level'):
             return jsonify({"success": False, "message": "Уровень дана обязателен"}), 400
 
-        if Dan.query.filter_by(level=data['level'].strip()).first():
+        existing_dan = dan_repo.get_dan_by_name(data['level'].strip())
+        if existing_dan:
             return jsonify({"success": False, "message": "Дан с таким уровнем уже существует"}), 400
 
-        dan = Dan(
+        dan = DanNew(
             level=data['level'].strip(),
             description=data.get('description')
         )
 
-        if dan.save_to_db():
+        dan_id = dan_repo.create_dan(dan)
+        if dan_id:
             return jsonify({
                 "success": True,
                 "message": "Дан успешно создан",
-                "dan_id": dan.id
+                "dan_id": dan_id
             }), 201
         else:
             return jsonify({"success": False, "message": "Ошибка при сохранении в базу"}), 400

@@ -125,7 +125,7 @@ def public_registration():
     """Публичная регистрация участника"""
     data = request.get_json(silent=True) or {}
 
-    required_fields = ['login', 'fullname', 'email', 'phone', 'password','role']
+    required_fields = ['login', 'fullname', 'email', 'phone', 'password']
     for field in required_fields:
         if field not in data:
             return jsonify({'success': False, 'message': f'Поле {field} обязательно'}), 400
@@ -148,7 +148,7 @@ def public_registration():
         is_active=True,
     )
 
-    role_name = data.get('role', RoleName.VIEWER.value)
+    role_name =RoleName.VIEWER.value
     user_id = auth_repo.create_user(new_user)
     role_id = auth_repo.get_role_id(role_name)
     is_added = auth_repo.set_user_role(user_id, role_id)
@@ -160,5 +160,5 @@ def public_registration():
     return jsonify({'success': True,
                     'message': 'Регистрация успешно создана',
                     'token': token,
-                    'role': data['role'],
+                    'role': user_role.name,
                     }), 201

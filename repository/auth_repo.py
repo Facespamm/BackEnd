@@ -52,10 +52,10 @@ class AuthRepository:
             query = (
                 select(RoleNew)
                 .join(new_user_roles, RoleNew.id == new_user_roles.c.role_id)
-                .filter(new_user_roles.user_id == user_id)
+                .filter(new_user_roles.c.user_id == user_id)
                 .limit(1)
             )
-            role = self.session.execute(query).first()
+            role = self.session.execute(query).scalar_one_or_none()
             return role
 
         except Exception as e:
