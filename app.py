@@ -11,12 +11,13 @@ from init_database.init_db import init_dans_new, init_roles_new
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:okjtt@localhost:5434/judo_tournament?client_encoding=utf8'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:okjtt@localhost:5434/judo_tournament'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY','cc820b15d44f7643fa52046a6c34f98a804c35d5ebdf830204a074c2c0059f88')
 # CORS для API
 CORS(app)
 jwt = JWTManager(app)
+CORS(app)
 
 # Инициализация базы данных
 init_db(app)
