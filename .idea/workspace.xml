@@ -5,34 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6559d010-01ce-415d-82f4-c262001ad7cb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/repository/club_repo.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repository/dan_repo.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/athletes.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/athletes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/brackets.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/brackets.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/clubs.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/clubs.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/tournaments.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/tournaments.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/Dan.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Dan.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/Enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/Enums.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/associations.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/associations.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/athlete.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/athlete.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/bracket.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/bracket.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/category.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/category.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/club.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/club.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/fight.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/fight.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/refere.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/refere.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/result.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/result.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/role.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/role.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/tournament.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/tournament.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/user.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/weighing.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/weighing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/new_model/Enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/new_model/Enums.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repository/auth_repo.py" beforeDir="false" afterPath="$PROJECT_DIR$/repository/auth_repo.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repository/tournament_repo.py" beforeDir="false" afterPath="$PROJECT_DIR$/repository/tournament_repo.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/bracket_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/bracket_generator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,7 +69,7 @@
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "task__decide__error__db",
+    "git-widget-placeholder": "Api",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
     "last_opened_file_path": "/Users/alex/Documents/GitHub/BackEnd",
@@ -139,7 +114,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/app.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
@@ -162,7 +136,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="RUN_TOOL" value="" />
       <option name="launchJavascriptDebuger" value="false" />
       <method v="2" />
     </configuration>
@@ -179,7 +152,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="RUN_TOOL" value="" />
       <option name="launchJavascriptDebuger" value="false" />
       <method v="2" />
     </configuration>
@@ -267,6 +239,11 @@
           <url>file://$PROJECT_DIR$/api/categories.py</url>
           <line>165</line>
           <option name="timeStamp" value="22" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/api/tournaments.py</url>
+          <line>149</line>
+          <option name="timeStamp" value="23" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
