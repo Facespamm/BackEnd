@@ -67,10 +67,9 @@ def get_tournaments():
                 'venue': tournament.venue,
                 'city': tournament.city,
                 'country': tournament.country,
-                'status': tournament.status,
+                'status': tournament.status.value,
                 'tatami_count': tournament.tatami_count,
-                'athletes_count': tournament.athletes_count,
-                'progress_percentage': tournament.progress_percentage
+                'athletes_count': tournament_repo.get_athlete_count(tournament.id)
             })
 
         return jsonify(result), 200
@@ -147,6 +146,12 @@ def create_tournament():
                 'message': 'Обязательные поля: name, start_date, end_date'
             }), 400
 
+        if not data.get('list_category'):
+            return jsonify({
+                'success': False,
+                'message': 'Нет категорий'
+            }),400
+
         tournament_new = TournamentNew(
             name=data['name'],
             description=data.get('description'),
@@ -158,7 +163,17 @@ def create_tournament():
             tatami_count=data.get('tatami_count', 1)
         )
 
-        if tournament_repo.create_tournament(tournament_new):
+        is_created = tournament_repo.create_tournament(tournament_new)
+
+        for category in data['list_category']:
+            tournament_repo.assign_category_tournament(category, tournament_new.id)
+
+        if not is_created:
+            return jsonify({
+                'message':'Ошибка создание турнира',
+                'success': False
+            }),400
+        else:
             return jsonify({
                 'id': tournament_new.id,
                 'name': tournament_new.name,
@@ -166,17 +181,6 @@ def create_tournament():
                 'end_date': tournament_new.end_date.isoformat(),
                 'status': tournament_new.status
             }), 201
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Ошибка при создании турнира'
-            }), 400
-
-    except ValueError as e:
-        return jsonify({
-            'success': False,
-            'message': f'Неверный формат даты: {str(e)}'
-        }), 400
     except Exception as e:
         return jsonify({
             'success': False,
@@ -246,8 +250,7 @@ def get_tournament(tournament_id):
             'country': tournament.country,
             'status': tournament.status,
             'tatami_count': tournament.tatami_count,
-            'athletes_count': tournament.athletes_count,
-            'progress_percentage': tournament.progress_percentage
+            'athletes_count': tournament_repo.get_athlete_count(tournament.id),
         }), 200
 
     except Exception as e:
@@ -857,6 +860,7 @@ def get_club_athletes():
             'message': f'Ошибка при получении участников клуба: {str(e)}'
         }), 500
 
+# TODO переделать вот эти эндпоинты
 @tournaments_bp.route('/<int:tournament_id>/add-athletes', methods=['POST'])
 def add_athletes_to_tournament(tournament_id):
     """Добавить участников к турниру"""

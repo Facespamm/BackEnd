@@ -1,7 +1,11 @@
-from sqlalchemy import true
+from sqlalchemy import true, select
+from sqlalchemy.dialects.mysql import insert
+from sqlalchemy.sql.functions import count
 
 from database.db import create_session
+from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.tournament_new import TournamentNew
+from new_model.new_associations import tournament_categories, athlete_tournament
 
 
 class TournamentRepository:
@@ -126,15 +130,48 @@ class TournamentRepository:
     def get_all_tournaments(self, status=None):
         """Получить все турниры"""
         try:
-            tournaments_query = self.session.query(TournamentNew).filter_by(is_active = True).order_by(TournamentNew.start_date.desc())
+            #TODO надо добавить поля is_active в турниры
+            # tournaments_query = self.session.query(TournamentNew).filter_by(is_active = True).order_by(TournamentNew.start_date.desc())
+            tournaments_query = self.session.query(TournamentNew).order_by(TournamentNew.start_date.desc())
 
             if status:
                 tournaments_query = tournaments_query.filter_by(status=status)
+
             tournaments = tournaments_query.all()
             return tournaments
         except Exception as e:
             print(f"Error getting all tournaments: {e}")
             return []
+
+    def get_athlete_count(self, tournament_id):
+        """Количество участников на турнир"""
+        try:
+            count_athlete = (
+                self.session.query(count(athlete_tournament.c.athlete_id))
+                .filter(
+                    athlete_tournament.c.tournament_id == tournament_id
+                ).scalar()
+            )
+
+            return count_athlete if count_athlete else 0
+        except Exception as e:
+            print(f"Error getting athlete count: {e}")
+            return None
+
+    def get_category(self, tournament_id):
+        """Категория"""
+        try:
+            category = (
+                self.session.query(CategoryNew)
+                .join(tournament_categories)
+                .filter(tournament_categories.c.tournament_id == tournament_id)
+                .all()
+            )
+
+            return category
+        except Exception as e:
+            print(f"Error getting category: {e}")
+            return None
 
     def create_tournament(self, tournament : TournamentNew):
         """Создать турнир"""
@@ -146,6 +183,21 @@ class TournamentRepository:
         except Exception as e:
             self.session.rollback()
             print(f"Error creating tournament {tournament.name}: {e}")
+            return False
+
+    def assign_category_tournament(self, category_id, tournament_id):
+        """Подписать категории к турниру"""
+        try:
+            insert_query = (
+                insert(tournament_categories)
+                .values(tournament_id=tournament_id, category_id=category_id)
+            )
+            self.session.execute(insert_query)
+            self.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error assigning category {category_id}: {e}")
+            self.session.rollback()
             return False
 
     def delete_tournament(self, tournament:TournamentNew):

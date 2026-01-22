@@ -1,7 +1,10 @@
+from sqlalchemy.sql.functions import count
+
 from database.db import create_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
+from new_model.new_associations import new_category_athletes
 
 
 class CategoryRepository:
@@ -52,3 +55,9 @@ class CategoryRepository:
         if tournament_id:
             query = query.filter(CategoryNew.tournaments.any(TournamentNew.id == tournament_id))
         return query.all()
+
+    #TODO доделать
+    def get_all_athletes(self):
+        query = (
+            self.session.query(count(new_category_athletes.c.athlete_id))
+        )
