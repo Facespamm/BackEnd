@@ -56,8 +56,34 @@ class CategoryRepository:
             query = query.filter(CategoryNew.tournaments.any(TournamentNew.id == tournament_id))
         return query.all()
 
-    #TODO доделать
-    def get_all_athletes(self):
-        query = (
-            self.session.query(count(new_category_athletes.c.athlete_id))
-        )
+    def get_all_athletes(self, category_id):
+        try:
+            count_athlete = self.session.query(count(AthleteNew.id)).filter(AthleteNew.categories.any(CategoryNew.id == category_id)).scalar()
+
+            return count_athlete
+        except Exception as e:
+            print(f"Error getting athletes: {e}")
+            return 0
+
+    def create_category(self, category_new:CategoryNew):
+        try:
+            self.session.add(category_new)
+            self.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error creating category: {e}")
+            self.session.rollback()
+            return False
+
+    def get_category_by_id(self, category_id):
+        return self.session.query(CategoryNew).filter_by(id=category_id).first()
+
+    def delete_category(self, category):
+        try:
+            self.session.delete(category)
+            self.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error deleting category: {e}")
+            self.session.rollback()
+            return False
