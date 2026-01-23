@@ -57,5 +57,4 @@ class FightRepository:
         self.session.commit()
 
     def get_fight_by_tournament(self, tournament_id):
-        fight = self.session.query(FightNew).filter_by(tournament_id = tournament_id).all()
-        return fight
+        return self.session.query(FightNew).filter_by(tournament_id = tournament_id).all()

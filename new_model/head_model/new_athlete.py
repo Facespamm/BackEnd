@@ -2,7 +2,6 @@ from datetime import datetime
 
 from database.db import db
 from new_model.head_model.fight_new import FightNew
-from new_model.new_associations import new_category_athletes, athlete_tournament
 
 
 class AthleteNew(db.Model):
@@ -10,6 +9,7 @@ class AthleteNew(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'))
     birth_date = db.Column(db.Date, nullable=False)
     gender = db.Column(db.String(10), nullable=False)
@@ -26,6 +26,7 @@ class AthleteNew(db.Model):
     club = db.relationship('ClubNew', back_populates='athletes' )
     user = db.relationship('UserNew', back_populates='athlete_profile')
     weighings = db.relationship('WeighingNew', back_populates='athlete')
+    registrations = db.relationship('AthleteRegistration',lazy=True, back_populates='athlete')
 
     white_fights = db.relationship('FightNew',
                                    back_populates='white_athlete',
@@ -36,11 +37,6 @@ class AthleteNew(db.Model):
                                   foreign_keys=[FightNew.blue_athlete_id])
 
     categories = db.relationship('CategoryNew',
-                                 secondary=new_category_athletes,  # Используем объект таблицы
                                  lazy=True,
                                  back_populates='athletes')
 
-    tournaments = db.relationship('TournamentNew',
-                                  secondary=athlete_tournament,
-                                  lazy=True,
-                                  back_populates='athletes')

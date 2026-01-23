@@ -1,11 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import false
-
 from database.db import db
 from new_model.Enums import Gender
-from new_model.new_associations import new_category_athletes, tournament_categories
-
 
 class CategoryNew(db.Model):
     __tablename__ = 'categories'
@@ -23,9 +19,8 @@ class CategoryNew(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     #связи
-    tournaments = db.relationship('TournamentNew', secondary=tournament_categories,
-        back_populates='categories')
+    tournament_categories = db.relationship('TournamentCategory', lazy = True ,back_populates='category')
+
     athletes = db.relationship('AthleteNew',
-                               secondary=new_category_athletes,  # Используем объект таблицы
                                lazy=True,
                                back_populates='categories')

@@ -4,7 +4,6 @@ from database.db import create_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
-from new_model.new_associations import new_category_athletes
 
 
 class CategoryRepository:
@@ -58,7 +57,7 @@ class CategoryRepository:
 
     def get_all_athletes(self, category_id):
         try:
-            count_athlete = self.session.query(count(AthleteNew.id)).filter(AthleteNew.categories.any(CategoryNew.id == category_id)).scalar()
+            count_athlete = self.session.query(AthleteNew.id).filter(CategoryNew.athletes.any(CategoryNew.id == category_id)).count()
 
             return count_athlete
         except Exception as e:

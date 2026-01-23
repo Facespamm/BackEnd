@@ -6,7 +6,8 @@ from sqlalchemy_utils import database_exists, create_database
 db = SQLAlchemy()
 
 # Используйте одну строку подключения
-DATABASE_URI = 'postgresql+psycopg2://postgres:password@db:5432/judo_tournament'
+# DATABASE_URI = 'postgresql+psycopg2://postgres:password@192.168.7.122:5434/judo_tournament'
+DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
 
 def init_db(app):
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
@@ -30,6 +31,7 @@ def init_db(app):
         from new_model.result_new import ResultNew
         from new_model.score_event import ScoreEvent
         from new_model.weighing_new import WeighingNew
+        from new_model.new_associations import TournamentCategory, AthleteRegistration,FightReferee
         db.create_all()
 
 def create_session():

@@ -10,50 +10,6 @@ registrations_bp = Blueprint('registrations', __name__, url_prefix='/registratio
 
 
 @registrations_bp.route('/', methods=['POST'])
-@swag_from({
-    'tags': ['Registrations'],
-    'summary': 'Зарегистрировать атлета на турнир',
-    'description': 'Регистрирует атлета в конкретной категории турнира',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'required': ['athlete_id', 'tournament_id', 'category_id'],
-                'properties': {
-                    'athlete_id': {'type': 'integer', 'description': 'ID атлета'},
-                    'tournament_id': {'type': 'integer', 'description': 'ID турнира'},
-                    'category_id': {'type': 'integer', 'description': 'ID категории'},
-                    'notes': {'type': 'string', 'description': 'Дополнительные заметки'}
-                }
-            }
-        }
-    ],
-    'responses': {
-        201: {
-            'description': 'Атлет успешно зарегистрирован',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'message': {'type': 'string'},
-                    'registration_id': {'type': 'integer'}
-                }
-            }
-        },
-        400: {
-            'description': 'Ошибка валидации'
-        },
-        404: {
-            'description': 'Атлет, турнир или категория не найдены'
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
 def register_athlete():
     """Зарегистрировать атлета на турнир"""
     try:
@@ -154,51 +110,6 @@ def register_athlete():
 
 
 @registrations_bp.route('/tournament/<int:tournament_id>', methods=['GET'])
-@swag_from({
-    'tags': ['Registrations'],
-    'summary': 'Получить список регистраций на турнир',
-    'description': 'Возвращает список всех зарегистрированных атлетов на турнир',
-    'parameters': [
-        {
-            'name': 'tournament_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID турнира'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Список регистраций',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'registrations': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'athlete_id': {'type': 'integer'},
-                                'athlete_name': {'type': 'string'},
-                                'category_id': {'type': 'integer'},
-                                'category_name': {'type': 'string'},
-                                'gender': {'type': 'string'},
-                                'age': {'type': 'integer'},
-                                'club': {'type': 'string'},
-                                'registered_at': {'type': 'string', 'format': 'date-time'}
-                            }
-                        }
-                    },
-                    'total': {'type': 'integer'}
-                }
-            }
-        },
-        404: {
-            'description': 'Турнир не найден'
-        }
-    }
-})
 def get_tournament_registrations(tournament_id):
     """Получить список регистраций на турнир"""
     try:
@@ -243,50 +154,6 @@ def get_tournament_registrations(tournament_id):
 
 
 @registrations_bp.route('/<int:category_id>/athletes', methods=['GET'])
-@swag_from({
-    'tags': ['Registrations'],
-    'summary': 'Получить зарегистрированных атлетов в категории',
-    'description': 'Возвращает список атлетов, зарегистрированных в конкретной категории',
-    'parameters': [
-        {
-            'name': 'category_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID категории'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Список атлетов в категории',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'category': {'type': 'string'},
-                    'athletes': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'id': {'type': 'integer'},
-                                'full_name': {'type': 'string'},
-                                'club': {'type': 'string'},
-                                'age': {'type': 'integer'},
-                                'rank': {'type': 'string'},
-                                'weight': {'type': 'number'}
-                            }
-                        }
-                    },
-                    'total': {'type': 'integer'}
-                }
-            }
-        },
-        404: {
-            'description': 'Категория не найдена'
-        }
-    }
-})
 def get_category_registrations(category_id):
     """Получить зарегистрированных атлетов в категории"""
     try:
@@ -326,38 +193,6 @@ def get_category_registrations(category_id):
 
 
 @registrations_bp.route('/<int:category_id>/athlete/<int:athlete_id>', methods=['DELETE'])
-@swag_from({
-    'tags': ['Registrations'],
-    'summary': 'Отменить регистрацию атлета',
-    'description': 'Удаляет атлета из категории (отмена регистрации)',
-    'parameters': [
-        {
-            'name': 'category_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID категории'
-        },
-        {
-            'name': 'athlete_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID атлета'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Регистрация отменена'
-        },
-        404: {
-            'description': 'Категория или атлет не найдены'
-        },
-        400: {
-            'description': 'Ошибка при отмене регистрации'
-        }
-    }
-})
 def unregister_athlete(category_id, athlete_id):
     """Отменить регистрацию атлета"""
     try:

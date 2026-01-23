@@ -406,44 +406,6 @@ def delete_tournament(tournament_id):
         }), 500
 
 @tournaments_bp.route('/<int:tournament_id>/categories', methods=['GET'])
-@swag_from({
-    'tags': ['Tournaments'],
-    'summary': 'Получить категории турнира',
-    'description': 'Возвращает список категорий конкретного турнира',
-    'parameters': [
-        {
-            'name': 'tournament_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID турнира'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Список категорий',
-            'schema': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'id': {'type': 'integer'},
-                        'name': {'type': 'string'},
-                        'gender': {'type': 'string'},
-                        'min_weight': {'type': 'number'},
-                        'max_weight': {'type': 'number'},
-                        'min_age': {'type': 'integer'},
-                        'max_age': {'type': 'integer'},
-                        'athletes_count': {'type': 'integer'}
-                    }
-                }
-            }
-        },
-        404: {
-            'description': 'Турнир не найден'
-        }
-    }
-})
 def get_tournament_categories(tournament_id):
     """Получить категории турнира"""
     try:
@@ -480,7 +442,7 @@ def get_tournament_categories(tournament_id):
 @tournaments_bp.route('/<int:tournament_id>/add-club',  methods=['POST'])
 def add_club_to_tournament(tournament_id):
     """Добавить клуб к турниру"""
-    club_id =request.args.get('club_id')
+    club_id =request.get('club_id')
 
     if not club_id:
         return jsonify({
@@ -701,12 +663,27 @@ def add_club_to_tournament(tournament_id):
 @tournaments_bp.route('/<int:tournament_id>/add-athletes', methods=['POST'])
 def add_athletes_to_tournament(tournament_id):
     """Добавить участников к турниру"""
-    athlete_ids = request.get_json().get('athlete_ids')
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            'success': False,
+            'message': 'Не переданы участники и категория'
+        }),400
+
+    athlete_ids = data.get('athlete_ids')
+    category_id = data.get('category_id')
 
     if not athlete_ids or not isinstance(athlete_ids, list):
         return jsonify({
             'success': False,
             'message': 'Не переданы участники или неверный формат'
+        }), 400
+
+    if not category_id:
+        return jsonify({
+            'success': False,
+            'message': 'Не передана категория'
         }), 400
 
     if not tournament_id:
