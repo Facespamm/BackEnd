@@ -68,4 +68,4 @@ class FightReferee(db.Model):
 
     # Relationships
     fight = db.relationship('FightNew', back_populates='fight_referees')
-    referee = db.relationship('RefereeNew', back_populates='fight_referees')
+    referees = db.relationship('RefereeNew', back_populates='fight_referees')
