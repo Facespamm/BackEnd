@@ -1,17 +1,15 @@
 from flask import Blueprint, jsonify
 from flasgger import swag_from
-from sqlalchemy import func, distinct
 from sqlalchemy.orm import joinedload
+from sqlalchemy.sql.expression import distinct
+from sqlalchemy.sql.functions import count
 
-# Ваши импорты (как указано)
+from new_model.handbook.role_new import RoleNew
+from new_model.head_model.new_athlete import AthleteNew
+from new_model.head_model.new_user import UserNew
 from new_model.head_model.tournament_new import TournamentNew
 from new_model.head_model.fight_new import FightNew
-from new_model.handbook import new_club
-from new_model.head_model import new_athlete
-from new_model.head_model import new_user
-from new_model.handbook import role_new
-from new_model.new_associations import athlete_tournament
-from new_model.new_associations import new_user_roles
+from new_model.new_associations import new_user_roles, AthleteRegistration, TournamentCategory
 from new_model.Enums import StatusTournament, FightStatus
 from database.db import db
 
@@ -47,20 +45,21 @@ statistics_bp = Blueprint('statistics', __name__, url_prefix='/statistics')
 def get_live_statistics():
     try:
         active_tournaments_count = (
-            db.session.query(func.count(TournamentNew.id))
+            db.session.query(count(TournamentNew.id))
             .filter(TournamentNew.status == StatusTournament.LIVE)
             .scalar() or 0
         )
 
         unique_athletes_count = (
-            db.session.query(func.count(distinct(athlete_tournament.c.athlete_id)))
-            .join(TournamentNew, TournamentNew.id == athlete_tournament.c.tournament_id)
+            db.session.query(count(distinct(AthleteRegistration.athlete_id)))
+            .join(TournamentCategory, TournamentCategory.tournament_category_id == AthleteRegistration.tournament_category_id)
+            .join(TournamentNew, TournamentNew.id == TournamentCategory.tournament_id)
             .filter(TournamentNew.status == StatusTournament.LIVE)
             .scalar() or 0
         )
 
         live_fights_count = (
-            db.session.query(func.count(FightNew.id))
+            db.session.query(count(FightNew.id))
             .join(TournamentNew)
             .filter(
                 TournamentNew.status == StatusTournament.LIVE,
@@ -127,10 +126,10 @@ def get_all_users():
     try:
         # Загружаем всех активных пользователей с предзагрузкой ролей
         users = (
-            db.session.query(new_user.UserNew)
-            .filter(new_user.UserNew.is_active == True)
-            .options(joinedload(new_user.UserNew.roles))
-            .order_by(new_user.UserNew.last_name, new_user.UserNew.first_name)
+            db.session.query(UserNew)
+            .filter(UserNew.is_active == True)
+            .options(joinedload(UserNew.roles))
+            .order_by(UserNew.last_name, UserNew.first_name)
             .all()
         )
 
@@ -193,37 +192,39 @@ def get_all_users():
 def get_live_detailed_statistics():
     try:
         active_tournaments_count = (
-            db.session.query(func.count(TournamentNew.id))
+            db.session.query(count(TournamentNew.id))
             .filter(TournamentNew.status == StatusTournament.LIVE)
             .scalar() or 0
         )
 
         unique_athletes_count = (
-            db.session.query(func.count(distinct(athlete_tournament.c.athlete_id)))
-            .join(TournamentNew, TournamentNew.id == athlete_tournament.c.tournament_id)
+            db.session.query(count(distinct(AthleteRegistration.athlete_id)))
+            .join(TournamentCategory, TournamentCategory.tournament_category_id == AthleteRegistration.tournament_category_id)
+            .join(TournamentNew, TournamentNew.id == TournamentCategory.tournament_id)
             .filter(TournamentNew.status == StatusTournament.LIVE)
             .scalar() or 0
         )
 
         unique_clubs_count = (
-            db.session.query(func.count(distinct(new_athlete.AthleteNew.club_id)))
-            .join(athlete_tournament, new_athlete.AthleteNew.id == athlete_tournament.c.athlete_id)
-            .join(TournamentNew, TournamentNew.id == athlete_tournament.c.tournament_id)
+            db.session.query(count(distinct(AthleteNew.club_id)))
+            .join(AthleteRegistration, AthleteRegistration.athlete_id == AthleteNew.id)
+            .join(TournamentCategory, TournamentCategory.tournament_category_id == AthleteRegistration.tournament_category_id)
+            .join(TournamentNew, TournamentCategory.tournament_id == TournamentNew.id)
             .filter(
                 TournamentNew.status == StatusTournament.LIVE,
-                new_athlete.AthleteNew.club_id.isnot(None)
+                AthleteNew.club_id.isnot(None)
             )
             .scalar() or 0
         )
 
         total_users_count = (
-            db.session.query(func.count(new_user.UserNew.id))
-            .filter(new_user.UserNew.is_active == True)
+            db.session.query(count(UserNew.id))
+            .filter(UserNew.is_active == True)
             .scalar() or 0
         )
 
         live_fights_count = (
-            db.session.query(func.count(FightNew.id))
+            db.session.query(count(FightNew.id))
             .join(TournamentNew)
             .filter(
                 TournamentNew.status == StatusTournament.LIVE,
@@ -288,32 +289,32 @@ def get_users_by_role_statistics():
     try:
         # 1. Общее количество активных пользователей
         total_active_users = (
-            db.session.query(func.count(new_user.UserNew.id))
-            .filter(new_user.UserNew.is_active == True)
+            db.session.query(count(UserNew.id))
+            .filter(UserNew.is_active == True)
             .scalar() or 0
         )
 
         # 2. Количество пользователей по каждой роли
         users_by_role = (
             db.session.query(
-                role_new.RoleNew.name.label('role_name'),
-                role_new.RoleNew.normalized_name.label('normalized_name'),
-                func.count(new_user.UserNew.id).label('count')
+                RoleNew.name.label('role_name'),
+                RoleNew.normalized_name.label('normalized_name'),
+                count(UserNew.id).label('count')
             )
-            .join(new_user_roles, role_new.RoleNew.id == new_user_roles.c.role_id)
-            .join(new_user.UserNew, new_user.UserNew.id == new_user_roles.c.user_id)
-            .filter(new_user.UserNew.is_active == True)
-            .group_by(role_new.RoleNew.id, role_new.RoleNew.name, role_new.RoleNew.normalized_name)
-            .order_by(role_new.RoleNew.name)
+            .join(new_user_roles, RoleNew.id == new_user_roles.c.role_id)
+            .join(UserNew, UserNew.id == new_user_roles.c.user_id)
+            .filter(UserNew.is_active == True)
+            .group_by(RoleNew.id, RoleNew.name, RoleNew.normalized_name)
+            .order_by(RoleNew.name)
             .all()
         )
 
         # 3. Пользователи без ролей (активные)
         users_without_role = (
-            db.session.query(func.count(new_user.UserNew.id))
-            .outerjoin(new_user_roles, new_user.UserNew.id == new_user_roles.c.user_id)
+            db.session.query(count(UserNew.id))
+            .outerjoin(new_user_roles, UserNew.id == new_user_roles.c.user_id)
             .filter(
-                new_user.UserNew.is_active == True,
+                UserNew.is_active == True,
                 new_user_roles.c.user_id.is_(None)
             )
             .scalar() or 0
@@ -398,14 +399,15 @@ def get_active_tournaments():
         for tournament in tournaments:
             # Количество уникальных атлетов на турнире
             athletes_count = (
-                db.session.query(func.count(distinct(athlete_tournament.c.athlete_id)))
-                .filter(athlete_tournament.c.tournament_id == tournament.id)
+                db.session.query(count(distinct(AthleteRegistration.athlete_id)))
+                .join(TournamentCategory, TournamentCategory.tournament_category_id == AthleteRegistration.tournament_category_id)
+                .filter(TournamentCategory.tournament_id == tournament.id)
                 .scalar() or 0
             )
 
             # Количество активных боёв на этом турнире
             live_fights_count = (
-                db.session.query(func.count(FightNew.id))
+                db.session.query(count(FightNew.id))
                 .filter(
                     FightNew.tournament_id == tournament.id,
                     FightNew.status == FightStatus.LIVE
