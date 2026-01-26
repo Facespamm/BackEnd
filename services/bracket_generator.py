@@ -22,11 +22,11 @@ class BracketGenerator:
         self.tournament = tournament_repo.get_tournament_by_id(tournament_id)
         self.tournament_id = tournament_id
 
-    def generate(self):
+    def generate(self, category_id: int):
         """Генерация сетки по олимпийской системе"""
         try:
             athlete_repo = AthleteRepository()
-            athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id)
+            athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
             if not athletes:
                 return []
@@ -35,8 +35,12 @@ class BracketGenerator:
             if athletes_count < 2:
                 return []
 
+            tournament_category_id = tournament_repo.get_tournament_category_id(self.tournament_id, category_id)
+            if not tournament_category_id:
+                print("❌ Tournament category not found")
+                return []
             # Очищаем существующие схватки
-            self.session.query(FightNew).filter_by(tournament_id=self.tournament_id).delete()
+            self.session.query(FightNew).filter_by(tournament_category_id=tournament_category_id).delete()
 
             # Определяем количество раундов
             total_rounds = self._calculate_rounds(athletes_count)
@@ -48,7 +52,7 @@ class BracketGenerator:
             seeded_athletes = self._seed_athletes(athletes)
 
             # Генерируем схватки
-            self._generate_fights(seeded_athletes, total_rounds)
+            self._generate_fights(seeded_athletes, total_rounds, tournament_category_id)
             return True
         except Exception as e:
             print("❌ Exception: ", e)
@@ -79,7 +83,7 @@ class BracketGenerator:
         # Убираем None значения (если участников меньше чем позиций)
         return [a for a in seeded_athletes if a is not None]
 
-    def _generate_fights(self, athletes, total_rounds):
+    def _generate_fights(self, athletes, total_rounds, tournament_category_id):
         """Генерация схваток для всех раундов"""
         try:
             fights = []
@@ -112,15 +116,10 @@ class BracketGenerator:
         except Exception as e:
             print(print("❌ Exception: ", e))
 
-    def _generate_round_fights(self,athletes, round_number, start_fight_number):
+    def _generate_round_fights(self,athletes, round_number, start_fight_number, tournament_category_id):
         """Генерация схваток для одного раунда"""
         fights = []
         fight_number = start_fight_number
-
-        tournament = tournament_repo.get_tournament_by_id(self.tournament_id) if athletes else None
-
-        if not tournament:
-            raise ValueError("Турнир не найден для генерации схваток.")
 
         for i in range(0, len(athletes), 2):
             white_athlete = athletes[i] if i < len(athletes) else None
@@ -131,7 +130,7 @@ class BracketGenerator:
                 continue
 
             fight = FightNew(
-                tournament_id=tournament.id,
+                tournament_category_id=tournament_category_id,
                 white_athlete_id=white_athlete.id if white_athlete else None,
                 blue_athlete_id=blue_athlete.id if blue_athlete else None,
                 round_number=round_number,
@@ -141,7 +140,7 @@ class BracketGenerator:
 
             #сохроняем бой
             fight_repo = FightRepository()
-            fight_repo.create_figth(fight)
+            fight_repo.create_fight(fight)
 
             fights.append(fight)
             fight_number += 1

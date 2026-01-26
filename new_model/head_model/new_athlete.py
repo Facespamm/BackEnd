@@ -13,6 +13,7 @@ class AthleteNew(db.Model):
     club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'))
     birth_date = db.Column(db.Date, nullable=False)
     gender = db.Column(db.String(10), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
     rank_id = db.Column(db.Integer, db.ForeignKey('dans.id'))  # КЮ/ДАН
     license_number = db.Column(db.String(50))
     medical_check = db.Column(db.Boolean, default=False)

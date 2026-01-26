@@ -18,15 +18,17 @@ def get_categories():
 
         result = []
         for category in categories:
-            tournament_ids = [t.id for t in category.tournaments]
+            tournament_ids = [t.tournament_category_id for t in category.tournament_categories]
 
             result.append({
                 'id': category.id,
                 'name': category.name,
                 'gender': category.gender.value,
-                'weight_range': category.weight_range,
-                'age_range': category.age_range,
-                'athletes_count': category.athletes_count,
+                'min_weight': category.min_weight,
+                'max_weight': category.max_weight,
+                'min_age': category.min_age,
+                'max_age': category.max_age,
+                'athletes_count': category_repo.get_all_athletes(category.id),
                 'tournament_id': tournament_ids
             })
 
@@ -60,9 +62,10 @@ def create_category():
                 'message': 'Обязательные поля: name, tournament_id, gender'
             }), 400
 
+        translate_gender_ =  translate_gender(data['gender'])
         category = CategoryNew(
             name=data['name'],
-            gender=data['gender'],
+            gender=translate_gender_,
             min_weight=data.get('min_weight'),
             max_weight=data.get('max_weight'),
             min_age=data.get('min_age'),

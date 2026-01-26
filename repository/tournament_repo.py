@@ -7,6 +7,7 @@ from database.db import create_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
+from new_model.new_associations import TournamentCategory, AthleteRegistration
 
 
 class TournamentRepository:
@@ -101,22 +102,22 @@ class TournamentRepository:
 
             # Получаем ID связей турнир-категория
             tournament_category_records = (
-                self.session.query(tournament_categories)
+                self.session.query(TournamentCategory)
                 .filter(
-                    tournament_categories.c.category_id.in_(category_ids),
-                    tournament_categories.c.tournament_id == tournament_id
+                    TournamentCategory.category_id.in_(category_ids),
+                    TournamentCategory.tournament_id == tournament_id
                 )
                 .all()
             )
 
-            tc_ids = [tc.id for tc in tournament_category_records]
+            tc_ids = [tc.tournament_category_id for tc in tournament_category_records]
             tc_by_category = {tc.category_id: tc.id for tc in tournament_category_records}
 
             # Получаем уже назначенных атлетов
             existing_athlete_ids = {
                 row[0] for row in
-                self.session.query(athlete_tournament.c.athlete_id)
-                .filter(athlete_tournament.c.tournament_category_id.in_(tc_ids))
+                self.session.query(AthleteRegistration.athlete_id)
+                .filter(AthleteRegistration.tournament_category_id.in_(tc_ids))
                 .all()
             }
 
@@ -168,10 +169,10 @@ class TournamentRepository:
                return False
 
             tournament_category_id = (
-                self.session.query(tournament_categories.c.tournament_category_id)
+                self.session.query(TournamentCategory.tournament_category_id)
                 .filter(
-                    tournament_categories.c.category_id == category_id,
-                    tournament_categories.c.tournament_id == tournament_id,
+                    TournamentCategory.category_id == category_id,
+                    TournamentCategory.tournament_id == tournament_id,
                 )
                 .scalar()
             )
@@ -227,9 +228,10 @@ class TournamentRepository:
         """Количество участников на турнир"""
         try:
             count_athlete = (
-                self.session.query(count(athlete_tournament.c.athlete_id))
+                self.session.query(count(AthleteRegistration.athlete_id))
+                .join(TournamentCategory)
                 .filter(
-                    athlete_tournament.c.tournament_id == tournament_id
+                    TournamentCategory.tournament_id == tournament_id
                 ).scalar()
             )
 
@@ -243,12 +245,12 @@ class TournamentRepository:
         try:
             category = (
                 self.session.query(CategoryNew)
-                .join(tournament_categories)
-                .filter(tournament_categories.c.tournament_id == tournament_id)
+                .join(TournamentCategory)
+                .filter(TournamentCategory.tournament_id == tournament_id)
             )
 
             if category_id:
-                category = category.filter(tournament_categories.c.category_id == category_id).first()
+                category = category.filter(TournamentCategory.category_id == category_id).first()
                 return category
 
             return category.all()
@@ -272,7 +274,7 @@ class TournamentRepository:
         """Подписать категории к турниру"""
         try:
             insert_query = (
-                insert(tournament_categories)
+                insert(TournamentCategory)
                 .values(tournament_id=tournament_id, category_id=category_id)
             )
             self.session.execute(insert_query)
@@ -305,7 +307,7 @@ class TournamentRepository:
     def assign_athletes_tournament(self, tournament_category_id, athlete_id):
         try:
             assign_athlete_query = (
-                insert(athlete_tournament)
+                insert(AthleteRegistration)
                 .values(tournament_category_id=tournament_category_id, athlete_id=athlete_id)
             )
             self.session.execute(assign_athlete_query)
@@ -315,3 +317,21 @@ class TournamentRepository:
             print(f"Error assigning athletes to tournament: {e}")
             self.session.rollback()
             return False
+
+    def get_tournament_category_id(self,  tournament_id:int, category_id:int):
+        """Получить ID категории турнира"""
+        try:
+            tournament_category = (
+                self.session.query(TournamentCategory)
+                .filter_by(tournament_id=tournament_id, category_id=category_id)
+                .first()
+            )
+
+            if not tournament_category:
+                print(f"TournamentCategory not found for tournament_id {tournament_id} and category_id {category_id}")
+                return None
+
+            return tournament_category.tournament_category_id
+        except Exception as e:
+            print(f"Error getting tournament category id: {e}")
+            return None
