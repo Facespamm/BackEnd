@@ -56,7 +56,6 @@ def get_clubs():
                 'city': club.city,
                 'country': club.country,
                 'coach_name': club.coach_name,
-                'athletes_count': club.athletes_count
             })
 
         return jsonify({
