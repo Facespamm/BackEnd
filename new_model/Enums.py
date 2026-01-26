@@ -1,8 +1,8 @@
 from enum import Enum
 
 class Gender(Enum):
-    male = 0,
-    female = 1
+    male = 'мужской',
+    female = 'женский'
 
 class EventType(Enum):
     SCORE = 'SCORE'

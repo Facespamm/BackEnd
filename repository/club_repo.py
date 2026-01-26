@@ -45,3 +45,21 @@ class ClubRepository:
         except Exception as e:
             print("❌ Exception: ", e)
             return None
+
+    def get_athletes_by_club(self,  club_id:int):
+        from new_model.handbook.athlete_new import AthleteNew
+
+        try:
+            athletes = self.session.query(AthleteNew).filter_by(club_id=club_id, is_active=True).all()
+            return athletes
+        except Exception as e:
+            print("❌ Exception: ", e)
+            return []
+
+    def get_club_by_id(self,  club_id:int):
+        try:
+            club = self.session.query(ClubNew).filter_by(id=club_id, is_active=True).first()
+            return club
+        except Exception as e:
+            print("❌ Exception: ", e)
+            return None

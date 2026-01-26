@@ -2,7 +2,7 @@ from sqlalchemy import select, update, insert, delete
 
 from database.db import create_session
 from new_model.head_model.fight_new import FightNew
-from new_model.new_associations import fight_referee
+from new_model.new_associations import FightReferee
 from repository.tournament_repo import TournamentRepository
 
 
@@ -14,25 +14,25 @@ class FightRepository:
         """Назначить судью на бой"""
         # Проверяем, не назначен ли уже судья на эту роль
         existing_query = (
-            select(fight_referee)
-            .where(fight_referee.c.fight_id == fight_id)
-            .where(fight_referee.c.role == role)
+            select(FightReferee)
+            .where(FightReferee.fight_id == fight_id)
+            .where(FightReferee.role == role)
         )
         existing = self.session.execute(existing_query).first()
 
         if existing:
             # Обновляем существующую запись
             update_query = (
-                update(fight_referee)
-                .where(fight_referee.c.fight_id == fight_id)
-                .where(fight_referee.c.role == role)
+                update(FightReferee)
+                .where(FightReferee.fight_id == fight_id)
+                .where(FightReferee.role == role)
                 .values(referee_id=referee_id)
             )
             self.session.execute(update_query)
         else:
             # Добавляем новую запись
             insert_query = (
-                insert(fight_referee)
+                insert(FightReferee)
                 .values(
                     fight_id=fight_id,
                     referee_id=referee_id,
@@ -45,9 +45,9 @@ class FightRepository:
     def remove_referee(self, fight_id,role):
         """Убрать судью с определенной роли"""
         delete_query = (
-            delete(fight_referee)
-            .where(fight_referee.c.fight_id == fight_id)
-            .where(fight_referee.c.role == role)
+            delete(FightReferee)
+            .where(FightReferee.fight_id == fight_id)
+            .where(FightReferee.role == role)
         )
         self.session.execute(delete_query)
         self.session.commit()
@@ -56,5 +56,5 @@ class FightRepository:
         self.session.add(fight)
         self.session.commit()
 
-    def get_fight_by_tournament(self, tournament_id):
-        return self.session.query(FightNew).filter_by(tournament_id = tournament_id).all()
+    def get_fight_by_tournament(self, tournament_category_id):
+        return self.session.query(FightNew).filter_by(tournament_category_id = tournament_category_id).all()

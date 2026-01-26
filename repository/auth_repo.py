@@ -92,3 +92,28 @@ class AuthRepository:
     def hash_password(self, password):
         salt = 'judo_tournament_salt_2024'
         return hashlib.sha256((password + salt).encode()).hexdigest()
+
+    def get_users(self):
+        return self.session.query(UserNew).filter_by(is_active=True).order_by(UserNew.username).all()
+
+    def get_user_by_id(self, user_id: int):
+        """Получить пользователя по его ID"""
+        try:
+            return self.session.query(UserNew).filter_by(id=user_id, is_active=True).first()
+        except Exception as e:
+            print(f"Error getting user by id: {e}")
+            return None
+
+    def update_user(self, existing_user,data):
+        """Обновить информацию о пользователе"""
+        try:
+            existing_user.name = data.get('name', existing_user.name)
+            existing_user.email = data.get('email', existing_user.email)
+            existing_user.phone = data.get('phone', existing_user.phone)
+
+            self.session.commit()
+            return True
+        except Exception as e:
+            self.session.rollback()
+            print(f"Error updating user: {e}")
+            return False
