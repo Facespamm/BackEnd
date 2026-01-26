@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flasgger import swag_from
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import distinct
@@ -162,89 +162,181 @@ def get_all_users():
             'message': f'Ошибка при получении списка пользователей: {str(e)}'
         }), 500
 
-@statistics_bp.route('/live-detailed', methods=['GET'])
+@statistics_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @swag_from({
-    'tags': ['Statistics'],
-    'summary': 'Расширенная статистика по активным турнирам (LIVE)',
+    'tags': ['Users'],
+    'summary': 'Удаление пользователя по ID',
+    'description': 'Удаляет пользователя из системы (жёсткое удаление). Требуются права администратора.',
+    'parameters': [
+        {
+            'name': 'user_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID пользователя'
+        }
+    ],
     'responses': {
         200: {
-            'description': 'Статистика успешно получена',
+            'description': 'Пользователь успешно удалён',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'success': {'type': 'boolean'},
-                    'data': {
+                    'message': {'type': 'string'}
+                }
+            }
+        },
+        404: {'description': 'Пользователь не найден'},
+        500: {'description': 'Ошибка сервера'}
+    }
+})
+def delete_user(user_id):
+    """Удалить пользователя по ID"""
+    try:
+        user = db.session.query(UserNew).filter(UserNew.id == user_id).first()
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': f'Пользователь с ID {user_id} не найден'
+            }), 404
+
+        username = user.username  # сохраняем для сообщения
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Пользователь {username} успешно удалён'
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при удалении пользователя: {str(e)}'
+        }), 500
+
+
+# ────────────────────────────────────────────────────────────────
+# ОБНОВЛЕНИЕ данных пользователя по ID
+# ────────────────────────────────────────────────────────────────
+@statistics_bp.route('/users/<int:user_id>', methods=['PUT'])
+@swag_from({
+    'tags': ['Users'],
+    'summary': 'Обновление информации о пользователе',
+    'description': 'Обновляет основные данные пользователя (имя, фамилия, email, телефон и т.д.). Роли обновляются отдельно.',
+    'parameters': [
+        {
+            'name': 'user_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID пользователя'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'username': {'type': 'string'},
+                    'first_name': {'type': 'string'},
+                    'last_name': {'type': 'string'},
+                    'middle_name': {'type': 'string', 'nullable': True},
+                    'email': {'type': 'string', 'nullable': True},
+                    'phone': {'type': 'string', 'nullable': True},
+                    'is_active': {'type': 'boolean'}
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Пользователь успешно обновлён',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'user': {
                         'type': 'object',
                         'properties': {
-                            'active_tournaments': {'type': 'integer'},
-                            'unique_athletes': {'type': 'integer'},
-                            'unique_clubs': {'type': 'integer'},
-                            'total_users': {'type': 'integer'},
-                            'live_fights': {'type': 'integer'}
+                            'id': {'type': 'integer'},
+                            'username': {'type': 'string'},
+                            'first_name': {'type': 'string'},
+                            'last_name': {'type': 'string'},
+                            'middle_name': {'type': 'string', 'nullable': True},
+                            'email': {'type': 'string', 'nullable': True},
+                            'phone': {'type': 'string', 'nullable': True},
+                            'is_active': {'type': 'boolean'}
                         }
                     }
                 }
             }
         },
+        404: {'description': 'Пользователь не найден'},
+        400: {'description': 'Некорректные данные'},
         500: {'description': 'Ошибка сервера'}
     }
 })
-def get_live_detailed_statistics():
+def update_user(user_id):
+    """Обновить информацию о пользователе по ID"""
     try:
-        active_tournaments_count = (
-            db.session.query(count(TournamentNew.id))
-            .filter(TournamentNew.status == StatusTournament.LIVE)
-            .scalar() or 0
-        )
+        user = db.session.query(UserNew).filter(UserNew.id == user_id).first()
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': f'Пользователь с ID {user_id} не найден'
+            }), 404
 
-        unique_athletes_count = (
-            db.session.query(count(distinct(AthleteRegistration.athlete_id)))
-            .join(TournamentCategory, TournamentCategory.tournament_category_id == AthleteRegistration.tournament_category_id)
-            .join(TournamentNew, TournamentNew.id == TournamentCategory.tournament_id)
-            .filter(TournamentNew.status == StatusTournament.LIVE)
-            .scalar() or 0
-        )
+        data = request.get_json() or {}
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'Не переданы данные для обновления'
+            }), 400
 
-        unique_clubs_count = (
-            db.session.query(count(distinct(AthleteNew.club_id)))
-            .join(AthleteRegistration, AthleteRegistration.athlete_id == AthleteNew.id)
-            .join(TournamentCategory, TournamentCategory.tournament_category_id == AthleteRegistration.tournament_category_id)
-            .join(TournamentNew, TournamentCategory.tournament_id == TournamentNew.id)
-            .filter(
-                TournamentNew.status == StatusTournament.LIVE,
-                AthleteNew.club_id.isnot(None)
-            )
-            .scalar() or 0
-        )
+        # Обновляем только те поля, которые переданы
+        if 'username' in data:
+            user.username = data['username']
+        if 'first_name' in data:
+            user.first_name = data['first_name']
+        if 'last_name' in data:
+            user.last_name = data['last_name']
+        if 'middle_name' in data:
+            user.middle_name = data['middle_name']
+        if 'email' in data:
+            user.email = data['email']
+        if 'phone' in data:
+            user.phone = data['phone']
+        if 'is_active' in data:
+            user.is_active = data['is_active']
 
-        total_users_count = (
-            db.session.query(count(UserNew.id))
-            .filter(UserNew.is_active == True)
-            .scalar() or 0
-        )
+        db.session.commit()
 
-        live_fights_count = (
-            db.session.query(count(FightNew.id))
-            .join(TournamentNew)
-            .filter(
-                TournamentNew.status == StatusTournament.LIVE,
-                FightNew.status == FightStatus.LIVE
-            )
-            .scalar() or 0
-        )
-
-        result = {
-            'active_tournaments': active_tournaments_count,
-            'unique_athletes': unique_athletes_count,
-            'unique_clubs': unique_clubs_count,
-            'total_users': total_users_count,
-            'live_fights': live_fights_count
-        }
-
-        return jsonify({'success': True, 'data': result}), 200
+        return jsonify({
+            'success': True,
+            'message': 'Пользователь успешно обновлён',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'middle_name': user.middle_name,
+                'email': user.email,
+                'phone': user.phone,
+                'is_active': user.is_active
+            }
+        }), 200
 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при обновлении пользователя: {str(e)}'
+        }), 500
 
 @statistics_bp.route('/users-by-role', methods=['GET'])
 @swag_from({
@@ -346,6 +438,7 @@ def get_users_by_role_statistics():
             'success': False,
             'message': f'Ошибка при получении статистики пользователей: {str(e)}'
         }), 500
+
 @statistics_bp.route('/active-tournaments', methods=['GET'])
 @swag_from({
     'tags': ['Statistics'],
