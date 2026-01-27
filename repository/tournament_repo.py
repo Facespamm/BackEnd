@@ -1,5 +1,6 @@
 from sqlalchemy import true, select
 from sqlalchemy.dialects.mysql import insert
+from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.functions import count
 
 from api.categories import category_repo
@@ -8,6 +9,7 @@ from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
 from new_model.new_associations import TournamentCategory, AthleteRegistration
+from repository.category_repo import CategoryRepository
 
 
 class TournamentRepository:
@@ -111,7 +113,7 @@ class TournamentRepository:
             )
 
             tc_ids = [tc.tournament_category_id for tc in tournament_category_records]
-            tc_by_category = {tc.category_id: tc.id for tc in tournament_category_records}
+            tc_by_category = { tc.category_id : tc.tournament_category_id for tc in tournament_category_records}
 
             # Получаем уже назначенных атлетов
             existing_athlete_ids = {
@@ -157,12 +159,8 @@ class TournamentRepository:
                 print(f"Athlete with id {athlete_id} not found")
                 raise Exception("Athlete not found")
 
-            if athlete in tournament.athletes:
-                print(f"Athlete {athlete_id} already registered for tournament {tournament_id}")
-                return False
-
-            categories = self.get_category(tournament_id,category_id)
-            athlete_categories = [category for category in categories if athlete in category.athletes]
+            category = self.get_category(tournament_id,category_id)
+            athlete_categories = athlete.category_id == category.id
 
             if not athlete_categories:
                print(f"Athlete {athlete_id} does not belong to any category in tournament {tournament_id}")
@@ -177,6 +175,17 @@ class TournamentRepository:
                 .scalar()
             )
 
+            athlete_registry = (
+                self.session.query(AthleteRegistration.athlete_id)
+                .filter(
+                    AthleteRegistration.tournament_category_id == tournament_category_id,
+                )
+                .all()
+            )
+
+            if athlete.id in athlete_registry:
+                print(f"Athlete {athlete_id} already registered for tournament {tournament_id}")
+                return False
 
             print(f"Athlete {athlete_id} added to tournament {tournament_id} with category {category_id}")
             return self.assign_athletes_tournament(tournament_category_id, athlete_id)
@@ -188,7 +197,11 @@ class TournamentRepository:
     def get_tournament_by_id(self, tournament_id):
         """Получить турнир по ID"""
         try:
-            tournament = self.session.query(TournamentNew).filter_by(id=tournament_id).one_or_none()
+            tournament = (
+                self.session.query(TournamentNew)
+                .options(joinedload(TournamentNew.tournament_categories).joinedload(TournamentCategory.category))
+                .filter_by(id=tournament_id).one_or_none()
+            )
 
             if not tournament:
                 print(f"Tournament with id {tournament_id} not found")
@@ -273,6 +286,13 @@ class TournamentRepository:
     def assign_category_tournament(self, category_id, tournament_id):
         """Подписать категории к турниру"""
         try:
+            category_repo = CategoryRepository()
+
+            exist_category = category_repo.get_category_by_id(category_id)
+            if not exist_category:
+                print(f"Category with id {category_id} not found")
+                raise Exception("Category not found")
+
             insert_query = (
                 insert(TournamentCategory)
                 .values(tournament_id=tournament_id, category_id=category_id)

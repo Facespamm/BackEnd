@@ -65,14 +65,13 @@ class AuthRepository:
     def update_user_role(self, user_id, user_role_id):
         """Обновить роль пользователя"""
         try:
-            user_role = self.session.query(new_user_roles).filter_by(user_id=user_id, is_active=True).first()
-
-            if user_role:
-                user_role.role_id = user_role_id
-                self.session.commit()
-                return True
-
-            return False
+            result = (
+                self.session.query(new_user_roles)
+                .filter_by(user_id=user_id)
+                .update({"role_id": user_role_id})
+            )
+            self.session.commit()
+            return result > 0  # True если обновлена хотя бы 1 строка
         except Exception as e:
             self.session.rollback()
             print(f"Error updating user role: {e}")

@@ -1,7 +1,7 @@
 from enum import Enum
 
 class Gender(Enum):
-    male = 'мужской',
+    male = 'мужской'
     female = 'женский'
 
 class EventType(Enum):
@@ -57,4 +57,4 @@ class RoleName(Enum):
     ATHLETE = 'Участник'
 
 def translate_gender(gender):
-    return Gender.male if gender == 'мужской' else Gender.female
+    return Gender.male.name if gender == 'мужской' else Gender.female.name

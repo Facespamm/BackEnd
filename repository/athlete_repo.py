@@ -10,6 +10,7 @@ from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.new_user import UserNew
 from new_model.head_model.tournament_new import TournamentNew
 from new_model.new_associations import AthleteRegistration, TournamentCategory, new_user_roles
+from repository.category_repo import CategoryRepository
 
 
 class AthleteRepository:
@@ -73,7 +74,7 @@ class AthleteRepository:
             return False
 
     def get_athlete_by_id(self, athlete_id:int):
-        return self.session.query(AthleteNew).join(AthleteNew.user).filter_by(id = athlete_id).first()
+        return self.session.query(AthleteNew).join(AthleteNew.user).filter(AthleteNew.id == athlete_id).first()
 
     def update_athlete(self, athlete:AthleteNew, athlete_fields:list,user_fields:list, data: dict):
         try:
@@ -100,7 +101,7 @@ class AthleteRepository:
             self.session.rollback()
             return False
 
-    def delete_athlete_by_id(self, athlete:AthleteNew):
+    def delete_athlete(self, athlete:AthleteNew):
         try:
             athlete.is_active = False
             athlete.user.is_active = False
@@ -114,14 +115,14 @@ class AthleteRepository:
 
     def has_athlete(self, user_id:int):
         athlete = (
-            self.session.query(AthleteNew, RoleNew.name.label('role_name'))
+            self.session.query(AthleteNew)
             .join(new_user_roles, AthleteNew.user_id == new_user_roles.c.user_id)
             .join(RoleNew, new_user_roles.c.role_id == RoleNew.id)
             .filter(
                 and_(
                     AthleteNew.user_id == user_id,
                     AthleteNew.is_active == True,
-                    RoleNew.name == RoleName.ATHLETE
+                    RoleNew.name == RoleName.ATHLETE.value
                 )
             ).first()
         )
@@ -131,7 +132,7 @@ class AthleteRepository:
     def search_athletes_by_name(self, name_query:dict, club_id = None):
         query = (
             self.session.query(AthleteNew)
-            .options(joinedload(AthleteNew.rank2), joinedload(AthleteNew.club))
+            .options(joinedload(AthleteNew.rank), joinedload(AthleteNew.user),joinedload(AthleteNew.club))
             .filter(
                 AthleteNew.is_active == True,
             )
@@ -152,7 +153,7 @@ class AthleteRepository:
             if last_name:
                 query = query.filter(UserNew.last_name.ilike(f'%{last_name}%'))
 
-        athletes = query.order_by(UserNew.last_name, UserNew.first_name).all()
+        athletes = query.order_by(AthleteNew.user.last_name, AthleteNew.user.first_name).all()
         return athletes
 
     def get_athletes_by_club_id(self, club_id:int, tournament_id = None, include_tournament_info = False):
@@ -197,3 +198,12 @@ class AthleteRepository:
 
         athletes = athletes_query.order_by(AthleteNew.user.last_name, AthleteNew.user.first_name).all()
         return athletes
+
+    def set_category(self, athlete:AthleteNew,weigth):
+        category_repo = CategoryRepository()
+        category_id = category_repo.get_id_by_athlete_feature(weigth, athlete.age, athlete.gender)
+
+        if not category_id:
+            raise Exception('Не найдина категория')
+
+        athlete.category_id = category_id

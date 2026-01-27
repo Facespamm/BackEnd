@@ -224,11 +224,12 @@ def get_tournament_categories(tournament_id):
 
         category_repo = CategoryRepository()
         result = []
-        for category in tournament.categories:
+        for tournament_category in tournament.tournament_categories:
+            category = tournament_category.category
             result.append({
                 'id': category.id,
                 'name': category.name,
-                'gender': category.gender,
+                'gender': category.gender.value,
                 'min_weight': category.min_weight,
                 'max_weight': category.max_weight,
                 'min_age': category.min_age,
@@ -247,7 +248,7 @@ def get_tournament_categories(tournament_id):
 @tournaments_bp.route('/<int:tournament_id>/add-club',  methods=['POST'])
 def add_club_to_tournament(tournament_id):
     """Добавить клуб к турниру"""
-    club_id =request.get('club_id')
+    club_id =request.args.get('club_id')
 
     if not club_id:
         return jsonify({
@@ -310,7 +311,7 @@ def add_athletes_to_tournament(tournament_id):
     tournament = TournamentRepository()
     try:
         for athlete_id in athlete_ids:
-            tournament.add_athlete_to_tournament(tournament_id, athlete_id)
+            tournament.add_athlete_to_tournament(tournament_id, category_id,athlete_id)
 
         return jsonify({
             'success': True,

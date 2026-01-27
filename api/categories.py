@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from flasgger import swag_from
 
 from new_model.Enums import translate_gender
 from new_model.handbook.category_new import CategoryNew
@@ -106,13 +105,12 @@ def get_category(category_id):
         return jsonify({
             'id': category.id,
             'name': category.name,
-            'gender': translate_gender(category.gender),
+            'gender': category.gender.value,
             'min_weight': category.min_weight,
             'max_weight': category.max_weight,
             'min_age': category.min_age,
             'max_age': category.max_age,
             'athletes_count': category_repo.get_all_athletes(category.id),
-            # 'tournament_id': category.tournament_id
         }), 200
 
     except Exception as e:
@@ -140,7 +138,7 @@ def update_category(category_id):
 
         is_update = category_repo.update_category(category_id, data)
 
-        if is_update():
+        if is_update:
             return jsonify({
                 'success': True,
                 'message': 'Категория успешно обновлена',

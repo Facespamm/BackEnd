@@ -25,7 +25,7 @@ class AthleteNew(db.Model):
     #связи
     rank = db.relationship('DanNew')
     club = db.relationship('ClubNew', back_populates='athletes' )
-    user = db.relationship('UserNew', back_populates='athlete_profile')
+    user = db.relationship('UserNew', lazy = True,back_populates='athlete_profile')
     weighings = db.relationship('WeighingNew', back_populates='athlete')
     registrations = db.relationship('AthleteRegistration',lazy=True, back_populates='athlete')
 

@@ -32,7 +32,7 @@ class CategoryRepository:
     def update_category(self, category_id, category_data: dict):
         """Создать новую категорию"""
         try:
-            category = self.session.query(CategoryNew).first(category_id)
+            category = self.session.query(CategoryNew).filter_by(id = category_id).first()
             if not category:
                 raise Exception("Category not found")
 
@@ -86,3 +86,17 @@ class CategoryRepository:
             print(f"Error deleting category: {e}")
             self.session.rollback()
             return False
+
+    def get_id_by_athlete_feature(self, weigth, age, gender):
+        category_id = (
+            self.session.query(CategoryNew.id)
+            .filter(
+                CategoryNew.min_weight <= weigth,
+                CategoryNew.max_weight >= weigth,
+                CategoryNew.min_age <= age,
+                CategoryNew.max_age >= age,
+                CategoryNew.gender == gender
+            ).scalar()
+        )
+
+        return category_id
