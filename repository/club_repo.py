@@ -38,6 +38,33 @@ class ClubRepository:
             self.session.rollback()
             return False
 
+    def update_club(self, club_id: int, update_data: dict) -> bool:
+        """
+        Обновляет поля клуба по переданному словарю.
+        Возвращает True в случае успеха, False — если клуб не найден или ошибка.
+        """
+        try:
+            club = self.session.query(ClubNew).filter_by(id=club_id, is_active=True).first()
+            if not club:
+                return False
+
+            # Обновляем только те поля, которые пришли в словаре
+            for key, value in update_data.items():
+                if hasattr(club, key):
+                    # Для строк делаем strip, если значение не None
+                    if isinstance(value, str) and value is not None:
+                        setattr(club, key, value.strip())
+                    else:
+                        setattr(club, key, value)
+
+            self.session.commit()
+            return True
+
+        except Exception as e:
+            print("❌ Exception in update_club: ", e)
+            self.session.rollback()
+            return False
+
     def get_club_by_name(self,  name):
         try:
             club = self.session.query(ClubNew).filter_by(name=name.strip(), is_active=True).first()
