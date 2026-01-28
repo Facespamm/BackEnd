@@ -224,9 +224,7 @@ class TournamentRepository:
     def get_all_tournaments(self, status=None):
         """Получить все турниры"""
         try:
-            #TODO надо добавить поля is_active в турниры
-            # tournaments_query = self.session.query(TournamentNew).filter_by(is_active = True).order_by(TournamentNew.start_date.desc())
-            tournaments_query = self.session.query(TournamentNew).order_by(TournamentNew.start_date.desc())
+            tournaments_query = self.session.query(TournamentNew).filter_by(is_active = True).order_by(TournamentNew.start_date.desc())
 
             if status:
                 tournaments_query = tournaments_query.filter_by(status=status)
