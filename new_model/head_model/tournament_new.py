@@ -43,6 +43,7 @@ class TournamentNew(db.Model):
     chief_referee_id = db.Column(db.Integer, db.ForeignKey('referees.id'))
     contact_phone = db.Column(db.String(20))
     contact_email = db.Column(db.String(100))
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

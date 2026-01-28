@@ -72,6 +72,7 @@ from api.brackets import brackets_bp
 from api.categories import categories_bp
 # from api.registrations import registrations_bp
 from api.dan import dans_bp
+from api.referee import referee_bp
 # from api.scores import scores_bp
 
 app.register_blueprint(auth_bp)
@@ -87,6 +88,7 @@ app.register_blueprint(brackets_bp)
 app.register_blueprint(categories_bp)
 # app.register_blueprint(registrations_bp)
 app.register_blueprint(dans_bp)
+app.register_blueprint(referee_bp)
 # app.register_blueprint(scores_bp)
 
 if __name__ == '__main__':
