@@ -14,7 +14,7 @@ def create_bracket(tournament_id):
         if  not tournament_id:
             return jsonify({'success': False, 'message': 'ID турнира не указан'}), 400
 
-        category_id = request.json.get('category')
+        category_id = request.args.get('category')
 
         if not category_id:
             return jsonify({'success': False, 'message': 'Не выброна категория'}), 400
