@@ -8,19 +8,6 @@ import string
 from functools import wraps
 from flask import session, redirect, url_for, flash, request
 
-def hash_password(password):
-    """
-    Хеширование пароля с солью
-    """
-    salt = 'judo_tournament_salt_2024'
-    return hashlib.sha256((password + salt).encode()).hexdigest()
-
-def check_password(password_hash, password):
-    """
-    Проверка пароля
-    """
-    return password_hash == hash_password(password)
-
 def generate_referee_code(length=6):
     """
     Генерация кода для судей
