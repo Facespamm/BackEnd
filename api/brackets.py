@@ -21,8 +21,8 @@ def create_bracket(tournament_id):
 
         tournament_repo = TournamentRepository()
         tournament = tournament_repo.get_tournament_by_id(tournament_id)
-
-        if not tournament or not tournament.categories:
+        categories = tournament_repo.get_category(tournament_id)
+        if not tournament or not categories:
             return jsonify({'success': False, 'message': 'Турнир или категория не найдены'}), 404
 
         bracket_generator = BracketGenerator(tournament_id, category_id)

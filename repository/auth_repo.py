@@ -6,7 +6,6 @@ from database.db import create_session
 from new_model.handbook.role_new import RoleNew
 from new_model.head_model.new_user import UserNew
 from new_model.new_associations import new_user_roles
-from utils.security import hash_password
 
 
 class AuthRepository:
@@ -86,7 +85,7 @@ class AuthRepository:
             return None
 
     def check_password(self,user: UserNew,password: str):
-        return user.password_hash == hash_password(password)
+        return user.password_hash == self.hash_password(password)
 
     def hash_password(self, password):
         salt = 'judo_tournament_salt_2024'
