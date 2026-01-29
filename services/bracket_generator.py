@@ -58,26 +58,44 @@ class BracketGenerator:
             print("❌ Exception: ", e)
             return False
 
+    def generate_olympic_with_semi_finalists(self, category_id: int):
+        athlete_repo = AthleteRepository()
+        athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
+
+        athlete_count = len(athletes)
+        if not athletes or athlete_count < 2 or athlete_count == 0:
+            print('No athletes found')
+            return None
+
+        tournament_category_id = tournament_repo.get_tournament_category_id(self.tournament_id, category_id)
+        if not tournament_category_id:
+            print("❌ Tournament category not found")
+            return None
+
+        # Очищаем существующие схватки
+        self.session.query(FightNew).filter_by(tournament_category_id=tournament_category_id).delete()
+
+        # Определяем количество раундов
+        total_rounds = self._calculate_rounds(athlete_count)
+        #распределение участников
+        seeded_athletes = self._seed_athletes(athletes)
+
+
     def _seed_athletes(self,athletes : list):
         """Посев участников (сильнейшие распределяются)"""
 
         athlete_count = len(athletes)
-        # Сортируем по рейтингу (если есть) или случайно
-        try:
-            athlete_repo = AthleteRepository()
-            # Попытка сортировки по рейтингу (можно добавить логику рейтинга)
-            athletes.sort(key=lambda a: athlete_repo.get_victory_count(a), reverse=True)
-        except Exception as e:
-            # Случайное перемешивание если нет данных
-            random.shuffle(athletes)
-            print("Ошибка при сортировке по рейтингу, используется случайное перемешивание:", e)
+
+        athlete_repo = AthleteRepository()
+        # Попытка сортировки по рейтингу (можно добавить логику рейтинга)
+        athletes.sort(key=lambda a: athlete_repo.get_victory_count(a))
 
         # Применяем seeding позиции
         positions = self._generate_bracket_positions(athlete_count)
         seeded_athletes = [None] * len(positions)
 
         for i, pos in enumerate(positions):
-            if i < len(athletes):
+            if i < athlete_count:
                 seeded_athletes[pos-1] = athletes[i]
 
         # Убираем None значения (если участников меньше чем позиций)
@@ -243,8 +261,6 @@ class BracketGenerator:
     #         self.tournament.status = 'COMPLETED'
     #         self.tournament.save()
 
-    import math
-
     def _generate_bracket_positions(self, participants_count: int) -> list[int]:
         """
         Генерирует позиции (1-based) для посева участников.
@@ -255,8 +271,7 @@ class BracketGenerator:
             return [1]
 
         # Находим ближайшую степень двойки сверху
-        n = 2 ** math.ceil(math.log2(participants_count))
-        logn = int(math.log2(n))  # количество бит
+        logn = math.ceil(math.log2(participants_count))
 
         positions = []
         for i in range(participants_count):
@@ -269,11 +284,8 @@ class BracketGenerator:
             pos = rev + 1  # переводим в 1-based индекс
             positions.append(pos)
 
-        # Сортируем по полученным позициям (чтобы вернуть порядок: позиция 1, 2, 3, ...)
-        sorted_indices = sorted(range(len(positions)), key=lambda k: positions[k])
-        ordered_positions = [positions[i] for i in sorted_indices]
+        return positions
 
-        return ordered_positions
     def _calculate_rounds(self,participants_count):
         """
         Расчет количества раундов для сетки

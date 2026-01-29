@@ -10,6 +10,7 @@ class ResultNew(db.Model):
     winner_id = db.Column(db.Integer, db.ForeignKey('athletes.id'), nullable=False)
     victory_type = db.Column(db.Enum(VictoryType), nullable=False)
     fight_duration = db.Column(db.Float, nullable=False)
+    count_of_fights_win = db.Column(db.Integer, nullable=False, default=0)
 
     #связи
     fight = db.relationship('FightNew', back_populates='result')
