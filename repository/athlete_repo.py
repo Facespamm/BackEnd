@@ -49,6 +49,23 @@ class AthleteRepository:
         athletes = query.order_by(AthleteNew.id).all()
         return athletes
 
+    def count_athletes_in_club(self, club_id: int) -> int:
+        """
+        Возвращает количество активных спортсменов в указанном клубе.
+
+        :param club_id: Идентификатор клуба
+        :return: Количество активных спортсменов
+        """
+        count = (
+            self.session.query(AthleteNew)
+            .filter(
+                AthleteNew.club_id == club_id,
+                AthleteNew.is_active == True
+            )
+            .count()
+        )
+        return count
+
     def get_victory_count(self,  athlete_id:int, tournament_id = None):
         from new_model.result_new import ResultNew
         from new_model.head_model.fight_new import FightNew

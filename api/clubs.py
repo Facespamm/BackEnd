@@ -71,7 +71,7 @@ def create_club():
 @swag_from({
     "tags": ["Клубы"],
     "summary": "Удалить клуб по ID",
-    "description": "Выполняет удаление клуба. Рекомендуется предварительно проверить наличие связанных участников.",
+    "description": "Удаляет клуб. У спортсменов, привязанных к клубу, поле club_id становится NULL.",
     "parameters": [
         {
             "name": "club_id",
@@ -83,7 +83,7 @@ def create_club():
     ],
     "responses": {
         200: {
-            "description": "Клуб успешно удалён",
+            "description": "Клуб успешно удалён, спортсмены отвязаны",
             "schema": {
                 "type": "object",
                 "properties": {
@@ -93,7 +93,7 @@ def create_club():
             }
         },
         404: {"description": "Клуб не найден"},
-        400: {"description": "Невозможно удалить клуб (есть активные участники)"},
+        400: {"description": "Не удалось удалить клуб"},
         500: {"description": "Ошибка сервера"}
     }
 })
@@ -107,21 +107,14 @@ def delete_club(club_id):
                 "message": f"Клуб с ID {club_id} не найден"
             }), 404
 
-        # Опциональная проверка на наличие участников
-        athlete_repo = AthleteRepository()
-        athletes_count = athlete_repo.count_athletes_in_club(club_id)  # предполагается, что метод существует
-        if athletes_count > 0:
-            return jsonify({
-                "success": False,
-                "message": f"Невозможно удалить клуб — в нём {athletes_count} активных участников"
-            }), 400
+        # Проверка на наличие спортсменов УДАЛЕНА — теперь удаляем всегда
 
         is_deleted = club_repo.delete_club(club_id)
 
         if is_deleted:
             return jsonify({
                 "success": True,
-                "message": f"Клуб '{club.name}' успешно удалён"
+                "message": f"Клуб '{club.name}' успешно удалён, спортсмены отвязаны"
             }), 200
         else:
             return jsonify({
@@ -134,7 +127,6 @@ def delete_club(club_id):
             "success": False,
             "message": f"Ошибка при удалении клуба: {str(e)}"
         }), 500
-
 
 @clubs_bp.route('/<int:club_id>', methods=['PUT'])
 @swag_from({

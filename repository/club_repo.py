@@ -38,6 +38,44 @@ class ClubRepository:
             self.session.rollback()
             return False
 
+    def delete_club(self, club_id: int) -> bool:
+        """
+        Удаляет клуб из базы (hard delete) и обнуляет club_id у всех связанных спортсменов.
+
+        Возвращает True при успешном выполнении, False — если клуб не найден или произошла ошибка.
+        """
+        from new_model.head_model.new_athlete import AthleteNew  # импорт внутри метода или наверху файла
+
+        try:
+            # 1. Находим клуб
+            club = (
+                self.session.query(ClubNew)
+                .filter_by(id=club_id)
+                .first()
+            )
+
+            if not club:
+                return False
+
+            # 2. Обнуляем club_id у всех спортсменов, которые были привязаны к этому клубу
+            self.session.query(AthleteNew).filter(
+                AthleteNew.club_id == club_id
+            ).update(
+                {AthleteNew.club_id: None},
+                synchronize_session=False
+            )
+
+            # 3. Удаляем сам клуб
+            self.session.delete(club)
+
+            self.session.commit()
+            return True
+
+        except Exception as e:
+            print(f"❌ Exception in delete_club (club_id={club_id}): {e}")
+            self.session.rollback()
+            return False
+
     def update_club(self, club_id: int, update_data: dict) -> bool:
         """
         Обновляет поля клуба по переданному словарю.
@@ -74,7 +112,7 @@ class ClubRepository:
             return None
 
     def get_athletes_by_club(self,  club_id:int):
-        from new_model.handbook.athlete_new import AthleteNew
+        from new_model.head_model.new_athlete import AthleteNew
 
         try:
             athletes = self.session.query(AthleteNew).filter_by(club_id=club_id, is_active=True).all()
