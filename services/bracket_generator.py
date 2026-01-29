@@ -4,6 +4,7 @@
 import math
 import random
 
+from api.fights import fights_bp
 from database.db import create_session
 from new_model.Enums import FightStatus
 from new_model.head_model.fight_new import FightNew
@@ -80,6 +81,8 @@ class BracketGenerator:
         #распределение участников
         seeded_athletes = self._seed_athletes(athletes)
 
+        fights = self._generate_fights(seeded_athletes, total_rounds, tournament_category_id)
+        return fights
 
     def _seed_athletes(self,athletes : list):
         """Посев участников (сильнейшие распределяются)"""
@@ -88,7 +91,7 @@ class BracketGenerator:
 
         athlete_repo = AthleteRepository()
         # Попытка сортировки по рейтингу (можно добавить логику рейтинга)
-        athletes.sort(key=lambda a: athlete_repo.get_victory_count(a))
+        athletes.sort(key=lambda a: athlete_repo.get_victory_count(a.id))
 
         # Применяем seeding позиции
         positions = self._generate_bracket_positions(athlete_count)
@@ -105,7 +108,7 @@ class BracketGenerator:
         """Генерация схваток для всех раундов"""
         try:
             fights = []
-            current_round = total_rounds
+            current_round = 1
             current_athletes = athletes.copy()
             fight_number = 1
 
@@ -113,35 +116,41 @@ class BracketGenerator:
             round_fights = self._generate_round_fights(current_athletes, current_round, fight_number, tournament_category_id)
             fights.extend(round_fights)
 
+            length_fights = len(round_fights)
+
             # winners для следующего раунда
-            next_athletes = [None] * len(fights)
+            next_athletes = [None] * (length_fights // 2)
             fight_number += len(round_fights)
-            current_round -= 1
 
             # Генерация последующих раундов
-            while current_round > 0:
+            while current_round < total_rounds:
+                #TODO:  не создает почемуто следующий раунд
                 round_fights = self._generate_round_fights(next_athletes, current_round, fight_number, tournament_category_id)
                 fights.extend(round_fights)
 
                 # Обновляем next_athletes для следующего раунда
                 next_athletes = [None] * (len(round_fights) // 2)
                 fight_number += len(round_fights)
-                current_round -= 1
+                current_round += 1
 
             # Утешительные схватки за 3 место
             # if self.tournament.has_consolation and len(athletes) >= 4:
             #     self._generate_consolation_fights(fights, fight_number)
+
+            return fights
         except Exception as e:
-            print(print("❌ Exception: ", e))
+            print("❌ Exception: ", e)
 
     def _generate_round_fights(self,athletes, round_number, start_fight_number, tournament_category_id):
         """Генерация схваток для одного раунда"""
         fights = []
         fight_number = start_fight_number
 
+        athlete_count = len(athletes)
+
         for i in range(0, len(athletes), 2):
-            white_athlete = athletes[i] if i < len(athletes) else None
-            blue_athlete = athletes[i+1] if i+1 < len(athletes) else None
+            white_athlete = athletes[i] if i < athlete_count else None
+            blue_athlete = athletes[i+1] if i+1 < athlete_count else None
 
             # Пропускаем схватки где оба участника None
             if not white_athlete and not blue_athlete:

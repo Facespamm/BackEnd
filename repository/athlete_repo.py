@@ -70,6 +70,9 @@ class AthleteRepository:
         from new_model.result_new import ResultNew
         from new_model.head_model.fight_new import FightNew
 
+        if hasattr(athlete_id, 'id'):
+            athlete_id = athlete_id.id
+
         count_query = self.session.query(ResultNew).join(FightNew, ResultNew.fight_id == FightNew.id).filter(
             ResultNew.winner_id == athlete_id,
         )

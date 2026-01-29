@@ -26,11 +26,12 @@ def create_bracket(tournament_id):
             return jsonify({'success': False, 'message': 'Турнир или категория не найдены'}), 404
 
         bracket_generator = BracketGenerator(tournament_id)
-        bracket_generator.generate(category_id)
+        generate_figths =  bracket_generator.generate_olympic_with_semi_finalists(category_id)
 
         return jsonify({
             'success': True,
             'message': 'Сетка успешно создана',
+            'fights': generate_figths
         }), 201
     except Exception as e:
         return jsonify({'success': False, 'message': f'Ошибка создания сетки: {str(e)}'}), 500
