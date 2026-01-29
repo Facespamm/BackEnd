@@ -41,7 +41,7 @@ class AthleteRepository:
             .join(TournamentCategory, AthleteRegistration.tournament_category_id == TournamentCategory.tournament_category_id)
             .filter(
                 AthleteNew.is_active == True,
-                TournamentCategory.id == tournament_id,
+                TournamentCategory.tournament_id == tournament_id,
                 TournamentCategory.category_id == category_id,
             )
         )

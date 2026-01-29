@@ -92,7 +92,7 @@ class BracketGenerator:
             fight_number = 1
 
             # Генерация первого раунда
-            round_fights = self._generate_round_fights(current_athletes, current_round, fight_number)
+            round_fights = self._generate_round_fights(current_athletes, current_round, fight_number, tournament_category_id)
             fights.extend(round_fights)
 
             # winners для следующего раунда
@@ -102,7 +102,7 @@ class BracketGenerator:
 
             # Генерация последующих раундов
             while current_round > 0:
-                round_fights = self._generate_round_fights(next_athletes, current_round, fight_number)
+                round_fights = self._generate_round_fights(next_athletes, current_round, fight_number, tournament_category_id)
                 fights.extend(round_fights)
 
                 # Обновляем next_athletes для следующего раунда
@@ -111,8 +111,8 @@ class BracketGenerator:
                 current_round -= 1
 
             # Утешительные схватки за 3 место
-            if self.tournament.has_consolation and len(athletes) >= 4:
-                self._generate_consolation_fights(fights, fight_number)
+            # if self.tournament.has_consolation and len(athletes) >= 4:
+            #     self._generate_consolation_fights(fights, fight_number)
         except Exception as e:
             print(print("❌ Exception: ", e))
 
@@ -243,24 +243,37 @@ class BracketGenerator:
     #         self.tournament.status = 'COMPLETED'
     #         self.tournament.save()
 
-    def _generate_bracket_positions(self,participants_count):
+    import math
+
+    def _generate_bracket_positions(self, participants_count: int) -> list[int]:
         """
-        Генерация позиций в сетке
+        Генерирует позиции (1-based) для посева участников.
+        Использует bit-reversal для равномерного распределения сильнейших.
+        Работает для любого количества участников ≥ 1.
         """
         if participants_count <= 1:
             return [1]
 
-        # Ближайшая степень двойки
-        next_power = 2 ** math.ceil(math.log2(participants_count))
+        # Находим ближайшую степень двойки сверху
+        n = 2 ** math.ceil(math.log2(participants_count))
+        logn = int(math.log2(n))  # количество бит
 
         positions = []
         for i in range(participants_count):
-            # Алгоритм seeding для равномерного распределения сильных участников
-            pos = ((i * 2) % next_power) + ((i * 2) // next_power) + 1
+            # Инверсия младших logn бит числа i
+            rev = 0
+            x = i
+            for _ in range(logn):
+                rev = (rev << 1) | (x & 1)
+                x >>= 1
+            pos = rev + 1  # переводим в 1-based индекс
             positions.append(pos)
 
-        return positions[:participants_count]
+        # Сортируем по полученным позициям (чтобы вернуть порядок: позиция 1, 2, 3, ...)
+        sorted_indices = sorted(range(len(positions)), key=lambda k: positions[k])
+        ordered_positions = [positions[i] for i in sorted_indices]
 
+        return ordered_positions
     def _calculate_rounds(self,participants_count):
         """
         Расчет количества раундов для сетки
