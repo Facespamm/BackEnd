@@ -2,9 +2,7 @@
 Генератор турнирных сеток по правилам дзюдо
 """
 import math
-import random
 
-from api.fights import fights_bp
 from database.db import create_session
 from new_model.Enums import FightStatus
 from new_model.head_model.fight_new import FightNew
@@ -14,6 +12,7 @@ from repository.result_repo import ResultRepository
 from repository.tournament_repo import TournamentRepository
 
 tournament_repo = TournamentRepository()
+fight_repo = FightRepository()
 
 class BracketGenerator:
     """Генератор турнирных сеток"""
@@ -23,66 +22,32 @@ class BracketGenerator:
         self.tournament = tournament_repo.get_tournament_by_id(tournament_id)
         self.tournament_id = tournament_id
 
-    def generate(self, category_id: int):
-        """Генерация сетки по олимпийской системе"""
+    def generate_olympic(self, category_id: int):
         try:
             athlete_repo = AthleteRepository()
             athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
-            if not athletes:
-                return []
-
-            athletes_count = len(athletes)
-            if athletes_count < 2:
-                return []
+            athlete_count = len(athletes)
+            if not athletes or athlete_count < 2 or athlete_count == 0:
+                raise Exception('No athletes found')
 
             tournament_category_id = tournament_repo.get_tournament_category_id(self.tournament_id, category_id)
             if not tournament_category_id:
-                print("❌ Tournament category not found")
-                return []
+                raise Exception("❌ Tournament category not found")
+
             # Очищаем существующие схватки
             self.session.query(FightNew).filter_by(tournament_category_id=tournament_category_id).delete()
 
             # Определяем количество раундов
-            total_rounds = self._calculate_rounds(athletes_count)
-
-            if athletes_count == 0:
-                return False
-
-            # Seed участников (сильнейшие не встречаются в первых раундах)
+            total_rounds = self._calculate_rounds(athlete_count)
+            #распределение участников
             seeded_athletes = self._seed_athletes(athletes)
 
-            # Генерируем схватки
-            self._generate_fights(seeded_athletes, total_rounds, tournament_category_id)
-            return True
+            fights = self._generate_fights(seeded_athletes, total_rounds, tournament_category_id)
+            return fights
         except Exception as e:
-            print("❌ Exception: ", e)
-            return False
-
-    def generate_olympic_with_semi_finalists(self, category_id: int):
-        athlete_repo = AthleteRepository()
-        athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
-
-        athlete_count = len(athletes)
-        if not athletes or athlete_count < 2 or athlete_count == 0:
-            print('No athletes found')
+            print('Error: ', e)
             return None
-
-        tournament_category_id = tournament_repo.get_tournament_category_id(self.tournament_id, category_id)
-        if not tournament_category_id:
-            print("❌ Tournament category not found")
-            return None
-
-        # Очищаем существующие схватки
-        self.session.query(FightNew).filter_by(tournament_category_id=tournament_category_id).delete()
-
-        # Определяем количество раундов
-        total_rounds = self._calculate_rounds(athlete_count)
-        #распределение участников
-        seeded_athletes = self._seed_athletes(athletes)
-
-        fights = self._generate_fights(seeded_athletes, total_rounds, tournament_category_id)
-        return fights
 
     def _seed_athletes(self,athletes : list):
         """Посев участников (сильнейшие распределяются)"""
@@ -113,24 +78,39 @@ class BracketGenerator:
             fight_number = 1
 
             # Генерация первого раунда
-            round_fights = self._generate_round_fights(current_athletes, current_round, fight_number, tournament_category_id)
+            round_fights = self._generate_first_round_fights(current_athletes, current_round, fight_number, tournament_category_id)
             fights.extend(round_fights)
 
             length_fights = len(round_fights)
 
             # winners для следующего раунда
-            next_athletes = [None] * (length_fights // 2)
+            current_round_fights = round_fights
+            next_fights = [None] * (length_fights // 2)
             fight_number += len(round_fights)
+            current_round += 1
 
             # Генерация последующих раундов
-            while current_round < total_rounds:
-                #TODO:  не создает почемуто следующий раунд
-                round_fights = self._generate_round_fights(next_athletes, current_round, fight_number, tournament_category_id)
-                fights.extend(round_fights)
+            while current_round <= total_rounds:
+                next_round = self._generate_next_rounds_fights(next_fights,current_round, fight_number, tournament_category_id)
+
+                # Обновляем ссылки на следующие схватки
+                for i in range(0, len(current_round_fights), 2):
+                    next_fight_index = i // 2
+
+                    # Первый бой из пары
+                    if i < len(current_round_fights):
+                        fight_repo.update_fight(current_round_fights[i].id,next_round[next_fight_index].id)
+
+                    # Второй бой из пары
+                    if i + 1 < len(current_round_fights):
+                        fight_repo.update_fight(current_round_fights[i + 1].id,next_round[next_fight_index].id)
+
+                fights.extend(next_round)
 
                 # Обновляем next_athletes для следующего раунда
-                next_athletes = [None] * (len(round_fights) // 2)
-                fight_number += len(round_fights)
+                next_fights = [None] * (len(next_round) // 2)
+                current_round_fights = next_round
+                fight_number += len(next_round)
                 current_round += 1
 
             # Утешительные схватки за 3 место
@@ -141,13 +121,13 @@ class BracketGenerator:
         except Exception as e:
             print("❌ Exception: ", e)
 
-    def _generate_round_fights(self,athletes, round_number, start_fight_number, tournament_category_id):
+    def _generate_first_round_fights(self,athletes, round_number, start_fight_number, tournament_category_id):
         """Генерация схваток для одного раунда"""
         fights = []
         fight_number = start_fight_number
 
         athlete_count = len(athletes)
-
+        group_id = 1
         for i in range(0, len(athletes), 2):
             white_athlete = athletes[i] if i < athlete_count else None
             blue_athlete = athletes[i+1] if i+1 < athlete_count else None
@@ -162,17 +142,42 @@ class BracketGenerator:
                 blue_athlete_id=blue_athlete.id if blue_athlete else None,
                 round_number=round_number,
                 fight_number=fight_number,
-                status=FightStatus.SCHEDULED
+                status=FightStatus.SCHEDULED,
+                next_fight_id = None
             )
 
             #сохроняем бой
-            fight_repo = FightRepository()
+            fight_repo.create_fight(fight)
+
+            fights.append(fight)
+            fight_number += 1
+            group_id += 1
+
+        return fights
+
+    def _generate_next_rounds_fights(self,next_fight,round_number, next_fight_number, tournament_category_id):
+        """Генерация схваток для следующих раунда"""
+        fights = []
+        fight_number = next_fight_number
+
+        length_next_fight = len(next_fight)
+        for i in range(length_next_fight):
+            fight = FightNew(
+                tournament_category_id=tournament_category_id,
+                white_athlete_id=None,
+                blue_athlete_id=None,
+                round_number=round_number,
+                fight_number=fight_number,
+                status=FightStatus.SCHEDULED
+            )
+
+            # сохроняем бой
             fight_repo.create_fight(fight)
 
             fights.append(fight)
             fight_number += 1
 
-        return fights
+        return  fights
 
     def _generate_consolation_fights(self, main_fights, start_fight_number):
         """Генерация утешительных схваток за 3 место"""
@@ -208,8 +213,7 @@ class BracketGenerator:
                 status=FightStatus.SCHEDULED
             )
 
-            fight_repo = FightRepository()
-            fight_repo.create_figth(fight)
+            fight_repo.create_fight(fight)
 
         return consolation_fights
 

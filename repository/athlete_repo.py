@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from datetime import datetime
 
 from sqlalchemy import or_, and_
@@ -6,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from database.db import create_session
 from new_model.Enums import RoleName
 from new_model.handbook.role_new import RoleNew
+from new_model.head_model.fight_new import FightNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.new_user import UserNew
 from new_model.head_model.tournament_new import TournamentNew
@@ -227,3 +229,43 @@ class AthleteRepository:
             raise Exception('Не найдина категория')
 
         athlete.category_id = category_id
+
+    def get_athlete_by_fight(self,  athlete_id:int ,fight_id:int):
+        athlete = (
+            self.session.query(UserNew.first_name, UserNew.last_name, UserNew.middle_name, AthleteNew.gender)
+            .join(AthleteNew, AthleteNew.user_id == UserNew.id)
+            .join(FightNew, or_(
+            FightNew.white_athlete_id == AthleteNew.id,
+            FightNew.blue_athlete_id == AthleteNew.id
+            ))
+            .filter(
+                FightNew.id == fight_id,
+                AthleteNew.id == athlete_id
+            ).first()
+        )
+
+        if not athlete:
+            return None
+
+        return {
+            'first_name': athlete[0],
+            'last_name': athlete[1],
+            'middle_name': athlete[2],
+            'gender': athlete[3]
+        }
+
+    def get_winer_data(self, athlete_id):
+        result = (
+            self.session.query(UserNew.last_name, UserNew.first_name, UserNew.middle_name)
+            .join(AthleteNew, AthleteNew.user_id == UserNew.id)
+            .filter(AthleteNew.id == athlete_id)
+            .first()
+        )
+
+        if result:
+            return {
+                'last_name': result[0],
+                'first_name': result[1],
+                'middle_name': result[2]
+            }
+        return None

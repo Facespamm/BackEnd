@@ -1,9 +1,13 @@
+from datetime import time, datetime, timedelta
+
 from sqlalchemy import select, update, insert, delete
 
 from database.db import create_session
+from new_model.Enums import text_to_fight_status, FightStatus
+from new_model.handbook.new_referee import RefereeNew
 from new_model.head_model.fight_new import FightNew
-from new_model.new_associations import FightReferee
-from repository.tournament_repo import TournamentRepository
+from new_model.new_associations import FightReferee, TournamentCategory
+from new_model.result_new import ResultNew
 
 
 class FightRepository:
@@ -53,8 +57,130 @@ class FightRepository:
         self.session.commit()
 
     def create_fight(self, fight):
-        self.session.add(fight)
-        self.session.commit()
+        try:
+            self.session.add(fight)
+            self.session.commit()
+        except Exception as e:
+            self.session.rollback()
+            print('Error: ',e)
 
     def get_fight_by_tournament(self, tournament_category_id):
         return self.session.query(FightNew).filter_by(tournament_category_id = tournament_category_id).all()
+
+    def get_fights_by_search_params(self, tournament_id=None, tatami_number=None, status=None):
+        select_query = self.session.query(FightNew)
+
+        if tournament_id:
+            select_query = select_query.join(TournamentCategory, TournamentCategory.tournament_id == tournament_id)
+
+        if status:
+            status_in_enum = text_to_fight_status(status)
+            select_query = select_query.filter(FightNew.status == status_in_enum.name)
+
+        if tatami_number:
+            select_query = select_query.filter(FightNew.tatami_number == tatami_number)
+
+        return  select_query.order_by(FightNew.tatami_number, FightNew.created_at).all()
+
+    def get_fight_by_id(self, fight_id):
+        return self.session.query(FightNew).filter_by(id=fight_id).first()
+
+    def get_fight_referees(self, fight_id):
+        fight_referees = (
+            self.session.query(RefereeNew.first_name,RefereeNew.last_name, RefereeNew.middle_name,FightReferee.role)
+            .join(FightReferee, FightReferee.referee_id == RefereeNew.id)
+            .filter(
+                FightReferee.fight_id == fight_id
+            ).all()
+        )
+
+        referee_list = [{
+            'first_name': referee.first_name,
+            'last_name': referee.last_name,
+            'middle_name': referee.middle_name,
+            'role': referee.role
+        } for referee in fight_referees]
+
+        return referee_list
+
+    def set_live_status(self, fight_id):
+        try:
+            fight = self.get_fight_by_id(fight_id)
+            if fight:
+                fight.status = FightStatus.LIVE
+                self.session.commit()
+        except Exception as e:
+            print('Error: ',e)
+            self.session.rollback()
+
+    def update_fight(self, fight_id,  next_fight_id):
+        try:
+            update_query = (
+                update(FightNew)
+                .where(FightNew.id == fight_id)
+                .values(next_fight_id = next_fight_id)
+            )
+            self.session.execute(update_query)
+            self.session.commit()
+        except Exception as e:
+            print('Error: ', e)
+            self.session.rollback()
+
+    def end_fight(self, fight_id, data: dict):
+        try:
+            fight = self.get_fight_by_id(fight_id)
+
+
+            start_time = _text_to_time(data['start_time'])
+            end_time = _text_to_time(data['end_time'])
+
+            fight.start_time = start_time
+            fight.end_time = end_time
+            fight.status = FightStatus.COMPLETED
+
+            fight_duration = end_time - start_time
+
+            new_result = ResultNew(
+                fight_id = fight_id,
+                winner_id = data.get('winner_athlete_id'),
+                victory_type = data.get('victory_type'),
+                fight_duration = int(fight_duration.total_seconds()),
+                count_of_fights_win = 1
+            )
+
+            self.move_athlete_next_fight(fight_id, new_result)
+
+            self.session.add(new_result)
+            self.session.commit()
+        except Exception as e:
+            print('Error: ', e)
+            self.session.rollback()
+
+    def move_athlete_next_fight(self, fight_id, athlete_id):
+        try:
+            fight = self.get_fight_by_id(fight_id)
+            next_fight = self.get_fight_by_id(fight.next_fight_id)
+
+            if not fight or not next_fight:
+                raise Exception('Error: Fight or next fight not found')
+
+            if fight.blue_athlete_id == athlete_id:
+                next_fight.white_athlete_id = athlete_id
+            elif fight.white_athlete_id == athlete_id:
+                next_fight.blue_athlete_id = athlete_id
+            else:
+                print('Error: Athlete not found in the fight')
+                return
+
+            self.session.commit()
+        except Exception as e:
+            print('Error: ', e)
+            self.session.rollback()
+
+def _text_to_time(text):
+    try:
+        m, s = map(int, text.split(":"))
+        return timedelta(minutes=m, seconds=s)
+    except Exception as e:
+        print('Error: ', e)
+        return None

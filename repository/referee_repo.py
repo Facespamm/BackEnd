@@ -1,5 +1,6 @@
 from database.db import create_session
 from new_model.handbook.new_referee import RefereeNew
+from new_model.new_associations import FightReferee
 
 
 class RefereeRepository:
@@ -44,3 +45,15 @@ class RefereeRepository:
         except Exception as e:
             print(f"Error: {e}")
             return False
+
+    def has_assign_referee(self, role , fight_id):
+        """Проверить, назначен ли судья на роль"""
+        existing = (
+            self.session.query(RefereeNew)
+            .join(FightReferee, FightReferee.referee_id == RefereeNew.id)
+            .filter(
+                FightReferee.fight_id == fight_id,
+                FightReferee.role == role
+            ).first()
+        )
+        return existing is not None

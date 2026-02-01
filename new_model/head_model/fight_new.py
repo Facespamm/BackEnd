@@ -19,8 +19,9 @@ class FightNew(db.Model):
 
     # Статус схватки
     status = db.Column(db.Enum(FightStatus), default=FightStatus.SCHEDULED)
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
+    start_time = db.Column(db.Interval)
+    end_time = db.Column(db.Interval)
+    next_fight_id  = db.Column(db.Integer, default=None, nullable=True) #Ссылка на предыдущую схватку в сетке
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

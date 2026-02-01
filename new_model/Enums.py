@@ -78,3 +78,12 @@ def text_to_referee_level(text: str):
             return level
 
     return  None
+
+def text_to_fight_status(text: str):
+    normolize_name = text.strip().lower()
+
+    for status in FightStatus:
+        if normolize_name == status.value.strip().lower():
+            return status
+
+    return None
