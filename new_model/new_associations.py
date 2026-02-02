@@ -26,6 +26,7 @@ class TournamentCategory(db.Model):
     tournament = db.relationship('TournamentNew', back_populates='tournament_categories')
     category = db.relationship('CategoryNew', back_populates='tournament_categories')
     registrations = db.relationship('AthleteRegistration', back_populates='tournament_categories')
+    weighings = db.relationship('WeighingNew', back_populates='tournament_categories')
 
 
 class AthleteRegistration(db.Model):

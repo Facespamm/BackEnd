@@ -84,7 +84,7 @@ def generate_bracket_with_consolation(tournament_id):
         if and_(fight.blue_athlete_id is not None, fight.white_athlete_id is not None):
             semi_final_fights_not_none.append(fight)
 
-    max_semi_final_fights = 4
+    max_semi_final_fights = 2
     if len(semi_final_fights_not_none) < max_semi_final_fights:
         return jsonify({'success': False}), 200
 
@@ -108,7 +108,7 @@ def generate_consolation_fights(tournament_id):
             return jsonify({'success': False, 'message': 'Категория турнира не найдена'}), 404
 
         bracket_generator = BracketGenerator(tournament_id)
-        generated_fights = bracket_generator.generate_consolation_fights_semifinalist(category_id)
+        generated_fights = bracket_generator.generate_consolation_by_semifinalists(category_id)
 
         if not generated_fights:
             return jsonify({
@@ -183,7 +183,8 @@ def fight_bracket(tournament_id):
                 'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
                 'tatami_number': fight.tatami_number,
                 'round': fight.round_number,
-                'status_fight': fight.status.value
+                'status_fight': fight.status.value,
+                'next_fight': fight.next_fight,
             })
 
         tournament_repo = TournamentRepository()

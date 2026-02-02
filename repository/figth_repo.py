@@ -141,16 +141,16 @@ class FightRepository:
             fight.status = FightStatus.COMPLETED
 
             fight_duration = end_time - start_time
-
+            athlete_id = int(data.get('winner_athlete_id'))
             new_result = ResultNew(
                 fight_id = fight_id,
-                winner_id = data.get('winner_athlete_id'),
+                winner_id = athlete_id,
                 victory_type = data.get('victory_type'),
                 fight_duration = int(fight_duration.total_seconds()),
                 count_of_fights_win = 1
             )
 
-            self.move_athlete_next_fight(fight_id, new_result)
+            self.move_athlete_next_fight(fight_id,athlete_id)
 
             self.session.add(new_result)
             self.session.commit()
@@ -166,9 +166,13 @@ class FightRepository:
             if not fight or not next_fight:
                 raise Exception('Error: Fight or next fight not found')
 
-            if fight.blue_athlete_id == athlete_id:
+            if fight.blue_athlete_id == athlete_id and not next_fight.white_athlete_id:
                 next_fight.white_athlete_id = athlete_id
-            elif fight.white_athlete_id == athlete_id:
+            elif fight.white_athlete_id == athlete_id and not next_fight.blue_athlete_id:
+                next_fight.blue_athlete_id = athlete_id
+            elif not next_fight.white_athlete_id:
+                next_fight.white_athlete_id = athlete_id
+            elif not next_fight.blue_athlete_id:
                 next_fight.blue_athlete_id = athlete_id
             else:
                 print('Error: Athlete not found in the fight')
@@ -184,7 +188,7 @@ class FightRepository:
             self.session.query(FightNew)
             .filter(
                 FightNew.tournament_category_id == tournament_category_id,
-                FightNew.round_number ==  semi_final_round_number -1
+                FightNew.round_number <=  semi_final_round_number
             )
             .all()
         )

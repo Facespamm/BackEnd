@@ -39,7 +39,7 @@ class BracketGenerator:
             self.session.query(FightNew).filter_by(tournament_category_id=tournament_category.tournament_category_id).delete()
 
             # Определяем количество раундов
-            total_rounds = self.calculate_rounds(athlete_count)
+            total_rounds = self.calculate_rounds(participants_count=athlete_count)
 
             if total_rounds == 0:
                 raise Exception("❌ Invalid number of rounds calculated")
@@ -73,7 +73,7 @@ class BracketGenerator:
                 raise Exception("❌ Not enough rounds for consolation fights")
 
             # Генерация утешительных схваток за 3 место
-            consolation_fights = self._generate_consolation_fights_finalist(tournament_category.tournament_category_id,
+            consolation_fights = self._generate_consolation_fights_semifinalist(tournament_category.tournament_category_id,
                                                                             max_rounds=total_rounds)
 
             return consolation_fights
@@ -243,10 +243,10 @@ class BracketGenerator:
         """Генерация утешительных схваток за 3 место"""
         # Находим полуфиналистов которые проиграли
 
-        semi_fights = fight_repo.get_semi_final_fights(tournament_category_id, max_rounds)
+        semi_fights = fight_repo.get_semi_final_fights(tournament_category_id, max_rounds-1)
 
         semifinal_fights = [f for f in semi_fights]
-        if len(semifinal_fights) != 4:
+        if len(semifinal_fights) < 2:
             raise Exception("❌ Недостаточно полуфиналистов для утешительных боев")
 
         result_repo = ResultRepository()
@@ -322,7 +322,7 @@ class BracketGenerator:
         return positions
 
     @staticmethod
-    def calculate_rounds(self,participants_count):
+    def calculate_rounds(participants_count):
         """
         Расчет количества раундов для сетки
         """

@@ -20,7 +20,7 @@ class CategoryNew(db.Model):
 
     #связи
     tournament_categories = db.relationship('TournamentCategory', lazy = True ,back_populates='category')
-
+    weighings = db.relationship('WeighingNew', back_populates='category')
     athletes = db.relationship('AthleteNew',
                                lazy=True,
                                back_populates='categories')

@@ -2,6 +2,7 @@ from sqlalchemy import true, select
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.functions import count
+from wtforms.validators import Optional
 
 from api.categories import category_repo
 from database.db import create_session
@@ -276,7 +277,7 @@ class TournamentRepository:
             self.session.rollback()
             return False
 
-    def get_tournament_category(self,  tournament_id:int, category_id:int):
+    def get_tournament_category(self,  tournament_id:int, category_id:int) -> TournamentCategory | None:
         """Получить ID категории турнира"""
         try:
             tournament_category = (

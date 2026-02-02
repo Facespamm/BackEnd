@@ -34,7 +34,7 @@ def get_athletes():
                 'gender': athlete.gender,
                 'club': athlete.club.name if athlete.club else None,
                 'club_id': athlete.club_id,
-                 'rank': athlete.rank.level if athlete.rank else None,
+                'rank': athlete.rank.level if athlete.rank else None,
                 'rank_id': athlete.rank_id,
                 'license_number': athlete.license_number,
                 'phone': athlete.user.phone,

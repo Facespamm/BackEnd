@@ -52,5 +52,4 @@ class TournamentNew(db.Model):
         lazy=True,
         back_populates='tournament')
     # fights = db.relationship('FightNew', back_populates='tournament')
-    weighings = db.relationship('WeighingNew', back_populates='tournament')
     chief_referee = db.relationship('RefereeNew', back_populates='tournament')

@@ -53,7 +53,7 @@ def create_tournament():
                 'message': 'Не передан JSON'
             }), 400
 
-        if not data.get('name') or not data.get('start_date') or not data.get('end_date') or not data.get('has_consalation'):
+        if not data.get('name') or not data.get('start_date') or not data.get('end_date'):
             return jsonify({
                 'success': False,
                 'message': 'Обязательные поля: name, start_date, end_date'
@@ -73,7 +73,8 @@ def create_tournament():
             venue=data.get('venue'),
             city=data.get('city'),
             country=data.get('country', 'Россия'),
-            tatami_count=data.get('tatami_count', 1)
+            tatami_count=data.get('tatami_count', 1),
+            has_consolation_fights = data.get('has_consalation')
         )
 
         is_created = tournament_repo.create_tournament(tournament_new)

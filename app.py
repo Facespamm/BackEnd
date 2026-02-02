@@ -68,7 +68,7 @@ from api.statistics import statistics_bp
 from api.fights import fights_bp
 from api.brackets import brackets_bp
 from api.results import results_bp
-# from api.weighing import weighing_bp
+from api.weighing import weighing_bp
 from api.categories import categories_bp
 # from api.registrations import registrations_bp
 from api.dan import dans_bp
@@ -84,7 +84,7 @@ app.register_blueprint(clubs_bp)
 app.register_blueprint(fights_bp)
 app.register_blueprint(brackets_bp)
 app.register_blueprint(results_bp)
-# app.register_blueprint(weighing_bp)
+app.register_blueprint(weighing_bp)
 app.register_blueprint(categories_bp)
 # app.register_blueprint(registrations_bp)
 app.register_blueprint(dans_bp)

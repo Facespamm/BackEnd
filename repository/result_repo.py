@@ -14,7 +14,7 @@ class ResultRepository:
     def get_loser(self,fight_id):
         fight = (
             self.session.query(FightNew)
-            .join(ResultNew, FightNew.id == ResultNew.result_id)
+            .join(ResultNew, FightNew.id == ResultNew.fight_id)
             .filter(
                 ResultNew.fight_id == fight_id,
             )
@@ -25,12 +25,13 @@ class ResultRepository:
             return None
 
         result = self.session.query(ResultNew).filter(ResultNew.fight_id == fight_id).one_or_none()
+
         athlete_repo = AthleteRepository()
         if result.winner_id == fight.white_athlete_id:
-            athlete = athlete_repo.get_athlete_by_id(fight.white_athlete_id)
+            athlete = athlete_repo.get_athlete_by_id(fight.blue_athlete_id)
             return athlete #проигравший
         else:
-            athlete = athlete_repo.get_athlete_by_id(fight.blue_athlete_id)
+            athlete = athlete_repo.get_athlete_by_id(fight.white_athlete_id)
             return athlete # проигравший
 
     def get_results_by_tournament(self, tournament_id, category_id):
