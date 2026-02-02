@@ -1,11 +1,10 @@
-from operator import and_
-
 from flask import request, Blueprint, jsonify
 
 from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
 from repository.tournament_repo import TournamentRepository
 from services.bracket_generator import BracketGenerator
+from operator import and_
 
 brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
 
@@ -13,19 +12,26 @@ brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
 def create_bracket(tournament_id):
     """Создать новую сетку"""
     try:
-        if  not tournament_id:
+        if not tournament_id:
             return jsonify({'success': False, 'message': 'ID турнира не указан'}), 400
 
-        category_id = request.args.get('category')
+        category_str = request.args.get('category')
+        if not category_str:
+            return jsonify({'success': False, 'message': 'Не выбрана категория'}), 400
 
-        if not category_id and type(category_id) != int:
-            return jsonify({'success': False, 'message': 'Не выброна категория'}), 400
+        try:
+            category_id = int(category_str)
+        except ValueError:
+            return jsonify({'success': False, 'message': 'ID категории должен быть целым числом'}), 400
 
         tournament_repo = TournamentRepository()
         tournament = tournament_repo.get_tournament_by_id(tournament_id)
+        if not tournament:
+            return jsonify({'success': False, 'message': 'Турнир не найден'}), 404
+
         categories = tournament_repo.get_category(tournament_id)
-        if not tournament or not categories:
-            return jsonify({'success': False, 'message': 'Турнир или категория не найдены'}), 404
+        if not any(cat.id == category_id for cat in categories):  # проверяем, что категория принадлежит турниру
+            return jsonify({'success': False, 'message': 'Категория не найдена в этом турнире'}), 404
 
         bracket_generator = BracketGenerator(tournament_id)
         generate_fights = bracket_generator.generate_olympic(category_id)
@@ -33,8 +39,8 @@ def create_bracket(tournament_id):
         if not generate_fights:
             return jsonify({
                 'success': False,
-                'message': 'Сетка не создала бои'
-            }), 404
+                'message': 'Не удалось создать бои (возможно, недостаточно спортсменов в категории)'
+            }), 400
 
         return jsonify({
             'success': True,

@@ -6,7 +6,7 @@ from repository.club_repo import ClubRepository
 
 clubs_bp = Blueprint('clubs', __name__, url_prefix='/clubs')
 club_repo = ClubRepository()
-
+athlete_repo = AthleteRepository()
 @clubs_bp.route('/', methods=['GET'])
 def get_clubs():
     """Получить список клубов"""
@@ -35,6 +35,92 @@ def get_clubs():
             'success': False,
             'message': f'Ошибка при получении клубов: {str(e)}'
         }), 500
+
+
+@clubs_bp.route('/search', methods=['GET'])
+def search_athletes():
+    """Поиск спортсменов по ФИО (частичное совпадение)"""
+    try:
+        # Параметры запроса: можно передать отдельно или один общий q
+        last_name = request.args.get('last_name', '').strip()
+        first_name = request.args.get('first_name', '').strip()
+        middle_name = request.args.get('middle_name', '').strip()
+        q = request.args.get('q', '').strip()  # альтернативно: "Иванов Иван Иванович"
+
+        name_query = {}
+
+        if q:
+            # Если передан общий q — разбиваем на части (по пробелам)
+            parts = q.split()
+            if len(parts) >= 1:
+                name_query['last_name'] = parts[0]
+            if len(parts) >= 2:
+                name_query['first_name'] = parts[1]
+            if len(parts) >= 3:
+                name_query['middle_name'] = ' '.join(parts[2:])
+        else:
+            # Отдельные параметры
+            if last_name:
+                name_query['last_name'] = last_name
+            if first_name:
+                name_query['first_name'] = first_name
+            if middle_name:
+                name_query['middle_name'] = middle_name
+
+        if not name_query:
+            return jsonify({
+                'success': False,
+                'message': 'Не переданы параметры поиска (last_name, first_name, middle_name или q)'
+            }), 400
+
+        # Поиск без ограничения по клубу (club_id=None)
+        athletes = athlete_repo.search_athletes_by_name(name_query=name_query, club_id=None)
+
+        result = []
+        for athlete in athletes:
+            club_name = athlete.club.name if athlete.club else None
+            club_short_name = athlete.club.short_name if athlete.club else None
+
+            athlete_data = {
+                'id': athlete.id,
+                'user_id': athlete.user_id,
+                'last_name': athlete.user.last_name or 'Неизвестно',
+                'first_name': athlete.user.first_name or 'Неизвестно',
+                'middle_name': athlete.user.middle_name or None,
+                'full_name': ' '.join(filter(None, [
+                    athlete.user.last_name or '',
+                    athlete.user.first_name or '',
+                    athlete.user.middle_name or ''
+                ])),
+                'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
+                'age': athlete.age,
+                'gender': athlete.gender,
+                'rank': athlete.rank.level if athlete.rank else None,
+                'license_number': athlete.license_number,
+                'medical_check': athlete.medical_check,
+                'insurance_number': athlete.insurance_number,
+                'is_active': athlete.is_active,
+                'club': {
+                    'id': athlete.club.id if athlete.club else None,
+                    'name': club_name,
+                    'short_name': club_short_name
+                } if athlete.club else None
+            }
+            result.append(athlete_data)
+
+        return jsonify({
+            'success': True,
+            'search_params': name_query or {'q': q},
+            'athletes_count': len(result),
+            'athletes': result
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при поиске спортсменов: {str(e)}'
+        }), 500
+
 
 @clubs_bp.route('/', methods=['POST'])
 def create_club():
@@ -295,22 +381,16 @@ def update_club(club_id):
         }), 500
 
 
-@clubs_bp.route('/<club_id>/club-athletes', methods=['GET'])
+@clubs_bp.route('/<int:club_id>/club-athletes/', methods=['GET'])
 def get_club_athletes(club_id):
     """Получить всех участников клуба"""
     try:
-        # Получаем параметры
-        # only_active = request.args.get('only_active', 'true').lower() == 'true'
         include_tournament_info = request.args.get('include_tournament_info', 'false').lower() == 'true'
-        tournament_id = request.args.get('tournament_id')
 
-        if not club_id:
-            return jsonify({
-                'success': False,
-                'message': 'Не указан club_id'
-            }), 400
+        # tournament_id как int или None (пустой/не передан → None)
+        tournament_id = request.args.get('tournament_id', type=int)
 
-        # Проверяем существование клуба
+        # Проверяем клуб
         club = club_repo.get_club_by_id(club_id)
         if not club:
             return jsonify({
@@ -319,43 +399,50 @@ def get_club_athletes(club_id):
             }), 404
 
         athlete_repo = AthleteRepository()
-        athletes =  athlete_repo.get_athletes_by_club_id(club_id, tournament_id, include_tournament_info)
+        athletes = athlete_repo.get_athletes_by_club_id(
+            club_id=club_id,
+            tournament_id=tournament_id,
+            include_tournament_info=include_tournament_info
+        )
 
-        # Формируем результат
         result = []
         for athlete in athletes:
-
             athlete_data = {
                 'id': athlete.id,
                 'user_id': athlete.user_id,
-                'last_name': athlete.user.last_name,
-                'first_name': athlete.user.first_name,
-                'middle_name': athlete.user.middle_name,
+                'last_name': athlete.user.last_name or 'Неизвестно',
+                'first_name': athlete.user.first_name or 'Неизвестно',
+                'middle_name': athlete.user.middle_name or None,
                 'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
                 'age': athlete.age,
                 'gender': athlete.gender,
-                'rank': athlete.rank.name if athlete.rank else None,
+                # ← Главное исправление: rank теперь берём из поля level (или description)
+                # Если нужно описание — используйте athlete.rank.description
+                # Если нужно оба — f"{athlete.rank.level} {athlete.rank.description}"
+                'rank': athlete.rank.level if athlete.rank else None,
                 'license_number': athlete.license_number,
                 'medical_check': athlete.medical_check,
                 'insurance_number': athlete.insurance_number,
                 'is_active': athlete.is_active
             }
 
-            # Добавляем информацию о турнирах
             if include_tournament_info:
                 tournaments = []
-                for tournament in athlete.registration.tournament_categories.tournament:
-                    tournament_data = {
-                        'tournament_id': tournament.id,
-                        'tournament_name': tournament.name
-                    }
-                    tournaments.append(tournament_data)
-
+                if (hasattr(athlete, 'registration') and
+                        athlete.registration and
+                        hasattr(athlete.registration, 'tournament_categories')):
+                    for tc in athlete.registration.tournament_categories:
+                        if hasattr(tc, 'tournament') and tc.tournament:
+                            tournaments.append({
+                                'tournament_id': tc.tournament.id,
+                                'tournament_name': tc.tournament.name
+                            })
                 athlete_data['tournaments'] = tournaments
 
             result.append(athlete_data)
 
         return jsonify({
+            'success': True,
             'club_id': club.id,
             'club_name': club.name,
             'athletes_count': len(result),

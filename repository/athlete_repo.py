@@ -151,22 +151,32 @@ class AthleteRepository:
 
         return athlete is not None
 
-    def search_athletes_by_name(self, name_query:dict, club_id = None):
+    def search_athletes_by_name(self, name_query: dict, club_id=None):
+        """
+        Поиск активных спортсменов по ФИО (частичное совпадение).
+        Поддерживает фильтр по клубу (club_id=None — поиск по всем клубам).
+        """
+        # Базовый запрос с обязательным JOIN к UserNew для фильтрации и сортировки
         query = (
             self.session.query(AthleteNew)
-            .options(joinedload(AthleteNew.rank), joinedload(AthleteNew.user),joinedload(AthleteNew.club))
-            .filter(
-                AthleteNew.is_active == True,
+            .join(AthleteNew.user)  # ← Ключевое исправление: JOIN для доступа к полям UserNew
+            .options(
+                joinedload(AthleteNew.rank),
+                joinedload(AthleteNew.user),
+                joinedload(AthleteNew.club)
             )
+            .filter(AthleteNew.is_active == True)
         )
 
-        if club_id:
+        # Фильтр по клубу (прямой, без JOIN)
+        if club_id is not None:
             query = query.filter(AthleteNew.club_id == club_id)
 
+        # Фильтрация по ФИО
         if name_query:
-            first_name = name_query.get('first_name', None).strip()
-            middle_name = name_query.get('middle_name', None).strip()
-            last_name = name_query.get('last_name', None).strip()
+            first_name = name_query.get('first_name')
+            middle_name = name_query.get('middle_name')
+            last_name = name_query.get('last_name')
 
             if first_name:
                 query = query.filter(UserNew.first_name.ilike(f'%{first_name}%'))
@@ -175,52 +185,49 @@ class AthleteRepository:
             if last_name:
                 query = query.filter(UserNew.last_name.ilike(f'%{last_name}%'))
 
-        athletes = query.order_by(AthleteNew.user.last_name, AthleteNew.user.first_name).all()
-        return athletes
+        # Сортировка по фамилии и имени (теперь работает благодаря JOIN)
+        query = query.order_by(UserNew.last_name, UserNew.first_name)
 
-    def get_athletes_by_club_id(self, club_id:int, tournament_id = None, include_tournament_info = False):
+        athletes = query.all()
+        return athletes
+    def get_athletes_by_club_id(self, club_id: int, tournament_id=None, include_tournament_info=False):
+        # Базовый запрос с обязательным join(user) для сортировки и joinedload для подгрузки
         athletes_query = (
             self.session.query(AthleteNew)
-            .options(joinedload(AthleteNew.rank), joinedload(AthleteNew.club), joinedload(AthleteNew.user))
+            .join(AthleteNew.user)  # ← Обязательно добавляем join для order_by по полям user
+            .options(
+                joinedload(AthleteNew.rank),
+                joinedload(AthleteNew.club),
+                joinedload(AthleteNew.user)
+            )
             .filter(
                 AthleteNew.is_active == True,
                 AthleteNew.club_id == club_id,
             )
         )
 
-        if not tournament_id and not include_tournament_info:
-            athletes_query = (
-                athletes_query
-                .join(AthleteRegistration)
-                .join(TournamentCategory, AthleteRegistration.tournament_category_id == TournamentCategory.tournament_category_id)
-                .join(TournamentNew, TournamentCategory.tournament_id == TournamentNew.id)
-                # .filter(TournamentNew.id == tournament_id)
-            )
-        elif tournament_id and include_tournament_info:
-            athletes_query = (
-                athletes_query
-                .join(AthleteRegistration)
-                .join(TournamentCategory, AthleteRegistration.tournament_category_id == TournamentCategory.tournament_category_id)
-                .join(TournamentNew, TournamentCategory.tournament_id == TournamentNew.id)
-                .filter(TournamentNew.id == tournament_id)
-                .options(
-                    joinedload(AthleteNew.registration)
-                    .joinedload(AthleteRegistration.tournament_categories)
-                    .joinedload(TournamentCategory.tournament)
-                         )
-            )
-        elif tournament_id and not include_tournament_info:
-            athletes_query = (
-                athletes_query
-                .join(AthleteRegistration)
-                .join(TournamentCategory, AthleteRegistration.tournament_category_id == TournamentCategory.tournament_category_id)
-                .join(TournamentNew, TournamentCategory.tournament_id == TournamentNew.id)
-                .filter(TournamentNew.id == tournament_id)
+        # Фильтр по tournament_id (если передан) — только зарегистрированные в турнире
+        if tournament_id is not None:
+            athletes_query = athletes_query \
+                .join(AthleteRegistration, AthleteNew.id == AthleteRegistration.athlete_id) \
+                .join(TournamentCategory,
+                      AthleteRegistration.tournament_category_id == TournamentCategory.tournament_category_id) \
+                .filter(TournamentCategory.tournament_id == tournament_id)
+
+        # Подгрузка информации о турнирах (независимо от tournament_id)
+        if include_tournament_info:
+            athletes_query = athletes_query.options(
+                joinedload(AthleteNew.registrations)  # ← ИСПРАВЛЕНО: plural "registrations"
+                .joinedload(AthleteRegistration.tournament_categories)
+                .joinedload(TournamentCategory.tournament)
             )
 
-        athletes = athletes_query.order_by(AthleteNew.user.last_name, AthleteNew.user.first_name).all()
+        # Сортировка (теперь работает благодаря join(user))
+        athletes = athletes_query.order_by(
+            UserNew.last_name, UserNew.first_name
+        ).all()
+
         return athletes
-
     def set_category(self, athlete:AthleteNew,weigth):
         category_repo = CategoryRepository()
         category_id = category_repo.get_id_by_athlete_feature(weigth, athlete.age, athlete.gender)

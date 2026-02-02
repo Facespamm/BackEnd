@@ -7,9 +7,9 @@ db = SQLAlchemy()
 
 # Используйте одну строку подключения
 # DATABASE_URI = 'postgresql+psycopg2://postgres:password@192.168.7.122:5434/judo_tournament'
-#DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
+DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
 #docker connection
-DATABASE_URI = 'postgresql+psycopg2://postgres:password@db:5432/judo_tournament'
+#DATABASE_URI = 'postgresql+psycopg2://postgres:password@db:5432/judo_tournament'
 
 def init_db(app):
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
