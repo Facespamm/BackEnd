@@ -5,6 +5,7 @@ from sqlalchemy import (
     ForeignKey
 )
 from database.db import db
+from new_model.Enums import ConsolationType
 
 new_user_roles = Table(
     'new_user_roles',
@@ -19,6 +20,7 @@ class TournamentCategory(db.Model):
     tournament_category_id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+    has_consolidation_fights = db.Column(db.Boolean, default=False)
 
     # Relationships
     tournament = db.relationship('TournamentNew', back_populates='tournament_categories')

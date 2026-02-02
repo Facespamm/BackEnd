@@ -53,7 +53,7 @@ def create_tournament():
                 'message': 'Не передан JSON'
             }), 400
 
-        if not data.get('name') or not data.get('start_date') or not data.get('end_date'):
+        if not data.get('name') or not data.get('start_date') or not data.get('end_date') or not data.get('has_consalation'):
             return jsonify({
                 'success': False,
                 'message': 'Обязательные поля: name, start_date, end_date'
@@ -79,7 +79,7 @@ def create_tournament():
         is_created = tournament_repo.create_tournament(tournament_new)
 
         for category in data['list_category']:
-            tournament_repo.assign_category_tournament(category, tournament_new.id)
+            tournament_repo.assign_category_tournament(category, tournament_new.id, data['has_consalation'])
 
         if not is_created:
             return jsonify({

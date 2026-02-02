@@ -2,7 +2,9 @@ from flask import Blueprint, jsonify, request
 
 from new_model.Enums import text_to_referee_level
 from new_model.handbook.new_referee import RefereeNew
+from repository.figth_repo import FightRepository
 from repository.referee_repo import RefereeRepository
+from repository.tournament_repo import TournamentRepository
 
 referee_bp = Blueprint("referee", __name__, url_prefix="/referee")
 referee_repo = RefereeRepository()
@@ -147,6 +149,65 @@ def update_referee(referee_id):
         return jsonify({
             'message': 'Ошибка обнавления'
         }),500
+
+@referee_bp.route("/<tournament_id>/assign_to-fights", methods=["POST"])
+def assign_referees_to_fights(tournament_id):
+    try:
+        if not tournament_id:
+            return jsonify({
+                'message': 'Не выбран турнир'
+            }), 400
+
+        category = request.args.get('category')
+        if not category:
+            return jsonify({
+                'message': 'Не выбрана категория'
+            }), 400
+
+        data = request.get_json()
+
+        required_fields = ['referees']
+
+        if not all(field in data for field in required_fields):
+            return jsonify({
+                'message': f'Не заполненно следующие поля {required_fields}'
+            }), 400
+
+        if not data['referees'] or len(data['referees']) != 3:
+            return jsonify({
+                'message': 'Список судей пуст'
+            }), 400
+
+        tournament_repo = TournamentRepository()
+        tournament_category = tournament_repo.get_tournament_category(tournament_id, category)
+
+        if not tournament_category:
+            return jsonify({
+                'message': 'Нет такой категории в турнире'
+            }), 404
+
+        fight_repo = FightRepository()
+        figths = fight_repo.get_fight_by_tournament(tournament_category.tournament_category_id)
+
+        if not figths:
+            return jsonify({
+                'message': 'В этой категории нет боев'
+            }), 404
+        referees = data['referees']
+        for fight in figths:
+            fight_repo.assign_referee(referees[0], fight.id,"Главный")
+            fight_repo.assign_referee(referees[1], fight.id,"Второй")
+            fight_repo.assign_referee(referees[2], fight.id,"Третий")
+
+        return jsonify({
+            'message': 'Судьи назначены на бои'
+        }), 200
+    except Exception as e:
+        print(f"Error in assign_referees_to_fights: {e}")
+        return jsonify({
+            'message': 'Ошибка назначения судей на бои'
+        }), 500
+
 
 @referee_bp.route("/<referee_id>", methods=["DELETE"])
 def delete_referee(referee_id):

@@ -212,6 +212,8 @@ def update_fight_status(fight_id):
                 'message': 'Обязательный параметр: fight_id'
             }), 400
 
+        tatami_number = request.args.get('tatami_number', type=int)
+
         exiting_fight = fight_repo.get_fight_by_id(fight_id)
         if not exiting_fight:
             return jsonify({
@@ -219,7 +221,7 @@ def update_fight_status(fight_id):
                 'message': 'Схватка не найдена'
             }), 404
 
-        fight_repo.set_live_status(fight_id)
+        fight_repo.set_live_status(fight_id, tatami_number)
 
         return jsonify({
             'success': True,

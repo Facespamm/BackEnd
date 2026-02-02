@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from database.db import db
-from new_model.Enums import FightStatus
+from new_model.Enums import FightStatus, BracketType
 
 
 class FightNew(db.Model):
@@ -21,7 +21,8 @@ class FightNew(db.Model):
     status = db.Column(db.Enum(FightStatus), default=FightStatus.SCHEDULED)
     start_time = db.Column(db.Interval)
     end_time = db.Column(db.Interval)
-    next_fight_id  = db.Column(db.Integer, default=None, nullable=True) #Ссылка на предыдущую схватку в сетке
+    next_fight_id  = db.Column(db.Integer, default=None, nullable=True) #Ссылка на следующию схватку в сетке
+    type_bracket = db.Column(db.Enum(BracketType), default='MAIN')  # Тип сетки для разделения боев
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

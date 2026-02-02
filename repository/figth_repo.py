@@ -1,4 +1,4 @@
-from datetime import time, datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy import select, update, insert, delete
 
@@ -103,11 +103,12 @@ class FightRepository:
 
         return referee_list
 
-    def set_live_status(self, fight_id):
+    def set_live_status(self, fight_id, tatami_number):
         try:
             fight = self.get_fight_by_id(fight_id)
             if fight:
                 fight.status = FightStatus.LIVE
+                fight.tatami_number = tatami_number
                 self.session.commit()
         except Exception as e:
             print('Error: ',e)
@@ -131,8 +132,8 @@ class FightRepository:
             fight = self.get_fight_by_id(fight_id)
 
 
-            start_time = _text_to_time(data['start_time'])
-            end_time = _text_to_time(data['end_time'])
+            start_time = self._text_to_time(data['start_time'])
+            end_time = self._text_to_time(data['end_time'])
 
             fight.start_time = start_time
             fight.end_time = end_time
@@ -177,10 +178,32 @@ class FightRepository:
             print('Error: ', e)
             self.session.rollback()
 
-def _text_to_time(text):
-    try:
-        m, s = map(int, text.split(":"))
-        return timedelta(minutes=m, seconds=s)
-    except Exception as e:
-        print('Error: ', e)
-        return None
+    def get_semi_final_fights(self, tournament_category_id, semi_final_round_number):
+        semi_final_fights = (
+            self.session.query(FightNew)
+            .filter(
+                FightNew.tournament_category_id == tournament_category_id,
+                FightNew.round_number ==  semi_final_round_number -1
+            )
+            .all()
+        )
+        return semi_final_fights
+
+    def get_final_fights(self, tournament_category_id, final_round_number):
+        semi_final_fights = (
+            self.session.query(FightNew)
+            .filter(
+                FightNew.tournament_category_id == tournament_category_id,
+                FightNew.round_number ==  final_round_number
+            )
+            .all()
+        )
+        return semi_final_fights
+
+    def _text_to_time(self,text):
+        try:
+            m, s = map(int, text.split(":"))
+            return timedelta(minutes=m, seconds=s)
+        except Exception as e:
+            print('Error: ', e)
+            return None

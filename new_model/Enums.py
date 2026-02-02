@@ -67,6 +67,17 @@ class RefereeLevels(Enum):
     INTERNATIONAL_B = 'Международный B'
     INTERNATIONAL_A = 'Международный A'
 
+class BracketType(Enum):
+    MAIN = 'MAIN'
+    CONSOLATION_GROUP_A = 'CONSOLATION_GROUP_A'
+    CONSOLATION_GROUP_B = 'CONSOLATION_GROUP_B'
+    Consolation_by_Semifinalists = 'Consolation_by_Semifinalists'
+    Consolation_by_Finalists = 'Consolation_by_Finalists'
+
+class ConsolationType(Enum):
+    SEMIFINALISTS = 'SEMIFINALISTS'
+    FINALISTS = 'FINALISTS'
+
 def translate_gender(gender):
     return Gender.male.name if gender == 'мужской' else Gender.female.name
 

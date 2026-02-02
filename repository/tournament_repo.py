@@ -221,7 +221,7 @@ class TournamentRepository:
             print(f"Error creating tournament {tournament.name}: {e}")
             return False
 
-    def assign_category_tournament(self, category_id, tournament_id):
+    def assign_category_tournament(self, category_id, tournament_id, has_consalation = False):
         """Подписать категории к турниру"""
         try:
             category_repo = CategoryRepository()
@@ -233,7 +233,7 @@ class TournamentRepository:
 
             insert_query = (
                 insert(TournamentCategory)
-                .values(tournament_id=tournament_id, category_id=category_id)
+                .values(tournament_id=tournament_id, category_id=category_id, has_consolidation_fights=has_consalation)
             )
             self.session.execute(insert_query)
             self.session.commit()
@@ -276,7 +276,7 @@ class TournamentRepository:
             self.session.rollback()
             return False
 
-    def get_tournament_category_id(self,  tournament_id:int, category_id:int):
+    def get_tournament_category(self,  tournament_id:int, category_id:int):
         """Получить ID категории турнира"""
         try:
             tournament_category = (
@@ -289,7 +289,7 @@ class TournamentRepository:
                 print(f"TournamentCategory not found for tournament_id {tournament_id} and category_id {category_id}")
                 return None
 
-            return tournament_category.tournament_category_id
+            return tournament_category
         except Exception as e:
             print(f"Error getting tournament category id: {e}")
             return None
