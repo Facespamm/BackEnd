@@ -109,6 +109,8 @@ class FightRepository:
             if fight:
                 fight.status = FightStatus.LIVE
                 fight.tatami_number = tatami_number
+                fight.start_time = timedelta(minutes=0, seconds=0)
+
                 self.session.commit()
         except Exception as e:
             print('Error: ',e)
@@ -130,7 +132,6 @@ class FightRepository:
     def end_fight(self, fight_id, data: dict):
         try:
             fight = self.get_fight_by_id(fight_id)
-
 
             start_time = self._text_to_time(data['start_time'])
             end_time = self._text_to_time(data['end_time'])
@@ -207,3 +208,21 @@ class FightRepository:
         except Exception as e:
             print('Error: ', e)
             return None
+
+    def create_result(self,  result):
+        try:
+            self.session.add(result)
+            self.session.commit()
+        except Exception as e:
+            self.session.rollback()
+            print('Error: ', e)
+
+    def update_end_time(self, fight_id, end_time:timedelta):
+        try:
+            fight = self.get_fight_by_id(fight_id)
+            if fight:
+                fight.end_time = end_time
+                self.session.commit()
+        except Exception as e:
+            print('Error: ', e)
+            self.session.rollback()
