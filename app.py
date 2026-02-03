@@ -17,6 +17,7 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 # CORS для API
 CORS(app)
 jwt = JWTManager(app)
+CORS(app)
 
 # Инициализация базы данных
 init_db(app)
