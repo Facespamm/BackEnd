@@ -52,3 +52,5 @@ class ResultRepository:
     def get_result_by_id(self, result_id):
         return self.session.query(ResultNew).filter_by(id=result_id).one_or_none()
 
+    def get_result_by_fight(self, fight_id):
+        return self.session.query(ResultNew).filter_by(fight_id=fight_id).one_or_none()

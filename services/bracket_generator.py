@@ -4,15 +4,16 @@
 import math
 
 from database.db import create_session
-from new_model.Enums import FightStatus, BracketType
+from new_model.Enums import BracketType
 from new_model.head_model.fight_new import FightNew
 from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
-from repository.result_repo import ResultRepository
 from repository.tournament_repo import TournamentRepository
+from services.fight_generator import FightGenerator
 
 tournament_repo = TournamentRepository()
 fight_repo = FightRepository()
+fight_generator = FightGenerator()
 
 class BracketGenerator:
     """Генератор турнирных сеток"""
@@ -53,62 +54,61 @@ class BracketGenerator:
             print('Error: ', e)
             return None
 
-    # def generate_consolation_by_semifinalists(self, category_id: int):
-    #     try:
-    #         athlete_repo = AthleteRepository()
-    #         athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
-    #
-    #         athlete_count = len(athletes)
-    #         if not athletes or athlete_count < 4:
-    #             raise Exception('Not enough athletes for consolation fights')
-    #
-    #         tournament_category = tournament_repo.get_tournament_category(self.tournament_id, category_id)
-    #         if not tournament_category:
-    #             raise Exception("❌ Tournament category not found")
-    #
-    #         # Определяем количество раундов
-    #         total_rounds = self.calculate_rounds(athlete_count)
-    #
-    #         if total_rounds == 0:
-    #             raise Exception("❌ Not enough rounds for consolation fights")
-    #
-    #         # Генерация утешительных схваток за 3 место
-    #         consolation_fights = self._generate_consolation_fights_semifinalist(tournament_category.tournament_category_id,
-    #                                                                         max_rounds=total_rounds)
-    #
-    #         return consolation_fights
-    #     except Exception as e:
-    #         print('Error: ', e)
-    #         return None
-    #
-    # def generate_consolation_fights_finalist(self,category_id:int):
-    #     """Генерация утешительных схваток за 3 место между финалистами"""
-    #     try:
-    #         athlete_repo = AthleteRepository()
-    #         athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
-    #
-    #         athlete_count = len(athletes)
-    #         if not athletes or athlete_count < 2:
-    #             raise Exception('Not enough athletes for consolation fights')
-    #
-    #         tournament_category = tournament_repo.get_tournament_category(self.tournament_id, category_id)
-    #         if not tournament_category:
-    #             raise Exception("❌ Tournament category not found")
-    #
-    #         # Определяем количество раундов
-    #         total_rounds = self.calculate_rounds(athlete_count)
-    #
-    #         if total_rounds == 0:
-    #             raise Exception("❌ Not enough rounds for consolation fights")
-    #
-    #         # Генерация утешительных схваток за 3 место между финалистами
-    #         consolation_fights = self._generate_consolation_fights_finalist(tournament_category.tournament_category_id,
-    #                                                                         max_rounds=total_rounds)
-    #
-    #         return consolation_fights
-    #     except Exception as e:
-    #         print('Error: ', e)
-    #         return None
+    def generate_consolation_by_semifinalists(self, category_id: int):
+        try:
+            athlete_repo = AthleteRepository()
+            athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
+
+            athlete_count = len(athletes)
+            if not athletes or athlete_count < 4:
+                raise Exception('Not enough athletes for consolation fights')
+
+            tournament_category = tournament_repo.get_tournament_category(self.tournament_id, category_id)
+            if not tournament_category:
+                raise Exception("❌ Tournament category not found")
+
+            # Определяем количество раундов
+            total_rounds = self.calculate_rounds(athlete_count)
+
+            if total_rounds == 0:
+                raise Exception("❌ Not enough rounds for consolation fights")
+
+            # Генерация утешительных схваток за 3 место
+            consolation_fights = fight_generator.generate_consolation_fights_semifinalist(tournament_category.tournament_category_id,
+                                                                            max_rounds=total_rounds)
+
+            return consolation_fights
+        except Exception as e:
+            print('Error: ', e)
+            return None
+
+    def generate_consolation_fights_finalist(self,category_id:int):
+        """Генерация утешительных схваток за 3 место между финалистами"""
+        try:
+            athlete_repo = AthleteRepository()
+            athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
+
+            athlete_count = len(athletes)
+            if not athletes or athlete_count < 2:
+                raise Exception('Not enough athletes for consolation fights')
+
+            tournament_category = tournament_repo.get_tournament_category(self.tournament_id, category_id)
+            if not tournament_category:
+                raise Exception("❌ Tournament category not found")
+
+            # Определяем количество раундов
+            total_rounds = self.calculate_rounds(athlete_count)
+
+            if total_rounds == 0:
+                raise Exception("❌ Not enough rounds for consolation fights")
+
+            # Генерация утешительных схваток за 3 место между финалистами
+            consolation_fights = fight_generator.generate_consolation_fights_finalist(tournament_category.tournament_category_id,total_rounds)
+
+            return consolation_fights
+        except Exception as e:
+            print('Error: ', e)
+            return None
 
     def _seed_athletes(self,athletes : list):
         """Посев участников (сильнейшие распределяются)"""
@@ -173,10 +173,6 @@ class BracketGenerator:
                 current_round_fights = next_round
                 fight_number += len(next_round)
                 current_round += 1
-
-            # Утешительные схватки за 3 место
-            # if self.tournament.has_consolation and len(athletes) >= 4:
-            #     self._generate_consolation_fights(fights, fight_number)
 
             return fights
         except Exception as e:

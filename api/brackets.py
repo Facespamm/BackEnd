@@ -11,7 +11,7 @@ brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
 
 @brackets_bp.route('/<int:tournament_id>', methods=['POST'])
 def create_bracket(tournament_id):
-    """Создать новую сетку"""
+    """Создает олимпийскую сетку"""
     try:
         if not tournament_id:
             return jsonify({'success': False, 'message': 'ID турнира не указан'}), 400
@@ -59,7 +59,8 @@ def create_bracket(tournament_id):
         return jsonify({'success': False, 'message': f'Ошибка создания сетки: {str(e)}'}), 500
 
 @brackets_bp.route('/<int:tournament_id>/has-consolation', methods=['GET'])
-def generate_bracket_with_consolation(tournament_id):
+def has_consolation_fights(tournament_id):
+    """Проверяет можно ли создать утешительные бои"""
     category_id = request.args.get('category_id')
 
     if not tournament_id:
@@ -101,6 +102,7 @@ def generate_bracket_with_consolation(tournament_id):
 
 @brackets_bp.route('/<int:tournament_id>/semifinals-consalation', methods=['POST'])
 def generate_consolation_fights(tournament_id):
+    """Создание утешительных боев от полуфиналистов"""
     try:
         if not tournament_id:
             return jsonify({'success': False, 'message': 'ID турнира не указан'}), 400
@@ -134,6 +136,7 @@ def generate_consolation_fights(tournament_id):
 
 @brackets_bp.route('/<int:tournament_id>/finals-consalation', methods=['POST'])
 def generate_consolation_fights_finalist(tournament_id):
+    """Создание сетки для утишительных от финалистов """
     try:
         if not tournament_id:
             return jsonify({'success': False, 'message': 'ID турнира не указан'}), 400
