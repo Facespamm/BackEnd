@@ -6,7 +6,6 @@ from database.db import create_session
 from new_model.handbook.role_new import RoleNew
 from new_model.head_model.new_user import UserNew
 from new_model.new_associations import new_user_roles
-from utils.security import hash_password
 
 
 class AuthRepository:
@@ -65,14 +64,13 @@ class AuthRepository:
     def update_user_role(self, user_id, user_role_id):
         """Обновить роль пользователя"""
         try:
-            user_role = self.session.query(new_user_roles).filter_by(user_id=user_id, is_active=True).first()
-
-            if user_role:
-                user_role.role_id = user_role_id
-                self.session.commit()
-                return True
-
-            return False
+            result = (
+                self.session.query(new_user_roles)
+                .filter_by(user_id=user_id)
+                .update({"role_id": user_role_id})
+            )
+            self.session.commit()
+            return result > 0  # True если обновлена хотя бы 1 строка
         except Exception as e:
             self.session.rollback()
             print(f"Error updating user role: {e}")
@@ -87,8 +85,33 @@ class AuthRepository:
             return None
 
     def check_password(self,user: UserNew,password: str):
-        return user.password_hash == hash_password(password)
+        return user.password_hash == self.hash_password(password)
 
     def hash_password(self, password):
         salt = 'judo_tournament_salt_2024'
         return hashlib.sha256((password + salt).encode()).hexdigest()
+
+    def get_users(self):
+        return self.session.query(UserNew).filter_by(is_active=True).order_by(UserNew.username).all()
+
+    def get_user_by_id(self, user_id: int):
+        """Получить пользователя по его ID"""
+        try:
+            return self.session.query(UserNew).filter_by(id=user_id, is_active=True).first()
+        except Exception as e:
+            print(f"Error getting user by id: {e}")
+            return None
+
+    def update_user(self, existing_user,data):
+        """Обновить информацию о пользователе"""
+        try:
+            existing_user.name = data.get('name', existing_user.name)
+            existing_user.email = data.get('email', existing_user.email)
+            existing_user.phone = data.get('phone', existing_user.phone)
+
+            self.session.commit()
+            return True
+        except Exception as e:
+            self.session.rollback()
+            print(f"Error updating user: {e}")
+            return False

@@ -1,113 +1,148 @@
 from sqlalchemy import true, select
 from sqlalchemy.dialects.mysql import insert
+from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.functions import count
+from wtforms.validators import Optional
 
+from api.categories import category_repo
 from database.db import create_session
 from new_model.handbook.category_new import CategoryNew
+from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
-from new_model.new_associations import tournament_categories, athlete_tournament
+from new_model.new_associations import TournamentCategory, AthleteRegistration
+from repository.category_repo import CategoryRepository
 
 
 class TournamentRepository:
     def __init__(self):
         self.session = create_session()
 
-    # TODO Переделать под новые модели
-    # def add_club_to_tournament(self,  tournament_id, club_id):
-    #     """Добавить клуб к турниру"""
-    #     try:
-    #         tournament = self.session.query(TournamentNew).filter_by(id=tournament_id).first()
-    #         if not tournament:
-    #             print(f"Tournament with id {tournament_id} not found")
-    #             raise Exception("Tournament not found")
-    #
-    #         #categories = self.session.query(Category).filter_by(tournament_id=tournament.id).all()
-    #
-    #         #category_ids = [cat.id for cat in categories]
-    #         #if not category_ids:
-    #         #    print(f"No categories found for tournament {tournament_id}")
-    #         #    return False
-    #
-    #         #query = (
-    #         #    select(Athlete)
-    #         #    .join(category_athletes, Athlete.id == category_athletes.c.athlete_id)
-    #         #    .where(category_athletes.c.category_id.in_(category_ids),
-    #         #           Athlete.club_id == club_id,
-    #         #           Athlete.is_active == True)
-    #         #)
-    #
-    #         #athletes =  self.session.execute(query).scalars().all()
-    #
-    #         athletes = self.session.query(Athlete).filter_by(club_id=club_id, is_active = True).all()
-    #
-    #         if not athletes:
-    #             print(f"No eligible athletes found for club {club_id}")
-    #
-    #         for athlete in athletes:
-    #             if athlete not in tournament.athletes:
-    #                 tournament.athletes.append(athlete)
-    #
-    #         self.session.commit()
-    #         print(f"Added {len(athletes)} athletes from club {club_id} to tournament {tournament_id}")
-    #     except Exception as e:
-    #         self.session.rollback()
-    #         print(f"Error adding club {club_id} to tournament {tournament_id}")
-    #         raise
-    #
-    # def get_tournament_categories(self, tournament_id):
-    #     """Получить категории турнира"""
-    #     try:
-    #         tournament = self.session.query(Tournament).filter_by(id=tournament_id).first()
-    #         if not tournament:
-    #             print(f"Tournament with id {tournament_id} not found")
-    #             raise Exception("Tournament not found")
-    #
-    #         categories = self.session.query(Category).filter_by(tournament_id=tournament.id).all()
-    #         return categories
-    #     except Exception as e:
-    #         print(f"Error getting categories for tournament {tournament_id}: {e}")
-    #         return []
-    #
-    # def add_athlete_to_tournament(self, tournament_id, athlete_id):
-    #     """Добавить участника к турниру"""
-    #     try:
-    #         tournament = self.session.query(Tournament).filter_by(id=tournament_id).first()
-    #         athlete = self.session.query(Athlete).filter_by(id=athlete_id).first()
-    #
-    #         if not tournament:
-    #             print(f"Tournament with id {tournament_id} not found")
-    #             raise Exception("Tournament not found")
-    #
-    #         if not athlete:
-    #             print(f"Athlete with id {athlete_id} not found")
-    #             raise Exception("Athlete not found")
-    #
-    #         if athlete in tournament.athletes:
-    #             print(f"Athlete {athlete_id} already registered for tournament {tournament_id}")
-    #             return False
-    #
-    #         #categories = self.get_tournament_categories(tournament_id)
-    #         #athlete_categories = [
-    #         #    category for category in categories if athlete in category.athletes
-    #         #]
-    #
-    #         #if not athlete_categories:
-    #         #    print(f"Athlete {athlete_id} does not belong to any category in tournament {tournament_id}")
-    #         #    return False
-    #
-    #         tournament.athletes.append(athlete)
-    #         self.session.commit()
-    #         print(f"Athlete {athlete_id} added to tournament {tournament_id}")
-    #         return True
-    #     except Exception as e:
-    #         self.session.rollback()
-    #         print(f"Error adding athlete {athlete_id} to tournament {tournament_id}: {e}")
-    #         return False
+    def add_club_to_tournament(self, tournament_id, club_id):
+        """Добавить клуб к турниру"""
+        try:
+            tournament = self.get_tournament_by_id(tournament_id)
+            if not tournament:
+                raise ValueError(f"Tournament with id {tournament_id} not found")
+
+            categories = self.get_category(tournament.id)
+            category_ids = [cat.id for cat in categories]
+
+            if not category_ids:
+                raise ValueError(f"No categories found for tournament {tournament_id}")
+
+            # Получаем атлетов клуба в нужных категориях
+            athletes = (
+                self.session.query(AthleteNew)
+                .filter(
+                    AthleteNew.category_id.in_(category_ids),
+                    AthleteNew.club_id == club_id
+                )
+                .all()
+            )
+
+            if not athletes:
+                raise ValueError(f"No eligible athletes found for club {club_id}")
+
+            # Получаем ID связей турнир-категория
+            tournament_category_records = (
+                self.session.query(TournamentCategory)
+                .filter(
+                    TournamentCategory.category_id.in_(category_ids),
+                    TournamentCategory.tournament_id == tournament_id
+                )
+                .all()
+            )
+
+            tc_ids = [tc.tournament_category_id for tc in tournament_category_records]
+            tc_by_category = { tc.category_id : tc.tournament_category_id for tc in tournament_category_records}
+
+            # Получаем уже назначенных атлетов
+            existing_athlete_ids = {
+                row[0] for row in
+                self.session.query(AthleteRegistration.athlete_id)
+                .filter(AthleteRegistration.tournament_category_id.in_(tc_ids))
+                .all()
+            }
+
+            # Назначаем новых атлетов
+            added_count = 0
+            for athlete in athletes:
+                if athlete.id in existing_athlete_ids:
+                    continue
+
+                tournament_category_id = tc_by_category.get(athlete.category_id)
+                if not tournament_category_id:
+                    continue
+
+                self.assign_athletes_tournament(tournament_category_id, athlete.id)
+                added_count += 1
+
+            print(f"Added {added_count} athletes from club {club_id} to tournament {tournament_id}")
+            return True
+
+        except Exception as e:
+            self.session.rollback()
+            print(f"Error adding club {club_id} to tournament {tournament_id}: {e}")
+            raise
+
+    def add_athlete_to_tournament(self, tournament_id, category_id, athlete_id):
+        """Добавить участника к турниру"""
+        try:
+            tournament = self.get_tournament_by_id(tournament_id)
+
+            athlete = self.session.query(AthleteNew).filter_by(id=athlete_id).first()
+
+            if not tournament:
+                print(f"Tournament with id {tournament_id} not found")
+                raise Exception("Tournament not found")
+
+            if not athlete:
+                print(f"Athlete with id {athlete_id} not found")
+                raise Exception("Athlete not found")
+
+            category = self.get_category(tournament_id,category_id)
+            athlete_categories = athlete.category_id == category.id
+
+            if not athlete_categories:
+               print(f"Athlete {athlete_id} does not belong to any category in tournament {tournament_id}")
+               return False
+
+            tournament_category_id = (
+                self.session.query(TournamentCategory.tournament_category_id)
+                .filter(
+                    TournamentCategory.category_id == category_id,
+                    TournamentCategory.tournament_id == tournament_id,
+                )
+                .scalar()
+            )
+
+            athlete_registry = (
+                self.session.query(AthleteRegistration.athlete_id)
+                .filter(
+                    AthleteRegistration.tournament_category_id == tournament_category_id,
+                )
+                .all()
+            )
+
+            if athlete.id in athlete_registry:
+                print(f"Athlete {athlete_id} already registered for tournament {tournament_id}")
+                return False
+
+            print(f"Athlete {athlete_id} added to tournament {tournament_id} with category {category_id}")
+            return self.assign_athletes_tournament(tournament_category_id, athlete_id)
+        except Exception as e:
+            self.session.rollback()
+            print(f"Error adding athlete {athlete_id} to tournament {tournament_id}: {e}")
+            return False
 
     def get_tournament_by_id(self, tournament_id):
         """Получить турнир по ID"""
         try:
-            tournament = self.session.query(TournamentNew).filter_by(id=tournament_id).one_or_none()
+            tournament = (
+                self.session.query(TournamentNew)
+                .options(joinedload(TournamentNew.tournament_categories).joinedload(TournamentCategory.category))
+                .filter_by(id=tournament_id).one_or_none()
+            )
 
             if not tournament:
                 print(f"Tournament with id {tournament_id} not found")
@@ -130,9 +165,7 @@ class TournamentRepository:
     def get_all_tournaments(self, status=None):
         """Получить все турниры"""
         try:
-            #TODO надо добавить поля is_active в турниры
-            # tournaments_query = self.session.query(TournamentNew).filter_by(is_active = True).order_by(TournamentNew.start_date.desc())
-            tournaments_query = self.session.query(TournamentNew).order_by(TournamentNew.start_date.desc())
+            tournaments_query = self.session.query(TournamentNew).filter_by(is_active = True).order_by(TournamentNew.start_date.desc())
 
             if status:
                 tournaments_query = tournaments_query.filter_by(status=status)
@@ -147,9 +180,10 @@ class TournamentRepository:
         """Количество участников на турнир"""
         try:
             count_athlete = (
-                self.session.query(count(athlete_tournament.c.athlete_id))
+                self.session.query(count(AthleteRegistration.athlete_id))
+                .join(TournamentCategory)
                 .filter(
-                    athlete_tournament.c.tournament_id == tournament_id
+                    TournamentCategory.tournament_id == tournament_id
                 ).scalar()
             )
 
@@ -158,17 +192,20 @@ class TournamentRepository:
             print(f"Error getting athlete count: {e}")
             return None
 
-    def get_category(self, tournament_id):
+    def get_category(self, tournament_id, category_id = None):
         """Категория"""
         try:
             category = (
                 self.session.query(CategoryNew)
-                .join(tournament_categories)
-                .filter(tournament_categories.c.tournament_id == tournament_id)
-                .all()
+                .join(TournamentCategory)
+                .filter(TournamentCategory.tournament_id == tournament_id)
             )
 
-            return category
+            if category_id:
+                category = category.filter(TournamentCategory.category_id == category_id).first()
+                return category
+
+            return category.all()
         except Exception as e:
             print(f"Error getting category: {e}")
             return None
@@ -185,12 +222,19 @@ class TournamentRepository:
             print(f"Error creating tournament {tournament.name}: {e}")
             return False
 
-    def assign_category_tournament(self, category_id, tournament_id):
+    def assign_category_tournament(self, category_id, tournament_id, has_consalation = False):
         """Подписать категории к турниру"""
         try:
+            category_repo = CategoryRepository()
+
+            exist_category = category_repo.get_category_by_id(category_id)
+            if not exist_category:
+                print(f"Category with id {category_id} not found")
+                raise Exception("Category not found")
+
             insert_query = (
-                insert(tournament_categories)
-                .values(tournament_id=tournament_id, category_id=category_id)
+                insert(TournamentCategory)
+                .values(tournament_id=tournament_id, category_id=category_id, has_consolidation_fights=has_consalation)
             )
             self.session.execute(insert_query)
             self.session.commit()
@@ -210,3 +254,63 @@ class TournamentRepository:
             self.session.rollback()
             print(f"Error deleting tournament: {e}")
             return False
+
+    def commit_change(self):
+        try:
+            self.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error committing changes: {e}")
+            return False
+
+    def assign_athletes_tournament(self, tournament_category_id, athlete_id):
+        try:
+            assign_athlete_query = (
+                insert(AthleteRegistration)
+                .values(tournament_category_id=tournament_category_id, athlete_id=athlete_id)
+            )
+            self.session.execute(assign_athlete_query)
+            self.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error assigning athletes to tournament: {e}")
+            self.session.rollback()
+            return False
+
+    def get_tournament_category(self,  tournament_id:int, category_id:int) -> TournamentCategory | None:
+        """Получить ID категории турнира"""
+        try:
+            tournament_category = (
+                self.session.query(TournamentCategory)
+                .filter_by(tournament_id=tournament_id, category_id=category_id)
+                .first()
+            )
+
+            if not tournament_category:
+                print(f"TournamentCategory not found for tournament_id {tournament_id} and category_id {category_id}")
+                return None
+
+            return tournament_category
+        except Exception as e:
+            print(f"Error getting tournament category id: {e}")
+            return None
+
+    def get_tournament_name_by_tournament_category(self, tournament_category_id):
+        """Получить турнир по турнир категории"""
+        try:
+            tournament = (
+                self.session.query(TournamentNew.name)
+                .join(TournamentCategory, TournamentNew.id == TournamentCategory.tournament_id)
+                .filter(
+                    TournamentCategory.tournament_category_id == tournament_category_id
+                ).scalar()
+            )
+
+            if not tournament:
+                print(f"Tournament with id {tournament_category_id} not found")
+                return None
+
+            return tournament
+        except Exception as e:
+            print(f"Error getting tournament by id {tournament_category_id}: {e}")
+            return None

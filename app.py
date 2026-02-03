@@ -11,9 +11,9 @@ from init_database.init_db import init_dans_new, init_roles_new
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:okjtt@localhost:5434/judo_tournament'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DOCKER_CONNECTION')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY','cc820b15d44f7643fa52046a6c34f98a804c35d5ebdf830204a074c2c0059f88')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 # CORS для API
 CORS(app)
 jwt = JWTManager(app)
@@ -66,14 +66,14 @@ from api.tournaments import tournaments_bp
 from api.athletes import athletes_bp
 from api.clubs import clubs_bp
 from api.statistics import statistics_bp
-# from api.fights import fights_bp
+from api.fights import fights_bp
 from api.brackets import brackets_bp
-# from api.results import results_bp
-# from api.weighing import weighing_bp
-# from api.categories import categories_bp
+from api.results import results_bp
+from api.weighing import weighing_bp
+from api.categories import categories_bp
 # from api.registrations import registrations_bp
-# from api.users import users_bp
-# from api.dan import dans_bp
+from api.dan import dans_bp
+from api.referee import referee_bp
 # from api.scores import scores_bp
 
 app.register_blueprint(auth_bp)
@@ -82,14 +82,14 @@ app.register_blueprint(athletes_bp)
 
 app.register_blueprint(statistics_bp)
 app.register_blueprint(clubs_bp)
-# app.register_blueprint(fights_bp)
+app.register_blueprint(fights_bp)
 app.register_blueprint(brackets_bp)
-# app.register_blueprint(results_bp)
-# app.register_blueprint(weighing_bp)
-# app.register_blueprint(categories_bp)
+app.register_blueprint(results_bp)
+app.register_blueprint(weighing_bp)
+app.register_blueprint(categories_bp)
 # app.register_blueprint(registrations_bp)
-# app.register_blueprint(users_bp)
-# app.register_blueprint(dans_bp)
+app.register_blueprint(dans_bp)
+app.register_blueprint(referee_bp)
 # app.register_blueprint(scores_bp)
 
 if __name__ == '__main__':

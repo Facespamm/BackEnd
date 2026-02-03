@@ -1,3 +1,5 @@
+import os
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -6,19 +8,17 @@ from sqlalchemy_utils import database_exists, create_database
 db = SQLAlchemy()
 
 # Используйте одну строку подключения
-# docker подключение
-DATABASE_URI = 'postgresql+psycopg2://postgres:password@db:5432/judo_tournament'
-#локальное подключение
-#DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
-#подключение на работе
-DATABASE_URI = 'postgresql+psycopg2://postgres:password@192.168.7.122:5434/judo_tournament'
+#DATABASE_URI = 'postgresql+psycopg2://postgres:password@192.168.7.122:5434/judo_tournament'
+DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
+#docker connection
+#DATABASE_URI = 'postgresql+psycopg2://postgres:password@db:5432/judo_tournament'
 
 def init_db(app):
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DOCKER_CONNECTION',DATABASE_URI)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    if not database_exists(DATABASE_URI):
-        create_database(DATABASE_URI)
+    if not database_exists(os.getenv('DOCKER_CONNECTION')):
+        create_database(os.getenv('DOCKER_CONNECTION'))
         print("База данных создана!")
 
     db.init_app(app)
@@ -35,9 +35,10 @@ def init_db(app):
         from new_model.result_new import ResultNew
         from new_model.score_event import ScoreEvent
         from new_model.weighing_new import WeighingNew
+        from new_model.new_associations import TournamentCategory, AthleteRegistration,FightReferee
         db.create_all()
 
 def create_session():
-    engine = create_engine(DATABASE_URI)
+    engine = create_engine(os.getenv('DOCKER_CONNECTION'))
     session = sessionmaker(bind=engine)
     return session()  # Возвращайте экземпляр сессии

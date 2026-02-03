@@ -4,7 +4,6 @@ from database.db import create_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
-from new_model.new_associations import new_category_athletes
 
 
 class CategoryRepository:
@@ -33,7 +32,7 @@ class CategoryRepository:
     def update_category(self, category_id, category_data: dict):
         """Создать новую категорию"""
         try:
-            category = self.session.query(CategoryNew).first(category_id)
+            category = self.session.query(CategoryNew).filter_by(id = category_id).first()
             if not category:
                 raise Exception("Category not found")
 
@@ -56,8 +55,48 @@ class CategoryRepository:
             query = query.filter(CategoryNew.tournaments.any(TournamentNew.id == tournament_id))
         return query.all()
 
-    #TODO доделать
-    def get_all_athletes(self):
-        query = (
-            self.session.query(count(new_category_athletes.c.athlete_id))
+    def get_all_athletes(self, category_id):
+        try:
+            count_athlete = self.session.query(AthleteNew.id).filter(CategoryNew.athletes.any(CategoryNew.id == category_id)).count()
+
+            return count_athlete
+        except Exception as e:
+            print(f"Error getting athletes: {e}")
+            return 0
+
+    def create_category(self, category_new:CategoryNew):
+        try:
+            self.session.add(category_new)
+            self.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error creating category: {e}")
+            self.session.rollback()
+            return False
+
+    def get_category_by_id(self, category_id):
+        return self.session.query(CategoryNew).filter_by(id=category_id).first()
+
+    def delete_category(self, category):
+        try:
+            self.session.delete(category)
+            self.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error deleting category: {e}")
+            self.session.rollback()
+            return False
+
+    def get_id_by_athlete_feature(self, weigth, age, gender):
+        category_id = (
+            self.session.query(CategoryNew.id)
+            .filter(
+                CategoryNew.min_weight <= weigth,
+                CategoryNew.max_weight >= weigth,
+                CategoryNew.min_age <= age,
+                CategoryNew.max_age >= age,
+                CategoryNew.gender == gender
+            ).scalar()
         )
+
+        return category_id

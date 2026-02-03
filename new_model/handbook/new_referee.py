@@ -1,17 +1,18 @@
 from database.db import db
-from new_model.new_associations import fight_referee
+from new_model.Enums import RefereeLevels
 
 
 class RefereeNew(db.Model):
     __tablename__ = 'referees'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    certification_level = db.Column(db.String(50), nullable=True)  # NATIONAL, INTERNATIONAL, etc.
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    middle_name = db.Column(db.String(50))
+    email = db.Column(db.String(100), nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    certification_level = db.Column(db.Enum(RefereeLevels))  # NATIONAL, INTERNATIONAL, etc.
     tatami_assigned = db.Column(db.Integer, nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
     #связи
-    user = db.relationship('UserNew', back_populates='referees')
-    fights = db.relationship('FightNew', secondary=fight_referee, back_populates='referees')
+    fight_referees = db.relationship('FightReferee', back_populates='referees')
     tournament = db.relationship('TournamentNew', back_populates='chief_referee')

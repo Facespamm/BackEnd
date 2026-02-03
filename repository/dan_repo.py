@@ -12,16 +12,20 @@ class DanRepository:
 
     def get_dans(self):
         try:
-            dans_query = (
-                select(DanNew.id, DanNew.level, DanNew.description, count(AthleteNew.id).label('athlete_count'))
-                .join(AthleteNew, DanNew.id == AthleteNew.dan_id)
-            )
+            dans = self.session.query(DanNew).all()
 
-            dans = self.session.execute(dans_query).all()
             return dans
         except Exception as e:
             print("❌ Exception: ", e)
             return []
+
+    def get_athletes_count(self, dan_id):
+        try:
+            athlete_count = self.session.query(AthleteNew).filter(AthleteNew.id == dan_id).count()
+            return athlete_count
+        except Exception as e:
+            print(f"Error getting athletes count: {e}")
+            return 0
 
     def get_dan_by_name(self, level: str):
         """Получить дан по его уровню"""

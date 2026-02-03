@@ -1,91 +1,14 @@
 from flask import Blueprint, request, jsonify
-from flasgger import swag_from
-from datetime import datetime
-from models.fight import Fight
-from models.tournament import Tournament
-from models.athlete import Athlete
-from services.fight_manager import FightManager
-from sqlalchemy.exc import IntegrityError
+
+from repository.athlete_repo import AthleteRepository
+from repository.figth_repo import FightRepository
+from repository.referee_repo import RefereeRepository
+from repository.tournament_repo import TournamentRepository
 
 fights_bp = Blueprint('fights', __name__, url_prefix='/api/fights')
-
+fight_repo = FightRepository()
 
 @fights_bp.route('/', methods=['GET'])
-@swag_from({
-    'tags': ['Fights'],
-    'summary': 'Получить список схваток',
-    'description': 'Возвращает список схваток с возможностью фильтрации',
-    'parameters': [
-        {
-            'name': 'tournament_id',
-            'in': 'query',
-            'type': 'integer',
-            'required': False,
-            'description': 'ID турнира для фильтрации'
-        },
-        {
-            'name': 'status',
-            'in': 'query',
-            'type': 'string',
-            'required': False,
-            'description': 'Статус схватки',
-            'enum': ['SCHEDULED', 'LIVE', 'COMPLETED', 'CANCELLED']
-        },
-        {
-            'name': 'tatami',
-            'in': 'query',
-            'type': 'integer',
-            'required': False,
-            'description': 'Номер татами'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Список схваток получен успешно',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'fights': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'id': {'type': 'integer'},
-                                'tournament_id': {'type': 'integer'},
-                                'tatami': {'type': 'integer'},
-                                'status': {'type': 'string'},
-                                'round_number': {'type': 'integer'},
-                                'fight_number': {'type': 'integer'},
-                                'scheduled_time': {'type': 'string', 'format': 'date-time'},
-                                'timer_seconds': {'type': 'integer'},
-                                'is_golden_score': {'type': 'boolean'},
-                                'white_athlete': {
-                                    'type': 'object',
-                                    'properties': {
-                                        'id': {'type': 'integer'},
-                                        'name': {'type': 'string'}
-                                    }
-                                },
-                                'blue_athlete': {
-                                    'type': 'object',
-                                    'properties': {
-                                        'id': {'type': 'integer'},
-                                        'name': {'type': 'string'}
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    'total': {'type': 'integer'}
-                }
-            }
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
 def get_fights():
     """Получить список схваток"""
     try:
@@ -93,47 +16,35 @@ def get_fights():
         status = request.args.get('status')
         tatami = request.args.get('tatami', type=int)
 
-        query = Fight.query
+        if not tournament_id:
+            return jsonify({
+                'success': False,
+                'message': 'Обязательный параметр: tournament_id'
+            }), 400
 
-        if tournament_id:
-            query = query.filter_by(tournament_id=tournament_id)
+        tournament_repo = TournamentRepository()
+        tournament = tournament_repo.get_tournament_by_id(tournament_id)
+        if not tournament:
+            return jsonify({
+                'success': False,
+                'message': 'Турнир не найден'
+            }), 404
 
-        if status:
-            query = query.filter_by(status=status)
-
-        if tatami:
-            query = query.filter_by(tatami=tatami)
-
-        fights = query.order_by(Fight.tatami, Fight.scheduled_time).all()
+        fights = fight_repo.get_fights_by_search_params(tournament_id, status, tatami)
 
         result = []
+        athlete_repo = AthleteRepository()
         for fight in fights:
             fight_data = {
                 'id': fight.id,
-                'tournament_id': fight.tournament_id,
-                'tatami': fight.tatami,
+                'tournament_id': fight.tournament_category_id,
+                'tatami': fight.tatami_number,
                 'status': fight.status,
                 'round_number': fight.round_number,
                 'fight_number': fight.fight_number,
-                'scheduled_time': fight.scheduled_time.isoformat() if fight.scheduled_time else None,
-                'timer_seconds': fight.timer_seconds,
-                'is_golden_score': fight.is_golden_score,
-                'white_athlete': None,
-                'blue_athlete': None
+                'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+                'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
             }
-
-            if fight.white_athlete:
-                fight_data['white_athlete'] = {
-                    'id': fight.white_athlete.id,
-                    'name': fight.white_athlete.full_name
-                }
-
-            if fight.blue_athlete:
-                fight_data['blue_athlete'] = {
-                    'id': fight.blue_athlete.id,
-                    'name': fight.blue_athlete.full_name
-                }
-
             result.append(fight_data)
 
         return jsonify({
@@ -148,229 +59,17 @@ def get_fights():
             'message': f'Ошибка при получении схваток: {str(e)}'
         }), 500
 
-#
-# @fights_bp.route('/', methods=['POST'])
-# @swag_from({
-#     'tags': ['Fights'],
-#     'summary': 'Создать схватку',
-#     'description': 'Создает новую схватку',
-#     'parameters': [
-#         {
-#             'name': 'body',
-#             'in': 'body',
-#             'required': True,
-#             'schema': {
-#                 'type': 'object',
-#                 'required': ['tournament_id'],
-#                 'properties': {
-#                     'tournament_id': {
-#                         'type': 'integer',
-#                         'description': 'ID турнира'
-#                     },
-#                     'white_athlete_id': {
-#                         'type': 'integer',
-#                         'description': 'ID спортсмена в белом'
-#                     },
-#                     'blue_athlete_id': {
-#                         'type': 'integer',
-#                         'description': 'ID спортсмена в синем'
-#                     },
-#                     'tatami': {
-#                         'type': 'integer',
-#                         'description': 'Номер татами'
-#                     },
-#                     'scheduled_time': {
-#                         'type': 'string',
-#                         'format': 'date-time',
-#                         'description': 'Запланированное время (ISO формат)'
-#                     },
-#                     'round_number': {
-#                         'type': 'integer',
-#                         'description': 'Номер раунда'
-#                     },
-#                     'fight_number': {
-#                         'type': 'integer',
-#                         'description': 'Номер схватки'
-#                     }
-#                 }
-#             }
-#         }
-#     ],
-#     'responses': {
-#         201: {
-#             'description': 'Схватка успешно создана',
-#             'schema': {
-#                 'type': 'object',
-#                 'properties': {
-#                     'success': {'type': 'boolean'},
-#                     'message': {'type': 'string'},
-#                     'fight_id': {'type': 'integer'}
-#                 }
-#             }
-#         },
-#         400: {
-#             'description': 'Ошибка валидации'
-#         },
-#         404: {
-#             'description': 'Турнир или спортсмен не найден'
-#         },
-#         409: {
-#             'description': 'Конфликт - схватка с такими параметрами уже существует'
-#         },
-#         500: {
-#             'description': 'Ошибка сервера'
-#         }
-#     }
-# })
-# def create_fight():
-#     """Создать схватку"""
-#     try:
-#         data = request.get_json()
-#
-#         if not data:
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Не передан JSON'
-#             }), 400
-#
-#         if not data.get('tournament_id'):
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Обязательное поле: tournament_id'
-#             }), 400
-#
-#         # Проверяем существование турнира
-#         tournament = Tournament.query.get(data['tournament_id'])
-#         if not tournament:
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Турнир не найден'
-#             }), 404
-#
-#         # Проверяем существование спортсменов
-#         if data.get('white_athlete_id'):
-#             white_athlete = Athlete.query.get(data['white_athlete_id'])
-#             if not white_athlete:
-#                 return jsonify({
-#                     'success': False,
-#                     'message': f'Спортсмен с ID {data["white_athlete_id"]} не найден'
-#                 }), 404
-#
-#         if data.get('blue_athlete_id'):
-#             blue_athlete = Athlete.query.get(data['blue_athlete_id'])
-#             if not blue_athlete:
-#                 return jsonify({
-#                     'success': False,
-#                     'message': f'Спортсмен с ID {data["blue_athlete_id"]} не найден'
-#                 }), 404
-#
-#         # Проверяем, что один спортсмен не борется сам с собой
-#         if (data.get('white_athlete_id') and data.get('blue_athlete_id') and
-#                 data['white_athlete_id'] == data['blue_athlete_id']):
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Спортсмен не может бороться сам с собой'
-#             }), 400
-#
-#         # Проверяем уникальность схватки (если есть tatami, round_number и fight_number)
-#         if data.get('tatami') and data.get('round_number') and data.get('fight_number'):
-#             existing_fight = Fight.query.filter_by(
-#                 tournament_id=data['tournament_id'],
-#                 tatami=data['tatami'],
-#                 round_number=data['round_number'],
-#                 fight_number=data['fight_number']
-#             ).first()
-#
-#             if existing_fight:
-#                 return jsonify({
-#                     'success': False,
-#                     'message': f'Схватка с такими параметрами уже существует (ID: {existing_fight.id})'
-#                 }), 409
-#
-#         fight = Fight(
-#             tournament_id=data['tournament_id'],
-#             white_athlete_id=data.get('white_athlete_id'),
-#             blue_athlete_id=data.get('blue_athlete_id'),
-#             tatami=data.get('tatami'),
-#             round_number=data.get('round_number'),
-#             fight_number=data.get('fight_number')
-#         )
-#
-#         if data.get('scheduled_time'):
-#             fight.scheduled_time = datetime.fromisoformat(data['scheduled_time'])
-#
-#         if fight.save_to_db():
-#             return jsonify({
-#                 'success': True,
-#                 'message': 'Схватка успешно создана',
-#                 'fight_id': fight.id
-#             }), 201
-#         else:
-#             return jsonify({
-#                 'success': False,
-#                 'message': 'Ошибка при сохранении схватки'
-#             }), 400
-#
-#     except IntegrityError as e:
-#         return jsonify({
-#             'success': False,
-#             'message': f'Ошибка целостности данных: возможно схватка с такими параметрами уже существует'
-#         }), 409
-#     except ValueError as e:
-#         return jsonify({
-#             'success': False,
-#             'message': f'Неверный формат данных: {str(e)}'
-#         }), 400
-#     except Exception as e:
-#         return jsonify({
-#             'success': False,
-#             'message': f'Ошибка при создании схватки: {str(e)}'
-#         }), 500
-
-
 @fights_bp.route('/<int:fight_id>', methods=['GET'])
-@swag_from({
-    'tags': ['Fights'],
-    'summary': 'Получить информацию о схватке',
-    'description': 'Возвращает детальную информацию о конкретной схватке',
-    'parameters': [
-        {
-            'name': 'fight_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID схватки'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Информация о схватке',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'id': {'type': 'integer'},
-                    'tournament_id': {'type': 'integer'},
-                    'tatami': {'type': 'integer'},
-                    'status': {'type': 'string'},
-                    'round_number': {'type': 'integer'},
-                    'fight_number': {'type': 'integer'},
-                    'scheduled_time': {'type': 'string'},
-                    'timer_seconds': {'type': 'integer'},
-                    'is_golden_score': {'type': 'boolean'},
-                    'white_athlete': {'type': 'object'},
-                    'blue_athlete': {'type': 'object'}
-                }
-            }
-        },
-        404: {
-            'description': 'Схватка не найдена'
-        }
-    }
-})
 def get_fight(fight_id):
     """Получить информацию о схватке"""
     try:
-        fight = Fight.query.get(fight_id)
+        if not fight_id:
+            return jsonify({
+                'success': False,
+                'message': 'Обязательный параметр: fight_id'
+            }), 400
+
+        fight = fight_repo.get_fight_by_id(fight_id)
 
         if not fight:
             return jsonify({
@@ -378,31 +77,17 @@ def get_fight(fight_id):
                 'message': 'Схватка не найдена'
             }), 404
 
+        athlete_repo = AthleteRepository()
         fight_data = {
             'id': fight.id,
-            'tournament_id': fight.tournament_id,
-            'tatami': fight.tatami,
-            'status': fight.status,
+            'tournament_id': fight.tournament_category_id,
+            'tatami': fight.tatami_number,
+            'status': fight.status.value,
             'round_number': fight.round_number,
             'fight_number': fight.fight_number,
-            'scheduled_time': fight.scheduled_time.isoformat() if fight.scheduled_time else None,
-            'timer_seconds': fight.timer_seconds,
-            'is_golden_score': fight.is_golden_score,
-            'white_athlete': None,
-            'blue_athlete': None
+            'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+            'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
         }
-
-        if fight.white_athlete:
-            fight_data['white_athlete'] = {
-                'id': fight.white_athlete.id,
-                'name': fight.white_athlete.full_name
-            }
-
-        if fight.blue_athlete:
-            fight_data['blue_athlete'] = {
-                'id': fight.blue_athlete.id,
-                'name': fight.blue_athlete.full_name
-            }
 
         return jsonify(fight_data), 200
 
@@ -412,209 +97,175 @@ def get_fight(fight_id):
             'message': f'Ошибка при получении схватки: {str(e)}'
         }), 500
 
-
-@fights_bp.route('/<int:fight_id>/start', methods=['POST'])
-@swag_from({
-    'tags': ['Fights'],
-    'summary': 'Начать схватку',
-    'description': 'Начинает схватку и запускает таймер',
-    'parameters': [
-        {
-            'name': 'fight_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID схватки'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Схватка начата',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'message': {'type': 'string'}
-                }
-            }
-        },
-        400: {
-            'description': 'Не удалось начать схватку'
-        },
-        404: {
-            'description': 'Схватка не найдена'
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
-def start_fight(fight_id):
-    """Начать схватку"""
+@fights_bp.route('/<int:fight_id>/referees', methods=['GET'])
+def get_fight_referees(fight_id):
+    """Получить судей, назначенных на схватку"""
     try:
-        fight = Fight.query.get(fight_id)
+        fight = fight_repo.get_fight_by_id(fight_id)
         if not fight:
             return jsonify({
                 'success': False,
                 'message': 'Схватка не найдена'
             }), 404
 
-        fight_manager = FightManager(fight_id)
+        referees = fight_repo.get_fight_referees(fight_id)
+        referee_list = referees
 
-        if fight_manager.start_fight():
-            return jsonify({
-                'success': True,
-                'message': 'Схватка начата'
-            }), 200
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Не удалось начать схватку'
-            }), 400
+
+        return jsonify({
+            'success': True,
+            'referees': referee_list
+        }), 200
 
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'Ошибка при запуске схватки: {str(e)}'
+            'message': f'Ошибка при получении судей схватки: {str(e)}'
         }), 500
 
-
-@fights_bp.route('/<int:fight_id>/finish', methods=['POST'])
-@swag_from({
-    'tags': ['Fights'],
-    'summary': 'Завершить схватку',
-    'description': 'Завершает схватку',
-    'parameters': [
-        {
-            'name': 'fight_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID схватки'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Схватка завершена'
-        },
-        404: {
-            'description': 'Схватка не найдена'
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
-def finish_fight(fight_id):
-    """Завершить схватку"""
+@fights_bp.route('/<fight_id>/assign_referee', methods=['POST'])
+def assign_referee_to_fight(fight_id):
+    """Назначить судью на схватку"""
     try:
-        fight = Fight.query.get(fight_id)
+        data = request.get_json()
+
+        required_fields = ['referee_id', 'role']
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'message': f'Обязательное поле: {missing_fields}'
+            }), 400
+
+        fight = fight_repo.get_fight_by_id(fight_id)
         if not fight:
             return jsonify({
                 'success': False,
                 'message': 'Схватка не найдена'
             }), 404
 
-        fight_manager = FightManager(fight_id)
-
-        if fight_manager.finish_fight():
-            return jsonify({
-                'success': True,
-                'message': 'Схватка завершена'
-            }), 200
-        else:
+        referee_repo = RefereeRepository()
+        referee = referee_repo.get_referee(data['referee_id'])
+        if not referee:
             return jsonify({
                 'success': False,
-                'message': 'Не удалось завершить схватку'
+                'message': 'Судья не найден'
+            }), 404
+
+        fight_repo.assign_referee(fight.id, data['referee_id'], data['role'])
+
+        return jsonify({
+            'success': True,
+            'message': 'Судья успешно назначен на схватку'
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при назначении судьи на схватку: {str(e)}'
+        }), 500
+
+@fights_bp.route('/<fight_id>/remove_referee', methods=['DELETE'])
+def remove_referee_from_fight(fight_id):
+    try:
+        role =request.args.get('role')
+
+        if not role:
+            return jsonify({
+                'success': False,
+                'message': 'Обязательный параметр: role'
             }), 400
 
+        fight = fight_repo.get_fight_by_id(fight_id)
+
+        if not fight:
+            return jsonify({
+                'success': False,
+                'message': 'Схватка не найдена'
+            }), 404
+
+        referee_repo = RefereeRepository()
+        if not referee_repo.has_assign_referee(role , fight.id):
+            return jsonify({
+                'success': False,
+                'message': f'Судья на роль {role} не назначен'
+            }), 404
+
+        fight_repo.remove_referee(fight.id, role)
+
+        return jsonify({
+            'success': True,
+            'message': 'Судья успешно удален с схватки'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при удалении судьи с схватки: {str(e)}'
+        }), 500
+
+@fights_bp.route('/<int:fight_id>/set-live', methods=['PATCH'])
+def update_fight_status(fight_id):
+    try:
+        if not fight_id:
+            return jsonify({
+                'success': False,
+                'message': 'Обязательный параметр: fight_id'
+            }), 400
+
+        tatami_number = request.args.get('tatami_number', type=int)
+
+        exiting_fight = fight_repo.get_fight_by_id(fight_id)
+        if not exiting_fight:
+            return jsonify({
+                'success': False,
+                'message': 'Схватка не найдена'
+            }), 404
+
+        fight_repo.set_live_status(fight_id, tatami_number)
+
+        return jsonify({
+            'success': True,
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при обновлении статуса схватки: {str(e)}'
+        }), 500
+
+@fights_bp.route('/<int:fight_id>/end-fight', methods=['PUT'])
+def end_fight(fight_id):
+    try:
+        if not fight_id:
+            return jsonify({
+                'success': False,
+                'message': 'Обязательный параметр: fight_id'
+            }), 400
+
+        data = request.get_json()
+        required_fields = ['start_time', 'end_time', 'winner_athlete_id', 'victory_type']
+
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'message': f'Обязательное поле: {missing_fields}'
+            }), 400
+
+        exiting_fight = fight_repo.get_fight_by_id(fight_id)
+        if not exiting_fight:
+            return jsonify({
+                'success': False,
+                'message': 'Схватка не найдена'
+            }), 404
+
+        fight_repo.end_fight(fight_id, data)
+
+        return jsonify({
+            'success': True,
+            'message': 'Схватка успешно завершена'
+        }), 200
     except Exception as e:
         return jsonify({
             'success': False,
             'message': f'Ошибка при завершении схватки: {str(e)}'
-        }), 500
-
-
-@fights_bp.route('/<int:fight_id>/reset', methods=['POST'])
-@swag_from({
-    'tags': ['Fights'],
-    'summary': 'Сбросить схватку для переигровки',
-    'description': 'Полный сброс схватки со всеми оценками и результатами',
-    'parameters': [
-        {
-            'name': 'fight_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID схватки'
-        },
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': False,
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'reason': {
-                        'type': 'string',
-                        'description': 'Причина переигровки'
-                    },
-                    'reset_bracket': {
-                        'type': 'boolean',
-                        'description': 'Сбросить зависимые схватки в сетке',
-                        'default': True
-                    }
-                }
-            }
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Схватка сброшена',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'message': {'type': 'string'},
-                    'fight_id': {'type': 'integer'},
-                    'new_status': {'type': 'string'}
-                }
-            }
-        },
-        400: {
-            'description': 'Не удалось сбросить схватку'
-        },
-        404: {
-            'description': 'Схватка не найдена'
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
-def reset_fight(fight_id):
-    """Сбросить схватку для переигровки"""
-    try:
-        data = request.get_json() or {}
-
-        fight_manager = FightManager(fight_id)
-        result = fight_manager.reset_fight()
-
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'message': result['message'],
-                'fight_id': result['fight_id'],
-                'new_status': result['new_status']
-            }), 200
-        else:
-            return jsonify({
-                'success': False,
-                'message': result['error']
-            }), 400
-
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при сбросе схватки: {str(e)}'
         }), 500

@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 
-from flasgger import swag_from
 from flask import request, Blueprint, jsonify
 from flask_jwt_extended import create_access_token
 
@@ -12,73 +11,6 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 auth_repo = AuthRepository()
 
 @auth_bp.route('/login', methods=['POST'])
-@swag_from({
-    "summary": "Аутентификация пользователя",
-    "description": "Возвращает JWT-токен и информацию о пользователе при успешном логине",
-    "tags": ["Аутентификация"],
-    "requestBody": {
-        "required": True,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "username": {"type": "string", "example": "admin"},
-                        "password": {"type": "string", "example": "secret123"}
-                    },
-                    "required": ["username", "password"]
-                }
-            }
-        }
-    },
-    "responses": {
-        "200": {
-            "description": "Успешный вход",
-            "content": {
-                "application/json": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "success": {"type": "boolean", "example": True},
-                            "token": {"type": "string"},
-                            "user": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {"type": "integer"},
-                                    "username": {"type": "string"},
-                                    "name": {"type": "string"},
-                                    "role": {"type": "string"},
-                                    "referee_level": {"type": "string", "nullable": True},
-                                    "tatami_assigned": {"type": "integer", "nullable": True}
-                                }
-                            }
-                        }
-                    },
-                    "example": {
-                        "success": True,
-                        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxx",
-                        "user": {
-                            "id": 1,
-                            "username": "admin",
-                            "name": "Администратор",
-                            "role": "admin",
-                            "referee_level": None,
-                            "tatami_assigned": None
-                        }
-                    }
-                }
-            }
-        },
-        "401": {
-            "description": "Неверные учетные данные",
-            "content": {
-                "application/json": {
-                    "example": {"success": False, "message": "Неверные учетные данные"}
-                }
-            }
-        }
-    }
-})
 def login():
     """Аутентификация пользователя"""
     data = request.get_json(silent=True) or {}
@@ -119,6 +51,35 @@ def login():
         }), 200
     else:
         return jsonify({'success': False, 'message': 'Неверные учетные данные'}), 401
+
+@auth_bp.route('/users', methods=['GET'])
+def get_users():
+    """Получить список пользователей"""
+    try:
+        users = auth_repo.get_users()
+
+        result = []
+        for user in users:
+            result.append({
+                'id': user.id,
+                'username': user.username,
+                'name': user.name,
+                'email': user.email,
+                'phone': user.phone,
+                'role': user.role
+            })
+
+        return jsonify({
+            'success': True,
+            'users': result,
+            'total': len(result)
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при получении пользователей: {str(e)}'
+        }), 500
 
 @auth_bp.route('/public/registrations/', methods=['POST'])
 def public_registration():
@@ -162,3 +123,28 @@ def public_registration():
                     'token': token,
                     'role': user_role.name,
                     }), 201
+
+@auth_bp.route('/<int:user_id>/update',  methods=['PUT'])
+def update_user(user_id: int):
+    """Изменить информацию о пользователе"""
+    data = request.get_json()
+    try:
+        user = auth_repo.get_user_by_id(user_id)
+
+        if not user or not user.is_active:
+            return jsonify({
+                'success': False,
+                'message': 'Пользователь не найден'
+            }), 404
+
+        auth_repo.update_user(user,data)
+
+        return jsonify({
+            'success': True,
+            'message': 'Данные пользователя успешно обнавленны'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при обновление данных пользователя: {str(e)}'
+        }), 500

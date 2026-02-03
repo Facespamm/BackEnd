@@ -12,8 +12,6 @@ class UserNew(db.Model):
 
     # Учетные данные
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
@@ -23,11 +21,9 @@ class UserNew(db.Model):
     middle_name = db.Column(db.String(50))
     email = db.Column(db.String(100))
     phone = db.Column(db.String(20))
-
-    # role = db.Column(db.String(20), nullable=False, default='VIEWER')  # ADMIN, REFEREE, SCOREBOARD, VIEWER
     is_active = db.Column(db.Boolean, default=True)
-
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Связи
-    referees = db.relationship('RefereeNew', back_populates='user')
     athlete_profile = db.relationship('AthleteNew', back_populates='user')
     roles = db.relationship('RoleNew', secondary=new_user_roles, back_populates='users')

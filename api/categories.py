@@ -1,59 +1,13 @@
 from flask import Blueprint, request, jsonify
-from flasgger import swag_from
 
-from models.Enums import translate_gender
-from models.category import Category
-from models.tournament import Tournament
+from new_model.Enums import translate_gender
+from new_model.handbook.category_new import CategoryNew
 from repository.category_repo import CategoryRepository
 
 categories_bp = Blueprint('categories', __name__, url_prefix='/categories')
 category_repo = CategoryRepository()
 
 @categories_bp.route('/', methods=['GET'])
-@swag_from({
-    'tags': ['Categories'],
-    'summary': 'Получить список категорий',
-    'description': 'Возвращает список категорий с возможностью фильтрации по турниру',
-    'parameters': [
-        {
-            'name': 'tournament_id',
-            'in': 'query',
-            'type': 'integer',
-            'required': False,
-            'description': 'ID турнира для фильтрации'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Список категорий получен успешно',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'categories': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'id': {'type': 'integer'},
-                                'name': {'type': 'string'},
-                                'gender': {'type': 'string'},
-                                'weight_range': {'type': 'string'},
-                                'age_range': {'type': 'string'},
-                                'athletes_count': {'type': 'integer'},
-                                'tournament_id': {'type': 'integer'}
-                            }
-                        }
-                    },
-                    'total': {'type': 'integer'}
-                }
-            }
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
 def get_categories():
     """Получить список категорий"""
     try:
@@ -63,15 +17,17 @@ def get_categories():
 
         result = []
         for category in categories:
-            tournament_ids = [t.id for t in category.tournaments]
+            tournament_ids = [t.tournament_category_id for t in category.tournament_categories]
 
             result.append({
                 'id': category.id,
                 'name': category.name,
-                'gender': category.gender,
-                'weight_range': category.weight_range,
-                'age_range': category.age_range,
-                'athletes_count': category.athletes_count,
+                'gender': category.gender.value,
+                'min_weight': category.min_weight,
+                'max_weight': category.max_weight,
+                'min_age': category.min_age,
+                'max_age': category.max_age,
+                'athletes_count': category_repo.get_all_athletes(category.id),
                 'tournament_id': tournament_ids
             })
 
@@ -87,79 +43,7 @@ def get_categories():
             'message': f'Ошибка при получении категорий: {str(e)}'
         }), 500
 
-
 @categories_bp.route('/', methods=['POST'])
-@swag_from({
-    'tags': ['Categories'],
-    'summary': 'Создать новую категорию',
-    'description': 'Создает новую категорию для турнира',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'required': ['tournament_id', 'name', 'gender'],
-                'properties': {
-                    'tournament_id': {
-                        'type': 'integer',
-                        'description': 'ID турнира'
-                    },
-                    'name': {
-                        'type': 'string',
-                        'description': 'Название категории'
-                    },
-                    'gender': {
-                        'type': 'string',
-                        'description': 'Пол',
-                        'enum': ['MALE', 'FEMALE', 'MIXED']
-                    },
-                    'min_weight': {
-                        'type': 'number',
-                        'format': 'float',
-                        'description': 'Минимальный вес в кг'
-                    },
-                    'max_weight': {
-                        'type': 'number',
-                        'format': 'float',
-                        'description': 'Максимальный вес в кг'
-                    },
-                    'min_age': {
-                        'type': 'integer',
-                        'description': 'Минимальный возраст'
-                    },
-                    'max_age': {
-                        'type': 'integer',
-                        'description': 'Максимальный возраст'
-                    }
-                }
-            }
-        }
-    ],
-    'responses': {
-        201: {
-            'description': 'Категория успешно создана',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'message': {'type': 'string'},
-                    'category_id': {'type': 'integer'}
-                }
-            }
-        },
-        400: {
-            'description': 'Ошибка валидации'
-        },
-        404: {
-            'description': 'Турнир не найден'
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
 def create_category():
     """Создать новую категорию"""
     try:
@@ -177,25 +61,19 @@ def create_category():
                 'message': 'Обязательные поля: name, tournament_id, gender'
             }), 400
 
-        # Проверяем существование турнира
-        #tournament = Tournament.query.get(data['tournament_id'])
-        #if not tournament:
-        #    return jsonify({
-        #        'success': False,
-        #        'message': 'Турнир не найден'
-        #    }), 404
-
-        category = Category(
-            #tournament_id=data['tournament_id'],
+        translate_gender_ =  translate_gender(data['gender'])
+        category = CategoryNew(
             name=data['name'],
-            gender=data['gender'],
+            gender=translate_gender_,
             min_weight=data.get('min_weight'),
             max_weight=data.get('max_weight'),
             min_age=data.get('min_age'),
             max_age=data.get('max_age')
         )
 
-        if category.save_to_db():
+        is_create = category_repo.create_category(category)
+
+        if is_create:
             return jsonify({
                 'success': True,
                 'message': 'Категория успешно создана',
@@ -212,50 +90,11 @@ def create_category():
             'message': f'Ошибка при создании категории: {str(e)}'
         }), 500
 
-
 @categories_bp.route('/<int:category_id>', methods=['GET'])
-@swag_from({
-    'tags': ['Categories'],
-    'summary': 'Получить информацию о категории',
-    'description': 'Возвращает детальную информацию о конкретной категории',
-    'parameters': [
-        {
-            'name': 'category_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID категории'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Информация о категории',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'id': {'type': 'integer'},
-                    'name': {'type': 'string'},
-                    'gender': {'type': 'string'},
-                    'min_weight': {'type': 'number'},
-                    'max_weight': {'type': 'number'},
-                    'min_age': {'type': 'integer'},
-                    'max_age': {'type': 'integer'},
-                    'weight_range': {'type': 'string'},
-                    'age_range': {'type': 'string'},
-                    'athletes_count': {'type': 'integer'},
-                    'tournament_id': {'type': 'integer'}
-                }
-            }
-        },
-        404: {
-            'description': 'Категория не найдена'
-        }
-    }
-})
 def get_category(category_id):
     """Получить информацию о категории"""
     try:
-        category = Category.query.get(category_id)
+        category = category_repo.get_category_by_id(category_id)
 
         if not category:
             return jsonify({
@@ -266,15 +105,12 @@ def get_category(category_id):
         return jsonify({
             'id': category.id,
             'name': category.name,
-            'gender': translate_gender(category.gender),
+            'gender': category.gender.value,
             'min_weight': category.min_weight,
             'max_weight': category.max_weight,
             'min_age': category.min_age,
             'max_age': category.max_age,
-            'weight_range': category.weight_range,
-            'age_range': category.age_range,
-            'athletes_count': category.athletes_count,
-            'tournament_id': category.tournament_id
+            'athletes_count': category_repo.get_all_athletes(category.id),
         }), 200
 
     except Exception as e:
@@ -283,49 +119,7 @@ def get_category(category_id):
             'message': f'Ошибка при получении категории: {str(e)}'
         }), 500
 
-
 @categories_bp.route('/<int:category_id>', methods=['PUT'])
-@swag_from({
-    'tags': ['Categories'],
-    'summary': 'Обновить категорию',
-    'description': 'Обновляет данные категории',
-    'parameters': [
-        {
-            'name': 'category_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID категории'
-        },
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'name': {'type': 'string'},
-                    'gender': {'type': 'string', 'enum': ['MALE', 'FEMALE', 'MIXED']},
-                    'min_weight': {'type': 'number'},
-                    'max_weight': {'type': 'number'},
-                    'min_age': {'type': 'integer'},
-                    'max_age': {'type': 'integer'}
-                }
-            }
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Категория успешно обновлена'
-        },
-        404: {
-            'description': 'Категория не найдена'
-        },
-        400: {
-            'description': 'Ошибка при обновлении'
-        }
-    }
-})
 def update_category(category_id):
     """Обновить категорию"""
     try:
@@ -342,10 +136,9 @@ def update_category(category_id):
             if field not in data:
                 return jsonify({'success': False, 'message': f'Поле {field} обязательно'}), 400
 
-        category_repo = CategoryRepository()
         is_update = category_repo.update_category(category_id, data)
 
-        if is_update():
+        if is_update:
             return jsonify({
                 'success': True,
                 'message': 'Категория успешно обновлена',
@@ -364,35 +157,10 @@ def update_category(category_id):
 
 
 @categories_bp.route('/<int:category_id>', methods=['DELETE'])
-@swag_from({
-    'tags': ['Categories'],
-    'summary': 'Удалить категорию',
-    'description': 'Удаляет категорию из системы',
-    'parameters': [
-        {
-            'name': 'category_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID категории'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Категория успешно удалена'
-        },
-        404: {
-            'description': 'Категория не найдена'
-        },
-        400: {
-            'description': 'Ошибка при удалении'
-        }
-    }
-})
 def delete_category(category_id):
     """Удалить категорию"""
     try:
-        category = Category.query.get(category_id)
+        category = category_repo.get_category_by_id(category_id)
 
         if not category:
             return jsonify({
@@ -400,7 +168,9 @@ def delete_category(category_id):
                 'message': 'Категория не найдена'
             }), 404
 
-        if category.delete():
+        is_delete = category_repo.delete_category(category)
+
+        if is_delete:
             return jsonify({
                 'success': True,
                 'message': 'Категория удалена'
@@ -419,56 +189,10 @@ def delete_category(category_id):
 
 
 @categories_bp.route('/<int:category_id>/athletes', methods=['GET'])
-@swag_from({
-    'tags': ['Categories'],
-    'summary': 'Получить участников категории',
-    'description': 'Возвращает список всех участников в категории',
-    'parameters': [
-        {
-            'name': 'category_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID категории'
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Список участников категории',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean'},
-                    'category': {'type': 'string'},
-                    'athletes': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'id': {'type': 'integer'},
-                                'full_name': {'type': 'string'},
-                                'club': {'type': 'string'},
-                                'age': {'type': 'integer'},
-                                'rank': {'type': 'string'}
-                            }
-                        }
-                    },
-                    'total': {'type': 'integer'}
-                }
-            }
-        },
-        404: {
-            'description': 'Категория не найдена'
-        },
-        500: {
-            'description': 'Ошибка сервера'
-        }
-    }
-})
 def get_category_athletes(category_id):
     """Получить участников категории"""
     try:
-        category = Category.query.get(category_id)
+        category = category_repo.get_category_by_id(category_id)
         if not category:
             return jsonify({
                 'success': False,
@@ -479,10 +203,10 @@ def get_category_athletes(category_id):
         for athlete in category.athletes:
             athletes.append({
                 'id': athlete.id,
-                'full_name': athlete.full_name,
-                'club': athlete.club.name if athlete.club else None,
+                'full_name': athlete.name,
+                'club': athlete.club_id,
                 'age': athlete.age,
-                'rank': athlete.rank
+                'rank': athlete.rank_id
             })
 
         return jsonify({
