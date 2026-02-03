@@ -1,6 +1,7 @@
 from flask import request, Blueprint, jsonify
 
 from repository.athlete_repo import AthleteRepository
+from repository.category_repo import CategoryRepository
 from repository.figth_repo import FightRepository
 from repository.tournament_repo import TournamentRepository
 from services.bracket_generator import BracketGenerator
@@ -19,6 +20,14 @@ def create_bracket(tournament_id):
         if not category_str:
             return jsonify({'success': False, 'message': 'Не выбрана категория'}), 400
 
+        tatami_number = request.args.get('tatami_number')
+
+        if not tatami_number:
+            return jsonify({
+                'success': False,
+                'message': 'Татами не указан'
+            })
+
         try:
             category_id = int(category_str)
         except ValueError:
@@ -34,7 +43,7 @@ def create_bracket(tournament_id):
             return jsonify({'success': False, 'message': 'Категория не найдена в этом турнире'}), 404
 
         bracket_generator = BracketGenerator(tournament_id)
-        generate_fights = bracket_generator.generate_olympic(category_id)
+        generate_fights = bracket_generator.generate_olympic(category_id,tatami_number)
 
         if not generate_fights:
             return jsonify({
@@ -168,8 +177,14 @@ def fight_bracket(tournament_id):
             return jsonify({'success': False, 'message': 'Не выброна категория'}), 400
 
         tournament_repo = TournamentRepository()
-        tournament_category_id = tournament_repo.get_tournament_category_id(tournament_id, category_id)
+        tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
+        if not tournament_category:
+            return jsonify({
+                'success': False,
+                'message': 'Категория турнира не найдена'
+            }), 404
 
+        tournament_category_id = tournament_category.tournament_category_id
         fight_repo = FightRepository()
         fights = fight_repo.get_fight_by_tournament(tournament_category_id)
 
@@ -183,12 +198,14 @@ def fight_bracket(tournament_id):
                 'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
                 'tatami_number': fight.tatami_number,
                 'round': fight.round_number,
-                'status_fight': fight.status.value
+                'status_fight': fight.status.value,
+                'next_fight': fight.next_fight_id,
             })
 
         tournament_repo = TournamentRepository()
         tournament_name = tournament_repo.get_tournament_name_by_tournament_category(tournament_category_id)
-
+        category_repo = CategoryRepository()
+        category  = category_repo.get_category_by_id(category_id)
         if not fights_dtos:
             return jsonify({
                 'success': False,
@@ -198,7 +215,12 @@ def fight_bracket(tournament_id):
         return jsonify({
             'success': True,
             'fights': fights_dtos,
-            'tournament_name': tournament_name
+            'tournament_name': tournament_name,
+            'category': {
+                'id': category.id,
+                'name': category.name,
+                'weight_range': f'от {category.min_weight} до {category.max_weight}'
+            }
         })
     except Exception as e:
         return jsonify({

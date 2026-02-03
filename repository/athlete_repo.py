@@ -239,7 +239,7 @@ class AthleteRepository:
 
     def get_athlete_by_fight(self,  athlete_id:int ,fight_id:int):
         athlete = (
-            self.session.query(UserNew.first_name, UserNew.last_name, UserNew.middle_name, AthleteNew.gender)
+            self.session.query(AthleteNew.id,UserNew.first_name, UserNew.last_name, UserNew.middle_name, AthleteNew.gender)
             .join(AthleteNew, AthleteNew.user_id == UserNew.id)
             .join(FightNew, or_(
             FightNew.white_athlete_id == AthleteNew.id,
@@ -255,10 +255,11 @@ class AthleteRepository:
             return None
 
         return {
-            'first_name': athlete[0],
-            'last_name': athlete[1],
-            'middle_name': athlete[2],
-            'gender': athlete[3]
+            'id': athlete[0],
+            'first_name': athlete[1],
+            'last_name': athlete[2],
+            'middle_name': athlete[3],
+            'gender': athlete[4]
         }
 
     def get_winer_data(self, athlete_id):

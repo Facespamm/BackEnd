@@ -20,7 +20,7 @@ def get_weighings():
         athlete_id = request.args.get('athlete_id', type=int)
         category_id = request.args.get('category_id', type=int)
 
-        if not category_id or not tournament_id or not athlete_id:
+        if not category_id or not tournament_id:
             return jsonify({
                 'success': False,
                 'message': "Не веденны category_id, tournament_id, athlete_id"
@@ -203,7 +203,6 @@ def create_weighing():
             'message': 'Взвешивание успешно записано',
             'weighing_id': weighing.id,
             'weight_category': weighing.weight_category,
-            'status': weighing.status_display
         }), 201
     except Exception as e:
         return jsonify({
