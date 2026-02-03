@@ -9,12 +9,12 @@ db = SQLAlchemy()
 
 # Используйте одну строку подключения
 #DATABASE_URI = 'postgresql+psycopg2://postgres:password@192.168.7.122:5434/judo_tournament'
-#DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
+DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
 #docker connection
 #DATABASE_URI = 'postgresql+psycopg2://postgres:password@db:5432/judo_tournament'
 
 def init_db(app):
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DOCKER_CONNECTION')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DOCKER_CONNECTION',DATABASE_URI)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     if not database_exists(os.getenv('DOCKER_CONNECTION')):
