@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 from repository.athlete_repo import AthleteRepository
 from repository.result_repo import ResultRepository
 
-results_bp = Blueprint('results', __name__, url_prefix='/results')
+results_bp = Blueprint('results', __name__, url_prefix='/api/results')
 result_repo = ResultRepository()
 
 @results_bp.route('/', methods=['GET'])

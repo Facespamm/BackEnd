@@ -13,7 +13,7 @@ from new_model.new_associations import new_user_roles, AthleteRegistration, Tour
 from new_model.Enums import StatusTournament, FightStatus
 from database.db import db
 
-statistics_bp = Blueprint('statistics', __name__, url_prefix='/statistics')
+statistics_bp = Blueprint('statistics', __name__, url_prefix='/api/statistics')
 
 
 

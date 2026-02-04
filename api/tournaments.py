@@ -6,7 +6,7 @@ from new_model.head_model.tournament_new import TournamentNew
 from repository.category_repo import CategoryRepository
 from repository.tournament_repo import TournamentRepository
 
-tournaments_bp = Blueprint('tournaments', __name__, url_prefix='/tournaments')
+tournaments_bp = Blueprint('tournaments', __name__, url_prefix='/api/tournaments')
 tournament_repo = TournamentRepository()
 
 @tournaments_bp.route('/', methods=['GET'])

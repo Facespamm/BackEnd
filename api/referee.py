@@ -6,7 +6,7 @@ from repository.figth_repo import FightRepository
 from repository.referee_repo import RefereeRepository
 from repository.tournament_repo import TournamentRepository
 
-referee_bp = Blueprint("referee", __name__, url_prefix="/referee")
+referee_bp = Blueprint("referee", __name__, url_prefix="/api/referee")
 referee_repo = RefereeRepository()
 
 @referee_bp.route("/", methods=["GET"])

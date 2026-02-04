@@ -10,7 +10,7 @@ from repository.athlete_repo import AthleteRepository
 from repository.auth_repo import AuthRepository
 from repository.category_repo import CategoryRepository
 
-athletes_bp = Blueprint('athletes', __name__, url_prefix='/athletes')
+athletes_bp = Blueprint('athletes', __name__, url_prefix='/api/athletes')
 athlete_repo = AthleteRepository()
 
 @athletes_bp.route('/', methods=['GET'])

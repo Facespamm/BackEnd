@@ -4,7 +4,6 @@ from new_model.Enums import FightStatus, BracketType
 from new_model.head_model.fight_new import FightNew
 from repository.figth_repo import FightRepository
 from repository.result_repo import ResultRepository
-from services.bracket_generator import BracketGenerator
 
 fight_repo = FightRepository()
 result_repo = ResultRepository()

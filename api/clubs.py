@@ -4,7 +4,7 @@ from flasgger import swag_from
 from repository.athlete_repo import AthleteRepository
 from repository.club_repo import ClubRepository
 
-clubs_bp = Blueprint('clubs', __name__, url_prefix='/clubs')
+clubs_bp = Blueprint('clubs', __name__, url_prefix='/api/clubs')
 club_repo = ClubRepository()
 athlete_repo = AthleteRepository()
 @clubs_bp.route('/', methods=['GET'])

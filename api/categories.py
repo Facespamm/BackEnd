@@ -4,7 +4,7 @@ from new_model.Enums import translate_gender
 from new_model.handbook.category_new import CategoryNew
 from repository.category_repo import CategoryRepository
 
-categories_bp = Blueprint('categories', __name__, url_prefix='/categories')
+categories_bp = Blueprint('categories', __name__, url_prefix='/api/categories')
 category_repo = CategoryRepository()
 
 @categories_bp.route('/', methods=['GET'])

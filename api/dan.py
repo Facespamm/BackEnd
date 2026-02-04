@@ -4,7 +4,7 @@ from flasgger import swag_from
 from new_model.handbook.new_dan import DanNew
 from repository.dan_repo import DanRepository
 
-dans_bp = Blueprint('dans', __name__, url_prefix='/dans')
+dans_bp = Blueprint('dans', __name__, url_prefix='/api/dans')
 dan_repo = DanRepository()
 
 @dans_bp.route('/', methods=['GET'])

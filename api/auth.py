@@ -7,7 +7,7 @@ from new_model.Enums import RoleName
 from new_model.head_model.new_user import UserNew
 from repository.auth_repo import AuthRepository
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 auth_repo = AuthRepository()
 
 @auth_bp.route('/login', methods=['POST'])

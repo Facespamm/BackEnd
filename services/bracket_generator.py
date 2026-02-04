@@ -9,11 +9,11 @@ from new_model.head_model.fight_new import FightNew
 from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
 from repository.tournament_repo import TournamentRepository
-from services.fight_generator import FightGenerator
+#from services.fight_generator import FightGenerator
 
 tournament_repo = TournamentRepository()
 fight_repo = FightRepository()
-fight_generator = FightGenerator()
+#fight_generator = FightGenerator()
 
 class BracketGenerator:
     """Генератор турнирных сеток"""
@@ -74,7 +74,7 @@ class BracketGenerator:
                 raise Exception("❌ Not enough rounds for consolation fights")
 
             # Генерация утешительных схваток за 3 место
-            consolation_fights = fight_generator.generate_consolation_fights_semifinalist(tournament_category.tournament_category_id,
+            consolation_fights = self.generate_consolation_fights_semifinalist(tournament_category.tournament_category_id,
                                                                             max_rounds=total_rounds)
 
             return consolation_fights
@@ -103,7 +103,7 @@ class BracketGenerator:
                 raise Exception("❌ Not enough rounds for consolation fights")
 
             # Генерация утешительных схваток за 3 место между финалистами
-            consolation_fights = fight_generator.generate_consolation_fights_finalist(tournament_category.tournament_category_id,total_rounds)
+            consolation_fights = self.generate_consolation_fights_finalist(tournament_category.tournament_category_id,total_rounds)
 
             return consolation_fights
         except Exception as e:

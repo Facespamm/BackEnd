@@ -7,7 +7,7 @@ from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
 from repository.tournament_repo import TournamentRepository
 
-weighing_bp = Blueprint('weighing', __name__, url_prefix='/weighing')
+weighing_bp = Blueprint('weighing', __name__, url_prefix='/api/weighing')
 athlete_repo = AthleteRepository()
 category_repo = CategoryRepository()
 tournament_repo = TournamentRepository()

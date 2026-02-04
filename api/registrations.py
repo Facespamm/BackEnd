@@ -6,7 +6,7 @@ from models.category import Category
 from models.associations import category_athletes
 from database.db import db
 
-registrations_bp = Blueprint('registrations', __name__, url_prefix='/registrations')
+registrations_bp = Blueprint('registrations', __name__, url_prefix='/api/registrations')
 
 
 @registrations_bp.route('/', methods=['POST'])

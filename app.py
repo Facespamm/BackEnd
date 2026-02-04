@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DOCKER_CONNECTION')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'cc820b15d44f7643fa52046a6c34f98a804c35d5ebdf830204a074c2c0059f88')
 # CORS для API
 CORS(app)
 jwt = JWTManager(app)
