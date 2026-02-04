@@ -64,8 +64,13 @@ class FightRepository:
             self.session.rollback()
             print('Error: ',e)
 
-    def get_fight_by_tournament(self, tournament_category_id):
-        return self.session.query(FightNew).filter_by(tournament_category_id = tournament_category_id).all()
+    def get_fight_by_tournament(self, tournament_category_id, status : FightStatus = None):
+        fights_query = self.session.query(FightNew).filter_by(tournament_category_id = tournament_category_id)
+
+        if status:
+            fights_query = fights_query.filter_by(status =status)
+
+        return fights_query.all()
 
     def get_fights_by_search_params(self, tournament_id=None, tatami_number=None, status=None):
         select_query = self.session.query(FightNew)
@@ -118,12 +123,27 @@ class FightRepository:
 
     def update_fight(self, fight_id,  next_fight_id):
         try:
-            update_query = (
-                update(FightNew)
-                .where(FightNew.id == fight_id)
-                .values(next_fight_id = next_fight_id)
-            )
-            self.session.execute(update_query)
+            current_fight = self.get_fight_by_id(fight_id)
+            next_fight = self.get_fight_by_id(next_fight_id)
+
+            current_fight.next_fight_id = next_fight_id
+
+            # Только белый атлет в текущем бою (белого нет - walkover)
+            if current_fight.white_athlete_id and not current_fight.blue_athlete_id:
+                if not next_fight.white_athlete_id:
+                    next_fight.white_athlete_id = current_fight.white_athlete_id
+                elif not next_fight.blue_athlete_id:
+                    next_fight.blue_athlete_id = current_fight.white_athlete_id
+                current_fight.status = FightStatus.COMPLETED
+
+            # Только синий атлет в текущем бою (белого нет - walkover)
+            elif current_fight.blue_athlete_id and not current_fight.white_athlete_id:
+                if not next_fight.white_athlete_id:
+                    next_fight.white_athlete_id = current_fight.blue_athlete_id
+                elif not next_fight.blue_athlete_id:
+                    next_fight.blue_athlete_id = current_fight.blue_athlete_id
+                current_fight.status = FightStatus.COMPLETED
+
             self.session.commit()
         except Exception as e:
             print('Error: ', e)
@@ -161,6 +181,10 @@ class FightRepository:
     def move_athlete_next_fight(self, fight_id, athlete_id):
         try:
             fight = self.get_fight_by_id(fight_id)
+
+            if not fight.next_fight_id:
+                return
+
             next_fight = self.get_fight_by_id(fight.next_fight_id)
 
             if not fight or not next_fight:
