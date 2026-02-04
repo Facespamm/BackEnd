@@ -194,8 +194,8 @@ def create_weighing():
         if data.get('weight_category'):
             weighing.weight_category = data['weight_category']
 
+        session.add(weighing)
         session.commit()
-        session.close()
 
         # ИСПРАВЛЕНО: используем save_to_db() вместо save()
         return jsonify({
@@ -210,7 +210,7 @@ def create_weighing():
             'message': f'Ошибка при создании записи взвешивания: {str(e)}'
         }), 500
 
-def _is_within_weight_category_limits(weighing: "WeighingNew") -> bool:
+def _is_within_weight_category_limits(weighing: WeighingNew) -> bool:
     tc = weighing.tournament_categories
     if not tc or not tc.category:
         return False   # или True — зависит от бизнес-логики
