@@ -1,6 +1,8 @@
 import os
 from datetime import timedelta# Базовые настройки
-SECRET_KEY = os.environ.get('SECRET_KEY') or 'judo-tournament-secret-key-2024'
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'judo-tournament-secret-key-2024'
 
 # Остальные настройки без изменений...
 PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
