@@ -1,5 +1,3 @@
-from operator import or_
-
 from new_model.Enums import FightStatus, BracketType
 from new_model.head_model.fight_new import FightNew
 from repository.figth_repo import FightRepository
@@ -9,7 +7,7 @@ fight_repo = FightRepository()
 result_repo = ResultRepository()
 
 class FightGenerator:
-    def generate_first_round_fights(self,athletes, round_number, start_fight_number, tournament_category_id, type_bracket=BracketType.MAIN):
+    def generate_first_round_fights(self,athletes, round_number, start_fight_number, tournament_category_id, tatami_number,type_bracket=BracketType.MAIN):
         """Генерация схваток для одного раунда"""
         fights = []
         fight_number = start_fight_number
@@ -30,7 +28,8 @@ class FightGenerator:
                 round_number=round_number,
                 fight_number=fight_number,
                 status=FightStatus.SCHEDULED,
-                type_bracket = type_bracket
+                type_bracket = type_bracket,
+                tatami_number = tatami_number
             )
 
             #сохроняем бой
@@ -41,7 +40,7 @@ class FightGenerator:
 
         return fights
 
-    def generate_next_rounds_fights(self,next_fight,round_number, next_fight_number, tournament_category_id, type_bracket=BracketType.MAIN):
+    def generate_next_rounds_fights(self,next_fight,round_number, next_fight_number, tournament_category_id, tatami_number,type_bracket=BracketType.MAIN):
         """Генерация схваток для следующих раунда"""
         fights = []
         fight_number = next_fight_number
@@ -55,7 +54,8 @@ class FightGenerator:
                 round_number=round_number,
                 fight_number=fight_number,
                 status=FightStatus.SCHEDULED,
-                type_bracket=type_bracket
+                type_bracket=type_bracket,
+                tatami_number = tatami_number
             )
 
             # сохроняем бой
@@ -66,7 +66,7 @@ class FightGenerator:
 
         return  fights
 
-    def generate_consolation_fights_semifinalist(self, tournament_category_id, max_rounds):
+    def generate_consolation_fights_semifinalist(self, tournament_category_id, tatami_number,max_rounds):
         """Генерация утешительных схваток за 3 место"""
         # Находим полуфиналистов которые проиграли
         semifinal_round = max_rounds-1
@@ -82,12 +82,12 @@ class FightGenerator:
         group_a = self._generate_group(all_fights,semifinal_fights[0])
         group_b = self._generate_group(all_fights,semifinal_fights[1])
 
-        consolation_fights_a = self._generate_fights_by_group(group_a, tournament_category_id, 'A')
-        consolation_fights_b = self._generate_fights_by_group(group_b, tournament_category_id, 'B')
+        consolation_fights_a = self._generate_fights_by_group(group_a, tournament_category_id, tatami_number,BracketType.CONSOLATION_GROUP_A)
+        consolation_fights_b = self._generate_fights_by_group(group_b, tournament_category_id, tatami_number,BracketType.CONSOLATION_GROUP_B)
 
         return consolation_fights_a + consolation_fights_b
 
-    def generate_consolation_fights_finalist(self, tournament_category_id, max_rounds):
+    def generate_consolation_fights_finalist(self, tournament_category_id, tatami_number,max_rounds):
         """Генерация утешительных схваток за 3 место"""
 
         # Находим полуфиналистов которые проиграли
@@ -104,8 +104,8 @@ class FightGenerator:
         group_a = self._generate_group(all_fights, final_fights[0])
         group_b = self._generate_group(all_fights, final_fights[1])
 
-        consolation_fights_a = self._generate_fights_by_group(group_a, tournament_category_id, 'A')
-        consolation_fights_b = self._generate_fights_by_group(group_b, tournament_category_id, 'B')
+        consolation_fights_a = self._generate_fights_by_group(group_a, tournament_category_id, tatami_number, BracketType.CONSOLATION_GROUP_A)
+        consolation_fights_b = self._generate_fights_by_group(group_b, tournament_category_id,tatami_number, BracketType.CONSOLATION_GROUP_B)
 
         return consolation_fights_a + consolation_fights_b
 
@@ -159,11 +159,12 @@ class FightGenerator:
 
     def _generate_fights_by_group(self, group_of_fights: list[FightNew],
                                   tournament_category_id: int,
-                                  branch_name: str) -> list[FightNew]:
+                                  tatami_number:int,
+                                  branch_name: BracketType) -> list[FightNew]:
         """Создает утешительные бои для одной ветки"""
 
         if len(group_of_fights) < 2:
-            raise Exception(f'❌ Недостаточно боев в ветке {branch_name}')
+            raise Exception(f'❌ Недостаточно боев в ветке {branch_name.name}')
 
         # Находим проигравшего полуфиналиста
         semifinal_fight = group_of_fights[-1]  # Последний бой - это полуфинал
@@ -180,7 +181,7 @@ class FightGenerator:
                 })
 
         if len(losers) == 0:
-            raise Exception(f'❌ Нет участников для утешительной сетки в ветке {branch_name}')
+            raise Exception(f'❌ Нет участников для утешительной сетки в ветке {branch_name.name}')
 
         # Сортируем по раунду поражения (позже проигравшие начинают выше)
         losers.sort(key=lambda x: x['round_lost'], reverse=True)
@@ -202,7 +203,8 @@ class FightGenerator:
                         blue_athlete_id=current_fighters[i + 1],
                         round_number=round_number,
                         status=FightStatus.SCHEDULED,
-                        type_bracket=BracketType.Consolation_by_Semifinalists
+                        type_bracket=branch_name,
+                        tatami_number = tatami_number
                     )
                     consolation_fights.append(new_fight)
                     next_round_fighters.append(None)  # Placeholder для победителя
@@ -220,7 +222,8 @@ class FightGenerator:
                 blue_athlete_id=semifinal_loser_id,  # Проигравший полуфиналист
                 round_number=round_number,
                 status=FightStatus.SCHEDULED,
-                type_bracket=BracketType.Consolation_Final  # Финал за бронзу
+                type_bracket=branch_name,  # Финал за бронзу
+                tatami_number = tatami_number
             )
             consolation_fights.append(bronze_fight)
 

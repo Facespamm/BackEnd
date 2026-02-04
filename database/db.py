@@ -8,17 +8,17 @@ from sqlalchemy_utils import database_exists, create_database
 db = SQLAlchemy()
 
 # Используйте одну строку подключения
-#DATABASE_URI = 'postgresql+psycopg2://postgres:password@192.168.7.122:5434/judo_tournament'
-DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
+DATABASE_URI = 'postgresql+psycopg2://postgres:password@192.168.7.122:5434/judo_tournament'
+#DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
 #docker connection
 #DATABASE_URI = 'postgresql+psycopg2://postgres:password@db:5432/judo_tournament'
 
 def init_db(app):
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DOCKER_CONNECTION',DATABASE_URI)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('CONNECT_TO_ALEXSANDER',DATABASE_URI)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    if not database_exists(os.getenv('DOCKER_CONNECTION',DATABASE_URI)):
-        create_database(os.getenv('DOCKER_CONNECTION',DATABASE_URI))
+    if not database_exists(os.getenv('CONNECT_TO_ALEXSANDER',DATABASE_URI)):
+        create_database(os.getenv('CONNECT_TO_ALEXSANDER',DATABASE_URI))
         print("База данных создана!")
 
     db.init_app(app)
@@ -39,6 +39,6 @@ def init_db(app):
         db.create_all()
 
 def create_session():
-    engine = create_engine(os.getenv('DOCKER_CONNECTION',DATABASE_URI))
+    engine = create_engine(os.getenv('CONNECT_TO_ALEXSANDER',DATABASE_URI))
     session = sessionmaker(bind=engine)
     return session()  # Возвращайте экземпляр сессии

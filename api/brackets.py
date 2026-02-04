@@ -7,6 +7,8 @@ from repository.tournament_repo import TournamentRepository
 from services.bracket_generator import BracketGenerator
 from operator import and_
 
+from services.fight_generator import FightGenerator
+
 brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
 
 @brackets_bp.route('/<int:tournament_id>', methods=['POST'])
@@ -112,6 +114,11 @@ def generate_consolation_fights(tournament_id):
         if not category_id and type(category_id) != int:
             return jsonify({'success': False, 'message': 'Не выброна категория'}), 400
 
+        tatami_number = request.args.get('tatami_number')
+
+        if not tatami_number and type(tatami_number) != int:
+            return jsonify({'success': False, 'message': 'Не выброн татами'}), 400
+
         tournament_repo = TournamentRepository()
         tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
 
@@ -119,7 +126,7 @@ def generate_consolation_fights(tournament_id):
             return jsonify({'success': False, 'message': 'Категория турнира не найдена'}), 404
 
         bracket_generator = BracketGenerator(tournament_id)
-        generated_fights = bracket_generator.generate_consolation_by_semifinalists(category_id)
+        generated_fights = bracket_generator.generate_olympic_consolation_fight_semifinal(category_id, tatami_number)
 
         if not generated_fights:
             return jsonify({
@@ -146,6 +153,11 @@ def generate_consolation_fights_finalist(tournament_id):
         if not category_id and type(category_id) != int:
             return jsonify({'success': False, 'message': 'Не выброна категория'}), 400
 
+        tatami_number = request.args.get('tatami_number')
+
+        if not tatami_number and type(tatami_number) != int:
+            return jsonify({'success': False, 'message': 'Не выброн татами'}), 400
+
         tournament_repo = TournamentRepository()
         tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
 
@@ -153,7 +165,7 @@ def generate_consolation_fights_finalist(tournament_id):
             return jsonify({'success': False, 'message': 'Категория турнира не найдена'}), 404
 
         bracket_generator = BracketGenerator(tournament_id)
-        generated_fights = bracket_generator.generate_consolation_fights_finalist(category_id)
+        generated_fights = bracket_generator.generate_olympic_consolation_fight_final(category_id, tatami_number)
 
         if not generated_fights:
             return jsonify({
