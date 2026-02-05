@@ -228,9 +228,10 @@ class AthleteRepository:
         ).all()
 
         return athletes
+
     def set_category(self, athlete:AthleteNew,weigth):
         category_repo = CategoryRepository()
-        category_id = category_repo.get_id_by_athlete_feature(weigth, athlete.age, athlete.gender)
+        category_id = category_repo.get_id_by_athlete_feature(weigth, athlete.birth_date.year, athlete.gender)
 
         if not category_id:
             raise Exception('Не найдина категория')

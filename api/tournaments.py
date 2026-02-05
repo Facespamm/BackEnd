@@ -74,13 +74,13 @@ def create_tournament():
             city=data.get('city'),
             country=data.get('country', 'Россия'),
             tatami_count=data.get('tatami_count', 1),
-            has_consolation_fights = data.get('has_consalation')
+            has_consolation_fights = data.get('has_consalation',False)
         )
 
         is_created = tournament_repo.create_tournament(tournament_new)
 
         for category in data['list_category']:
-            tournament_repo.assign_category_tournament(category, tournament_new.id, data['has_consalation'])
+            tournament_repo.assign_category_tournament(category, tournament_new.id, data.get('has_consalation',False))
 
         if not is_created:
             return jsonify({
