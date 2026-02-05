@@ -1,3 +1,4 @@
+from sqlalchemy import or_
 from sqlalchemy.sql.functions import count
 
 from database.db import create_session
@@ -87,14 +88,17 @@ class CategoryRepository:
             self.session.rollback()
             return False
 
-    def get_id_by_athlete_feature(self, weigth, age, gender):
+    def get_id_by_athlete_feature(self, weigth, bith_year, gender):
         category_id = (
             self.session.query(CategoryNew.id)
             .filter(
                 CategoryNew.min_weight <= weigth,
-                CategoryNew.max_weight >= weigth,
-                CategoryNew.min_age <= age,
-                CategoryNew.max_age >= age,
+                or_(
+                    CategoryNew.max_weight >= weigth,
+                    CategoryNew.max_weight.is_(None)  # для открытой категории
+                ),
+                CategoryNew.min_age <= bith_year,
+                CategoryNew.max_age >= bith_year,
                 CategoryNew.gender == gender
             ).scalar()
         )
