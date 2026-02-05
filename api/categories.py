@@ -25,8 +25,8 @@ def get_categories():
                 'gender': category.gender.value,
                 'min_weight': category.min_weight,
                 'max_weight': category.max_weight,
-                'min_age': category.min_age,
-                'max_age': category.max_age,
+                'min_age': category.min_year,
+                'max_age': category.max_year,
                 'athletes_count': category_repo.get_all_athletes(category.id),
                 'tournament_id': tournament_ids
             })

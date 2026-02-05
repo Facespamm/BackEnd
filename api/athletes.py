@@ -1,14 +1,12 @@
 from flask import request, Blueprint, jsonify
-from flasgger import swag_from
-from flask_jwt_extended import get_jwt_identity, jwt_required
 from database.db import db
 from new_model.Enums import translate_gender, RoleName
-import datetime
+from datetime import datetime
 
 from new_model.head_model.new_athlete import AthleteNew
 from repository.athlete_repo import AthleteRepository
 from repository.auth_repo import AuthRepository
-from repository.category_repo import CategoryRepository
+from dateutil.relativedelta import relativedelta
 
 athletes_bp = Blueprint('athletes', __name__, url_prefix='/api/athletes')
 athlete_repo = AthleteRepository()
@@ -75,7 +73,7 @@ def create_athlete(user_id):
             data['gender'] = translate_gender(data['gender'])
 
         # Проверяем обязательные поля (только для атлета, без данных пользователя)
-        required = ['birth_date', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number','age','weight']
+        required = ['birth_date', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number','weight']
         missing = [field for field in required if field not in data]
         if missing:
             return jsonify({
@@ -83,17 +81,22 @@ def create_athlete(user_id):
                 'message': f'Обязательные поля: {", ".join(missing)}'
             }), 400
 
+        date_now = datetime.now()
+        birth_date = datetime.fromisoformat(data['birth_date'])
+
+        years = relativedelta(date_now, birth_date).years
+
         # Создаем профиль участника
         athlete = AthleteNew(
             user_id=user_id,
-            birth_date=datetime.datetime.fromisoformat(data['birth_date']).date(),
+            birth_date=datetime.fromisoformat(data['birth_date']).date(),
             gender=data['gender'],
             club_id=data['club_id'],
             rank_id=data['rank_id'],
             license_number=data['license_number'],
             medical_check=data['medical_check'],
             insurance_number=data['insurance_number'],
-            age = data['age'],
+            age = years,
             is_active=True
         )
 

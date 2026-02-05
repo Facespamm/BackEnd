@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
+from sqlalchemy import update
 
 from database.db import create_session
 from new_model.head_model.new_athlete import AthleteNew
+from new_model.new_associations import AthleteRegistration
 from new_model.weighing_new import WeighingNew
 from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
@@ -52,7 +54,7 @@ def get_weighings():
                 'weight_category': {
                     'name': category.name,
                     'weight_range': f'от {category.min_weight} до {category.max_weight}',
-                    'age-range': f'от {category.min_age} до {category.max_age}',
+                    'age-range': f'от {category.min_year} до {category.max_year}',
                     'gender': category.gender.value
                 },
                 'tournament_name': tournament_repo.get_tournament_name_by_tournament_category(weighing.tournament_category_id),
@@ -209,6 +211,57 @@ def create_weighing():
             'success': False,
             'message': f'Ошибка при создании записи взвешивания: {str(e)}'
         }), 500
+
+@weighing_bp.route('/<int:tournament_id>/change-category', methods=['GET'])
+def change_category(tournament_id):
+    try:
+        data = request.get_json()
+
+        required = ['category_id', 'athlete_id']
+        missing_fields = [field for field in required if field not in data]
+
+        if missing_fields:
+            return jsonify({
+                'message': f'Не ввели {missing_fields}'
+            }),400
+
+        session = create_session()
+
+        tournament = tournament_repo.get_tournament_by_id(tournament_id)
+        if not tournament:
+            return jsonify({
+                'message': 'Нет такого турнира'
+            }), 404
+
+        category = category_repo.get_category_by_id(data['category_id'])
+        if not category:
+            return jsonify({
+                'message': 'Нет такой категории'
+            }),400
+
+        tournament_category = tournament_repo.get_tournament_category(tournament.id,category.id)
+
+        exesting_athlete = session.query(AthleteRegistration.athlete_id).filter_by(tournament_category_id=tournament_category.tournament_category_id,athlete_id=data['athlete_id']).one()
+        if exesting_athlete:
+            return jsonify({
+                'message':'Участник находится в правельной категории'
+            }), 200
+        else:
+            updated_athlete = (
+                update(AthleteRegistration)
+                .values(athlete_id=data['athlete_id'],tournament_category_id=tournament_category.tournament_category_id,)
+            )
+            session.execute(updated_athlete)
+            session.commit()
+
+            return jsonify({
+              'message': f'Участник перенесен в категорию {category.name}'
+            })
+    except Exception as e:
+        return jsonify({
+            'message': f'Ошибка выполнения {e}'
+        })
+
 
 def _is_within_weight_category_limits(weighing: WeighingNew) -> bool:
     tc = weighing.tournament_categories
