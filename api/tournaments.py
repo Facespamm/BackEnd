@@ -101,6 +101,55 @@ def create_tournament():
             'message': f'Ошибка при создании турнира: {str(e)}'
         }), 500
 
+@tournaments_bp.route('/by-category/<int:category_id>', methods=['GET'])
+def get_tournaments_by_category(category_id):
+    """
+    Получить список турниров по указанной категории
+    ---
+    Параметры:
+        category_id (path): ID категории
+        status (query, optional): фильтр по статусу турнира (строковое значение enum, например, PLANNED, ACTIVE и т.д.)
+    """
+    try:
+        status = request.args.get('status')  # Опциональный фильтр по статусу (строка, как в основном эндпоинте)
+
+        query = TournamentNew.query.filter(
+            TournamentNew.tournament_categories.any(category_id=category_id)
+        )
+
+        if status:
+            # Предполагается, что status передаётся как строковое значение enum (например, 'PLANNED')
+            query = query.filter(TournamentNew.status == status)
+
+        # Сортировка по дате начала (сначала ближайшие)
+        query = query.order_by(TournamentNew.start_date.desc())
+
+        tournaments = query.all()
+
+        result = []
+        for tournament in tournaments:
+            result.append({
+                'id': tournament.id,
+                'name': tournament.name,
+                'description': tournament.description,
+                'start_date': tournament.start_date.isoformat() if tournament.start_date else None,
+                'end_date': tournament.end_date.isoformat() if tournament.end_date else None,
+                'venue': tournament.venue,
+                'city': tournament.city,
+                'country': tournament.country,
+                'status': tournament.status.value if tournament.status else None,
+                'tatami_count': tournament.tatami_count,
+                'athletes_count': tournament_repo.get_athlete_count(tournament.id)
+            })
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при получении турниров по категории: {str(e)}'
+        }), 500
+
 @tournaments_bp.route('/<int:tournament_id>', methods=['GET'])
 def get_tournament(tournament_id):
     """Получить информацию о турнире"""

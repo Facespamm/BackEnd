@@ -4,7 +4,7 @@
 
 from config import Config
 from database.db import db
-from models.weighing import Weighing
+from new_model.weighing_new import WeighingNew
 
 
 class WeighingService:
@@ -42,7 +42,7 @@ class WeighingService:
     def register_weighing(self, athlete_id, weight, weight_category=None, notes=None):
         """Зарегистрировать взвешивание"""
         # Проверяем существующее взвешивание
-        existing = Weighing.query.filter_by(
+        existing = WeighingNew.query.filter_by(
             tournament_id=self.tournament_id,
             athlete_id=athlete_id
         ).first()
@@ -61,7 +61,7 @@ class WeighingService:
             return existing.save()
         else:
             # Создаем новое
-            weighing = Weighing(
+            weighing = WeighingNew(
                 tournament_id=self.tournament_id,
                 athlete_id=athlete_id,
                 weight=weight,
@@ -79,7 +79,7 @@ class WeighingService:
             return weighing.save()
     def assign_to_categories(self):
         """Автоматическое распределение участников по категориям"""
-        weighings = Weighing.query.filter_by(
+        weighings = WeighingNew.query.filter_by(
             tournament_id=self.tournament_id,
             is_valid=True
         ).all()
@@ -102,7 +102,7 @@ class WeighingService:
 
     def get_weighing_statistics(self):
         """Получить статистику взвешивания"""
-        weighings = Weighing.query.filter_by(tournament_id=self.tournament_id).all()
+        weighings = WeighingNew.query.filter_by(tournament_id=self.tournament_id).all()
 
         stats = {
             'total_weighed': len(weighings),
@@ -142,7 +142,7 @@ class WeighingService:
 
     def validate_weighing(self, weighing_id, is_valid=True):
         """Валидация/инвалидация взвешивания"""
-        weighing = Weighing.query.get(weighing_id)
+        weighing = WeighingNew.query.get(weighing_id)
         if not weighing:
             return False
 
@@ -151,9 +151,9 @@ class WeighingService:
 
     def get_athletes_without_weighing(self):
         """Получить участников без взвешивания"""
-        from models.tournament import Tournament
+        from new_model.head_model.tournament_new import TournamentNew
 
-        tournament = Tournament.query.get(self.tournament_id)
+        tournament = TournamentNew.query.get(self.tournament_id)
         if not tournament:
             return []
 
@@ -164,7 +164,7 @@ class WeighingService:
 
         # Получаем участников с взвешиванием
         weighed_athlete_ids = [
-            w.athlete_id for w in Weighing.query.filter_by(tournament_id=self.tournament_id).all()
+            w.athlete_id for w in WeighingNew.query.filter_by(tournament_id=self.tournament_id).all()
         ]
 
         # Находим участников без взвешивания
@@ -177,7 +177,7 @@ class WeighingService:
 
     def export_weighing_data(self, format_type='CSV'):
         """Экспорт данных взвешивания"""
-        weighings = Weighing.query.filter_by(tournament_id=self.tournament_id).all()
+        weighings = WeighingNew.query.filter_by(tournament_id=self.tournament_id).all()
 
         data = []
         for weighing in weighings:
@@ -199,7 +199,7 @@ class WeighingService:
 
     def get_category_suggestions(self, athlete_id):
         """Получить предложения по категориям для участника"""
-        athlete = Weighing.query.get(athlete_id).athlete
+        athlete = WeighingNew.query.get(athlete_id).athlete
         if not athlete:
             return []
 

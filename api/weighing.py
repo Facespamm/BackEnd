@@ -39,17 +39,28 @@ def get_weighings():
 
         weighings = query.order_by(WeighingNew.weighing_time.desc()).all()
 
-
         result = []
         for weighing in weighings:
+            # Берём атлета по ID из текущего взвешивания
+            athlete = athlete_repo.get_athlete_by_id(weighing.athlete_id)
 
-            athlete = athlete_repo.get_athlete_by_id(athlete_id)
+            # Добавляем защиту от None
+            athlete_name = None
+            if athlete and athlete.user:
+                athlete_name = f'{athlete.user.first_name} {athlete.user.last_name} {athlete.user.middle_name or ""}'.strip()
 
+            # Аналогично защита для категории
             category = category_repo.get_category_by_id(weighing.weight_category)
+            weight_category_info = {
+                'name': category.name if category else 'Неизвестно',
+                'weight_range': f'от {category.min_weight} до {category.max_weight}' if category else 'Не указано',
+                'age-range': f'от {category.min_age} до {category.max_age}' if category else 'Не указано',
+                'gender': category.gender.value if category and category.gender else 'Не указано'
+            }
 
             result.append({
                 'id': weighing.id,
-                'athlete_name': f'{athlete.user.first_name} {athlete.user.last_name} {athlete.user.middle_name}' if athlete.user else None,
+                'athlete_name': athlete_name or 'Атлет не найден',
                 'weight': weighing.weight,
                 'weight_category': {
                     'name': category.name,
@@ -62,7 +73,6 @@ def get_weighings():
                 'status': _is_within_weight_category_limits(weighing),
                 'is_valid': weighing.is_valid
             })
-
         return jsonify({
             'success': True,
             'weighings': result,
@@ -186,12 +196,11 @@ def create_weighing():
             }), 404
 
         weighing = WeighingNew(
-            tournament_category_id=data['tournament_id'],
+            tournament_category_id=tournament.tournament_category_id,  # Правильный ID
             athlete_id=data['athlete_id'],
             weight=data['weight'],
             notes=data.get('notes')
         )
-
         # Если указана весовая категория вручную - используем ее
         if data.get('weight_category'):
             weighing.weight_category = data['weight_category']
