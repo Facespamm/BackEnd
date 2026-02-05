@@ -19,4 +19,4 @@ class TatamiFight(db.Model):
     completed_at = db.Column(db.DateTime, nullable=True)
 
     # Связи
-    fight = db.relationship('Fight', back_populates='tatami_fight', uselist=False)
+    fight = db.relationship('FightNew', back_populates='tatami_fight', uselist=False)
