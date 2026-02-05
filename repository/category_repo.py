@@ -97,8 +97,8 @@ class CategoryRepository:
                     CategoryNew.max_weight >= weigth,
                     CategoryNew.max_weight.is_(None)  # для открытой категории
                 ),
-                CategoryNew.min_age <= bith_year,
-                CategoryNew.max_age >= bith_year,
+                CategoryNew.min_year <= bith_year,
+                CategoryNew.max_year >= bith_year,
                 CategoryNew.gender == gender
             ).scalar()
         )
