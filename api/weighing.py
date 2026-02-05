@@ -173,7 +173,7 @@ def create_weighing():
                 'message': 'Не передан JSON'
             }), 400
 
-        if not data.get('tournament_id') or  not data.get('category_id') or not data.get('athlete_id') or not data.get('weight') or not data.get('weight_category'):
+        if not data.get('tournament_id') or  not data.get('category_id') or not data.get('athlete_id') or not data.get('weight'):
             return jsonify({
                 'success': False,
                 'message': 'Обязательные поля: tournament_id, athlete_id, weight'
@@ -199,11 +199,10 @@ def create_weighing():
             tournament_category_id=tournament.tournament_category_id,  # Правильный ID
             athlete_id=data['athlete_id'],
             weight=data['weight'],
-            notes=data.get('notes')
+            notes=data.get('notes'),
+            weight_category= data.get('category_id'),
         )
         # Если указана весовая категория вручную - используем ее
-        if data.get('weight_category'):
-            weighing.weight_category = data['weight_category']
 
         session.add(weighing)
         session.commit()
