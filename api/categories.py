@@ -67,8 +67,8 @@ def create_category():
             gender=translate_gender_,
             min_weight=data.get('min_weight'),
             max_weight=data.get('max_weight'),
-            min_age=data.get('min_age'),
-            max_age=data.get('max_age')
+            min_year=data.get('min_age'),
+            max_year=data.get('max_age')
         )
 
         is_create = category_repo.create_category(category)
