@@ -33,3 +33,4 @@ class FightNew(db.Model):
     fight_referees = db.relationship('FightReferee', back_populates='fight')
     score_events = db.relationship('ScoreEvent', back_populates='fight')
     result = db.relationship('ResultNew', back_populates='fight', uselist=False)
+    tatami_fight = db.relationship('TatamiFight', back_populates='fight', uselist=False)
