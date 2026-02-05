@@ -41,7 +41,8 @@ class TournamentRepository:
             )
 
             if not athletes:
-                raise ValueError(f"No eligible athletes found for club {club_id}")
+                raise ValueError(f"Не найдено ни одного подходящего спортсмена для регистрации на турнир по данным категориям"
+                                 f" {club_id}")
 
             # Получаем ID связей турнир-категория
             tournament_category_records = (
