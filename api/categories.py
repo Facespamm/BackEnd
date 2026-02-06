@@ -61,6 +61,16 @@ def create_category():
                 'message': 'Обязательные поля: name, tournament_id, gender'
             }), 400
 
+        if data['min_weight'] > data['max_weight']:
+            return jsonify({
+                'message': 'Минемальный вес не может быть больше максимального'
+            }),400
+
+        if data['min_age'] > data['max_age']:
+            return jsonify({
+                'message': 'Минимальный год не может быть меньше максимального года'
+            }),400
+
         translate_gender_ =  translate_gender(data['gender'])
         category = CategoryNew(
             name=data['name'],
