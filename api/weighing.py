@@ -8,11 +8,11 @@ from new_model.weighing_new import WeighingNew
 from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
 from repository.tournament_repo import TournamentRepository
+from repository.weight_repo import WeightRepository
 
 weighing_bp = Blueprint('weighing', __name__, url_prefix='/api/weighing')
-athlete_repo = AthleteRepository()
-category_repo = CategoryRepository()
 tournament_repo = TournamentRepository()
+weighing_repo = WeightRepository()
 
 @weighing_bp.route('/', methods=['GET'])
 def get_weighings():
@@ -25,21 +25,21 @@ def get_weighings():
         if not category_id or not tournament_id:
             return jsonify({
                 'success': False,
-                'message': "Не веденны category_id, tournament_id, athlete_id"
+                'message': "Не веденны category_id, tournament_id"
             })
 
-        query = WeighingNew.query
+        tournament = tournament_repo.get_tournament_category(tournament_id, category_id)
 
-        if tournament_id:
-            tournament =  tournament_repo.get_tournament_category(tournament_id, category_id)
-            query = query.filter_by(tournament_category_id=tournament.tournament_category_id)
+        if not tournament:
+            return jsonify({
+                'message':'Нет такого категории в турнире'
+            })
 
-        if athlete_id:
-            query = query.filter_by(athlete_id=athlete_id)
-
-        weighings = query.order_by(WeighingNew.weighing_time.desc()).all()
+        weighings = weighing_repo.get_weights(tournament.tournament_category_id,athlete_id)
 
         result = []
+        athlete_repo = AthleteRepository()
+        category_repo = CategoryRepository()
         for weighing in weighings:
             # Берём атлета по ID из текущего взвешивания
             athlete = athlete_repo.get_athlete_by_id(weighing.athlete_id)
@@ -49,14 +49,7 @@ def get_weighings():
             if athlete and athlete.user:
                 athlete_name = f'{athlete.user.first_name} {athlete.user.last_name} {athlete.user.middle_name or ""}'.strip()
 
-            # Аналогично защита для категории
             category = category_repo.get_category_by_id(weighing.weight_category)
-            weight_category_info = {
-                'name': category.name if category else 'Неизвестно',
-                'weight_range': f'от {category.min_weight} до {category.max_weight}' if category else 'Не указано',
-                'age-range': f'от {category.min_age} до {category.max_age}' if category else 'Не указано',
-                'gender': category.gender.value if category and category.gender else 'Не указано'
-            }
 
             result.append({
                 'id': weighing.id,
@@ -85,14 +78,11 @@ def get_weighings():
             'message': f'Ошибка при получении взвешиваний: {str(e)}'
         }), 500
 
-
 @weighing_bp.route('/<int:weighing_id>/toggle-validation', methods=['PATCH'])
 def toggle_weighing_validation(weighing_id):
     """Изменить статус валидации взвешивания"""
     try:
-        session = create_session()
-        weighing = session.query(WeighingNew).get(weighing_id)
-
+        weighing = weighing_repo.get_weight(weighing_id)
         if not weighing:
             return jsonify({
                 'success': False,
@@ -100,29 +90,30 @@ def toggle_weighing_validation(weighing_id):
             }), 404
 
         # Меняем статус на противоположный
-        weighing.is_valid = not weighing.is_valid
+        is_change = weighing_repo.change_weighing_validation(weighing_id)
 
-        session.commit()
-        session.close()
-        return jsonify({
-            'success': True,
-            'message': f'Статус валидации изменен на {"валидно" if weighing.is_valid else "невалидно"}',
-            'is_valid': weighing.is_valid,
-            'status_display': _is_within_weight_category_limits(weighing)
-        }), 200
+        if is_change:
+            return jsonify({
+                'success': True,
+                'message': f'Статус валидации изменен на {"валидно" if weighing.is_valid else "невалидно"}',
+                'is_valid': weighing.is_valid,
+                'status_display': _is_within_weight_category_limits(weighing)
+            }), 200
+        else:
+            return jsonify({
+                'message': 'Не получилось обновить статус'
+            }), 500
     except Exception as e:
         return jsonify({
             'success': False,
             'message': f'Ошибка при изменении статуса валидации: {str(e)}'
         }), 500
 
-
 @weighing_bp.route('/<int:weighing_id>', methods=['PUT'])
 def update_weighing(weighing_id):
     """Обновить запись о взвешивании"""
     try:
-        session = create_session()
-        weighing = session.query(WeighingNew).get(weighing_id)
+        weighing = weighing_repo.get_weight(weighing_id)
 
         if not weighing:
             return jsonify({
@@ -131,29 +122,24 @@ def update_weighing(weighing_id):
             }), 404
 
         data = request.get_json()
+        if not data:
+            return jsonify({
+                'message': 'Нет данных для изменения'
+            }),400
 
-        if 'weight' in data:
-            weighing.weight = data['weight']
-
-        if 'weight_category' in data:
-            weighing.weight_category = data['weight_category']
-
-        if 'is_valid' in data:
-            weighing.is_valid = data['is_valid']
-
-        if 'notes' in data:
-            weighing.notes = data['notes']
-
-        session.commit()
-        session.close()
-
-        return jsonify({
-            'success': True,
-            'message': 'Взвешивание успешно обновлено',
-            'weight_category': weighing.weight_category,
-            'status': weighing.status_display,
-            'is_valid': weighing.is_valid
-        }), 200
+        is_update = weighing_repo.update_weighing_information(weighing_id, data)
+        if is_update:
+            return jsonify({
+                'success': True,
+                'message': 'Взвешивание успешно обновлено',
+                'weight_category': weighing.weight_category,
+                'status': weighing.status_display,
+                'is_valid': weighing.is_valid
+            }), 200
+        else:
+            return jsonify({
+                'message': 'Не получилось обновить данные для звешивания'
+            }), 500
     except Exception as e:
         return jsonify({
             'success': False,
@@ -164,7 +150,6 @@ def update_weighing(weighing_id):
 def create_weighing():
     """Создать запись о взвешивании"""
     try:
-        session = create_session()
         data = request.get_json()
 
         if not data:
@@ -181,7 +166,8 @@ def create_weighing():
 
         # Проверяем существование турнира и участника
         tournament = tournament_repo.get_tournament_category(data['tournament_id'], data['category_id'])
-        athlete = AthleteNew.query.get(data['athlete_id'])
+        athlete_repo = AthleteRepository()
+        athlete = athlete_repo.get_athlete_by_id(data['athlete_id'])
 
         if not tournament:
             return jsonify({
@@ -195,19 +181,29 @@ def create_weighing():
                 'message': 'Участник не найден'
             }), 404
 
+        is_valid_for_category = _is_valid_for_category(data, athlete)
+
+        if not is_valid_for_category:
+            return jsonify({
+                'message': 'Атлетне подходит для этой категории'
+            }), 400
+
         weighing = WeighingNew(
             tournament_category_id=tournament.tournament_category_id,  # Правильный ID
             athlete_id=data['athlete_id'],
             weight=data['weight'],
             notes=data.get('notes'),
-            weight_category= data.get('category_id'),
+            weight_category= data.get('category_id') if is_valid_for_category else athlete.category_id,
+            is_valid = True  if is_valid_for_category else False
         )
-        # Если указана весовая категория вручную - используем ее
 
-        session.add(weighing)
-        session.commit()
+        is_added = weighing_repo.create_weighting(weighing)
 
-        # ИСПРАВЛЕНО: используем save_to_db() вместо save()
+        if not is_added:
+            return jsonify({
+                'message': 'Ошибка создание звешивание участника'
+            }), 500
+
         return jsonify({
             'success': True,
             'message': 'Взвешивание успешно записано',
@@ -220,7 +216,7 @@ def create_weighing():
             'message': f'Ошибка при создании записи взвешивания: {str(e)}'
         }), 500
 
-@weighing_bp.route('/<int:tournament_id>/change-category', methods=['GET'])
+@weighing_bp.route('/<int:tournament_id>/change-category', methods=['POST'])
 def change_category(tournament_id):
     try:
         data = request.get_json()
@@ -241,6 +237,7 @@ def change_category(tournament_id):
                 'message': 'Нет такого турнира'
             }), 404
 
+        category_repo = CategoryRepository()
         category = category_repo.get_category_by_id(data['category_id'])
         if not category:
             return jsonify({
@@ -249,7 +246,7 @@ def change_category(tournament_id):
 
         tournament_category = tournament_repo.get_tournament_category(tournament.id,category.id)
 
-        exesting_athlete = session.query(AthleteRegistration.athlete_id).filter_by(tournament_category_id=tournament_category.tournament_category_id,athlete_id=data['athlete_id']).one()
+        exesting_athlete = session.query(AthleteRegistration.athlete_id).filter_by(tournament_category_id=tournament_category.tournament_category_id,athlete_id=data['athlete_id']).first()
         if exesting_athlete:
             return jsonify({
                 'message':'Участник находится в правельной категории'
@@ -270,7 +267,6 @@ def change_category(tournament_id):
             'message': f'Ошибка выполнения {e}'
         })
 
-
 def _is_within_weight_category_limits(weighing: WeighingNew) -> bool:
     tc = weighing.tournament_categories
     if not tc or not tc.category:
@@ -282,3 +278,10 @@ def _is_within_weight_category_limits(weighing: WeighingNew) -> bool:
         return False   # категория некорректно настроена
 
     return cat.min_weight <= weighing.weight <= cat.max_weight
+
+def _is_valid_for_category(data, athlete:AthleteNew) -> bool:
+    category_repo = CategoryRepository()
+    category_id = category_repo.get_id_by_athlete_feature(data['weight'], athlete.birth_date.year, athlete.gender)
+
+    is_valid = data['category_id'] == category_id
+    return is_valid

@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from datetime import datetime
 
 from sqlalchemy import or_, and_
@@ -10,7 +9,6 @@ from new_model.handbook.role_new import RoleNew
 from new_model.head_model.fight_new import FightNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.new_user import UserNew
-from new_model.head_model.tournament_new import TournamentNew
 from new_model.new_associations import AthleteRegistration, TournamentCategory, new_user_roles
 from repository.category_repo import CategoryRepository
 
@@ -278,3 +276,18 @@ class AthleteRepository:
                 'middle_name': result[2]
             }
         return None
+
+    def update_category(self, athlete_id:int, weight):
+        try:
+            athlete = self.get_athlete_by_id(athlete_id)
+
+            if not athlete:
+                return False
+
+            self.set_category(athlete, weight)
+            self.session.commit()
+            return True
+        except Exception as e:
+            print('Error ',e)
+            self.session.rollback()
+            return False
