@@ -3,9 +3,12 @@ from flasgger import swag_from
 from datetime import datetime
 
 from new_model.head_model.tournament_new import TournamentNew
+from new_model.head_model.new_athlete import AthleteNew
+from new_model.handbook.category_new import CategoryNew
+from new_model.new_associations import TournamentCategory, AthleteRegistration
 from repository.category_repo import CategoryRepository
 from repository.tournament_repo import TournamentRepository
-
+from sqlalchemy.orm import joinedload
 tournaments_bp = Blueprint('tournaments', __name__, url_prefix='/api/tournaments')
 tournament_repo = TournamentRepository()
 
@@ -326,6 +329,54 @@ def add_club_to_tournament(tournament_id):
             'message': f'Ошибка при добавлении клуба к турниру: {str(e)}'
         }), 500
 
+
+@tournaments_bp.route('/<int:tournament_id>/athletes', methods=['GET'])
+def get_tournament_athletes(tournament_id):
+    """Получить список зарегистрированных атлетов на турнир"""
+    try:
+        tournament = tournament_repo.get_tournament_by_id(tournament_id)
+
+        if not tournament:
+            return jsonify({
+                'success': False,
+                'message': 'Турнир не найден'
+            }), 404
+
+        # Опциональная фильтрация по категории
+        category_id = request.args.get('category_id', type=int)
+
+        athletes = tournament_repo.get_tournament_athletes(tournament_id, category_id)
+
+        result = []
+        for athlete_data in athletes:
+            athlete = athlete_data['athlete']
+            category = athlete_data['category']
+
+            result.append({
+                'athlete_id': athlete.id,
+                'first_name': athlete.user.first_name if athlete.user else None,
+                'last_name': athlete.user.last_name if athlete.user else None,
+                'gender': athlete.gender,
+                'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
+                'age': athlete.age,
+                'club_name': athlete.club.name if athlete.club else None,
+                'rank': athlete.rank.level if athlete.rank else None,  # Используем level вместо name
+                'category_id': category.id,
+                'category_name': category.name
+            })
+
+        return jsonify({
+            'success': True,
+            'tournament_id': tournament_id,
+            'athletes_count': len(result),
+            'athletes': result
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при получении атлетов турнира: {str(e)}'
+        }), 500
 @tournaments_bp.route('/<int:tournament_id>/add-athletes', methods=['POST'])
 def add_athletes_to_tournament(tournament_id):
     """Добавить участников к турниру"""

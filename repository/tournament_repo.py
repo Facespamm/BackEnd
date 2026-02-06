@@ -86,6 +86,44 @@ class TournamentRepository:
             print(f"Error adding club {club_id} to tournament {tournament_id}: {e}")
             raise
 
+    def get_tournament_athletes(self, tournament_id, category_id=None):
+        """Получить зарегистрированных атлетов на турнир"""
+        try:
+            query = (
+                self.session.query(AthleteNew, CategoryNew, TournamentCategory)
+                .join(AthleteRegistration, AthleteRegistration.athlete_id == AthleteNew.id)
+                .join(TournamentCategory,
+                      TournamentCategory.tournament_category_id == AthleteRegistration.tournament_category_id)
+                .join(CategoryNew, CategoryNew.id == TournamentCategory.category_id)
+                .options(
+                    joinedload(AthleteNew.user),
+                    joinedload(AthleteNew.club),
+                    joinedload(AthleteNew.rank)
+                )
+                .filter(TournamentCategory.tournament_id == tournament_id)
+            )
+
+            # Фильтрация по категории, если передана
+            if category_id:
+                query = query.filter(TournamentCategory.category_id == category_id)
+
+            results = query.all()
+
+            athletes_data = []
+            for athlete, category, tournament_category in results:
+                athletes_data.append({
+                    'athlete': athlete,
+                    'category': category,
+                    'tournament_category': tournament_category
+                })
+
+            return athletes_data
+
+        except Exception as e:
+            print(f"Error getting tournament athletes: {e}")
+            return []
+
+
     def add_athlete_to_tournament(self, tournament_id, category_id, athlete_id):
         """Добавить участника к турниру"""
         try:
