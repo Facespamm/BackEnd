@@ -5,6 +5,7 @@ from sqlalchemy.orm import joinedload
 
 from database.db import create_session
 from new_model.Enums import RoleName
+from new_model.handbook.new_dan import DanNew
 from new_model.handbook.role_new import RoleNew
 from new_model.head_model.fight_new import FightNew
 from new_model.head_model.new_athlete import AthleteNew
@@ -19,6 +20,28 @@ class AthleteRepository:
 
     def get_athletes(self, club_id:int, search_name: str):
         query = self.session.query(AthleteNew).join(AthleteNew.user).filter_by(is_active = True)
+
+        if club_id:
+            query = query.filter(AthleteNew.club_id == club_id)
+
+        if search_name:
+            query = query.filter(
+                or_(
+                    UserNew.last_name.ilike(f'%{search_name}%'),
+                    UserNew.first_name.ilike(f'%{search_name}%')
+                )
+            )
+
+        athletes = query.order_by(UserNew.last_name, UserNew.first_name).all()
+        return athletes
+
+    def get_basic_info(self,club_id:int, search_name: str):
+        query = (
+            self.session.query(AthleteNew.id,UserNew.first_name, UserNew.last_name,UserNew.middle_name, DanNew.level)
+            .join(AthleteNew.user)
+            .join(AthleteNew.rank)
+            .filter(AthleteNew.is_active == True)
+        )
 
         if club_id:
             query = query.filter(AthleteNew.club_id == club_id)
@@ -156,18 +179,14 @@ class AthleteRepository:
         """
         # Базовый запрос с обязательным JOIN к UserNew для фильтрации и сортировки
         query = (
-            self.session.query(AthleteNew)
-            .join(AthleteNew.user)  # ← Ключевое исправление: JOIN для доступа к полям UserNew
-            .options(
-                joinedload(AthleteNew.rank),
-                joinedload(AthleteNew.user),
-                joinedload(AthleteNew.club)
-            )
+            self.session.query(AthleteNew.id,UserNew.id,UserNew.first_name,UserNew.last_name,UserNew.middle_name,DanNew.level)
+            .join(AthleteNew.user)
+            .join(AthleteNew.rank)
             .filter(AthleteNew.is_active == True)
         )
 
-        # Фильтр по клубу (прямой, без JOIN)
-        if club_id is not None:
+        # Фильтр по клубу
+        if club_id is not None and club_id != '':
             query = query.filter(AthleteNew.club_id == club_id)
 
         # Фильтрация по ФИО
@@ -183,11 +202,12 @@ class AthleteRepository:
             if last_name:
                 query = query.filter(UserNew.last_name.ilike(f'%{last_name}%'))
 
-        # Сортировка по фамилии и имени (теперь работает благодаря JOIN)
+        # Сортировка по фамилии и имени
         query = query.order_by(UserNew.last_name, UserNew.first_name)
 
         athletes = query.all()
         return athletes
+
     def get_athletes_by_club_id(self, club_id: int, tournament_id=None, include_tournament_info=False):
         # Базовый запрос с обязательным join(user) для сортировки и joinedload для подгрузки
         athletes_query = (

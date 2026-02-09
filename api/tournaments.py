@@ -318,7 +318,13 @@ def add_club_to_tournament(tournament_id):
 
     tournament= TournamentRepository()
     try:
-        tournament.add_club_to_tournament(tournament_id, club_id)
+        is_added = tournament.add_club_to_tournament(tournament_id, club_id)
+
+        if not is_added:
+            return jsonify({
+                'message': 'Не получилось добавить клуб к турниру'
+            }), 500
+
         return jsonify({
             'success': True,
             'message': f'Клуб {club_id} добавлен к турниру {tournament_id}'
@@ -411,12 +417,16 @@ def add_athletes_to_tournament(tournament_id):
 
     tournament = TournamentRepository()
     try:
+        added_athletes = 0
         for athlete_id in athlete_ids:
-            tournament.add_athlete_to_tournament(tournament_id, category_id,athlete_id)
+            is_add = tournament.add_athlete_to_tournament(tournament_id, category_id,athlete_id)
+            if is_add:
+                added_athletes += 1
 
         return jsonify({
             'success': True,
-            'message': f'Участники добавлены к турниру {tournament_id}'
+            'message': f'Участники добавлены к турниру {tournament_id}',
+            'count_added': added_athletes
         })
     except Exception as e:
         return jsonify({

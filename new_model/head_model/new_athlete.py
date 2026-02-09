@@ -9,8 +9,8 @@ class AthleteNew(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
-    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'))
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
+    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=True)
     birth_date = db.Column(db.Date, nullable=False)
     gender = db.Column(db.String(10), nullable=False)
     age = db.Column(db.Integer, nullable=False)
