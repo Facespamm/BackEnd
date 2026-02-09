@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, request, jsonify
 
 from new_model.Enums import translate_gender
@@ -66,10 +68,19 @@ def create_category():
                 'message': 'Минемальный вес не может быть больше максимального'
             }),400
 
-        if data['min_age'] > data['max_age']:
+        # if data['min_age'] > data['max_age']:
+        #     return jsonify({
+        #         'message': 'Минимальный год не может быть меньше максимального года'
+        #     }),400
+
+        date_min = date(year=date['min_age'])
+        date_max = date(year=date['max_age'])
+
+        if date_max > date_min:
             return jsonify({
-                'message': 'Минимальный год не может быть меньше максимального года'
+                'message':'Дата "c" не может быть меньше даты "по "'
             }),400
+
 
         translate_gender_ =  translate_gender(data['gender'])
         category = CategoryNew(

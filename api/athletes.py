@@ -18,26 +18,16 @@ def get_athletes():
         club_id = request.args.get('club_id', type=int)
         search = request.args.get('search', '').strip()
 
-        athletes = athlete_repo.get_athletes(club_id, search)
+        basic_information = athlete_repo.get_basic_info(club_id, search)
 
-        result = []
-        for athlete in athletes:
-            result.append({
-                'id': athlete.id,
-                'first_name': athlete.user.first_name,
-                'last_name': athlete.user.last_name,
-                'middle_name': athlete.user.middle_name,
-                'birth_date': athlete.birth_date.isoformat(),
-                'age': athlete.age,
-                'gender': athlete.gender,
-                'club': athlete.club.name if athlete.club else None,
-                'club_id': athlete.club_id,
-                'rank': athlete.rank.level if athlete.rank else None,
-                'rank_id': athlete.rank_id,
-                'license_number': athlete.license_number,
-                'phone': athlete.user.phone,
-                'email': athlete.user.email
-            })
+        result = [
+            {
+                'id': athlete[0],
+                'first_name': athlete[1],
+                'last_name': athlete[2],
+                'middle_name': athlete[3],
+                'rank': athlete[4]
+            }for athlete in basic_information]
 
         return jsonify({
             'success': True,
@@ -73,7 +63,7 @@ def create_athlete(user_id):
             data['gender'] = translate_gender(data['gender'])
 
         # Проверяем обязательные поля (только для атлета, без данных пользователя)
-        required = ['birth_date', 'gender', 'club_id', 'rank_id', 'license_number', 'medical_check', 'insurance_number','weight']
+        required = ['birth_date', 'gender', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
         missing = [field for field in required if field not in data]
         if missing:
             return jsonify({
@@ -91,7 +81,7 @@ def create_athlete(user_id):
             user_id=user_id,
             birth_date=datetime.fromisoformat(data['birth_date']).date(),
             gender=data['gender'],
-            club_id=data['club_id'],
+            club_id=data['club_id', None],
             rank_id=data['rank_id'],
             license_number=data['license_number'],
             medical_check=data['medical_check'],
@@ -104,7 +94,7 @@ def create_athlete(user_id):
         role_id = auth_repo.get_role_id(RoleName.ATHLETE.value)
         auth_repo.update_user_role(user_id, role_id)
 
-        athlete_repo.set_category(athlete,data['weight'])
+        # athlete_repo.set_category(athlete,data['weight'])
         athlete_is_added = athlete_repo.create_athlete(athlete)
 
         if not athlete_is_added:
@@ -112,13 +102,13 @@ def create_athlete(user_id):
                 'success': False,
                 'message': 'Ошибка при сохранении участника в категорию'
             }), 400
-        else:
-            return jsonify({
-                'success': True,
-                'message': 'Участник успешно создан, добавлен в категорию',
-                'athlete_id': athlete.id,
-                'user_id': user_id
-            }), 201
+
+        return jsonify({
+            'success': True,
+            'message': 'Участник успешно создан, добавлен в категорию',
+            'athlete_id': athlete.id,
+            'user_id': user_id
+        }), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({
@@ -243,7 +233,6 @@ def search_athlete():
         first_name = request.args.get('first_name', '').strip()
         middle_name = request.args.get('middle_name', '').strip()
         club_id = request.args.get('club_id')
-        # is_active = request.args.get('is_active', 'true').lower() == 'true'
 
         # Проверяем, что хотя бы один параметр передан
         if not any([last_name, first_name, middle_name, club_id]):
@@ -259,24 +248,14 @@ def search_athlete():
         }
 
         athletes = athlete_repo.search_athletes_by_name(name_query, club_id)
-        result = []
-
-        for athlete in athletes:
-            result.append({
-                'id': athlete.id,
-                'user_id': athlete.user_id,
-                'last_name': athlete.user.last_name,
-                'first_name': athlete.user.first_name,
-                'middle_name': athlete.user.middle_name,
-                'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
-                'age': athlete.age,
-                'gender': athlete.gender,
-                'club_id': athlete.club_id,
-                'club_name': athlete.club.name if athlete.club else None,
-                'rank': athlete.rank.level if athlete.rank else None,
-                'license_number': athlete.license_number,
-                'is_active': athlete.is_active
-            })
+        result = [
+            {
+                'id': athlete[0],
+                'user_id': athlete[1],
+                'last_name': athlete[2],
+                'first_name': athlete[3],
+                'middle_name': athlete[4]
+            } for athlete in athletes ]
 
         return jsonify(result), 200
 

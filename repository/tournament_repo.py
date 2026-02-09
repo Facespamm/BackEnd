@@ -1,10 +1,8 @@
-from sqlalchemy import true, select
+from sqlalchemy import and_, extract
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.functions import count
-from wtforms.validators import Optional
 
-from api.categories import category_repo
 from database.db import create_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
@@ -24,7 +22,7 @@ class TournamentRepository:
             if not tournament:
                 raise ValueError(f"Tournament with id {tournament_id} not found")
 
-            categories = self.get_category(tournament.id)
+            categories = self.get_categories(tournament.id)
             category_ids = [cat.id for cat in categories]
 
             if not category_ids:
@@ -32,10 +30,14 @@ class TournamentRepository:
 
             # Получаем атлетов клуба в нужных категориях
             athletes = (
-                self.session.query(AthleteNew)
-                .filter(
-                    AthleteNew.category_id.in_(category_ids),
-                    AthleteNew.club_id == club_id
+                self.session.query(AthleteNew,CategoryNew.id.label('category_id'))
+                .join(
+                    CategoryNew,
+                    and_(
+                        CategoryNew.id.in_(category_ids),
+                        extract('year', AthleteNew.birth_date) >= CategoryNew.min_year,
+                        extract('year', AthleteNew.birth_date) <= CategoryNew.max_year
+                    )
                 )
                 .all()
             )
@@ -67,11 +69,11 @@ class TournamentRepository:
 
             # Назначаем новых атлетов
             added_count = 0
-            for athlete in athletes:
+            for athlete, category_id  in athletes:
                 if athlete.id in existing_athlete_ids:
                     continue
 
-                tournament_category_id = tc_by_category.get(athlete.category_id)
+                tournament_category_id = tc_by_category.get(category_id)
                 if not tournament_category_id:
                     continue
 
@@ -140,9 +142,9 @@ class TournamentRepository:
                 raise Exception("Athlete not found")
 
             category = self.get_category(tournament_id,category_id)
-            athlete_categories = athlete.category_id == category.id
+            athlete_category = category.min_year <= athlete.birth_date.year <= category.max_year
 
-            if not athlete_categories:
+            if not athlete_category:
                print(f"Athlete {athlete_id} does not belong to any category in tournament {tournament_id}")
                return False
 
@@ -231,20 +233,34 @@ class TournamentRepository:
             print(f"Error getting athlete count: {e}")
             return None
 
-    def get_category(self, tournament_id, category_id = None):
-        """Категория"""
+    def get_categories(self, tournament_id) -> list[CategoryNew] | None:
+        """Категории по турниру"""
+        try:
+            categories = (
+                self.session.query(CategoryNew)
+                .join(TournamentCategory)
+                .filter(TournamentCategory.tournament_id == tournament_id)
+                .all()
+            )
+
+            return categories
+        except Exception as e:
+            print(f"Error getting category: {e}")
+            return None
+
+    def get_category(self, tournament_id, category_id) -> CategoryNew | None:
+        """Категория по турниру"""
         try:
             category = (
                 self.session.query(CategoryNew)
                 .join(TournamentCategory)
-                .filter(TournamentCategory.tournament_id == tournament_id)
+                .filter(
+                    TournamentCategory.tournament_id == tournament_id,
+                    TournamentCategory.category_id == category_id
+                ).first()
             )
 
-            if category_id:
-                category = category.filter(TournamentCategory.category_id == category_id).first()
-                return category
-
-            return category.all()
+            return category
         except Exception as e:
             print(f"Error getting category: {e}")
             return None
