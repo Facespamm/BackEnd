@@ -6,6 +6,7 @@ from new_model.head_model.tournament_new import TournamentNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.handbook.category_new import CategoryNew
 from new_model.new_associations import TournamentCategory, AthleteRegistration
+from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
 from repository.tournament_repo import TournamentRepository
 from sqlalchemy.orm import joinedload
@@ -81,23 +82,24 @@ def create_tournament():
         )
 
         is_created = tournament_repo.create_tournament(tournament_new)
-
-        for category in data['list_category']:
-            tournament_repo.assign_category_tournament(category, tournament_new.id, data.get('has_consalation',False))
-
         if not is_created:
             return jsonify({
                 'message':'Ошибка создание турнира',
                 'success': False
             }),400
-        else:
-            return jsonify({
-                'id': tournament_new.id,
-                'name': tournament_new.name,
-                'start_date': tournament_new.start_date.isoformat(),
-                'end_date': tournament_new.end_date.isoformat(),
-                'status': tournament_new.status.value
-            }), 201
+
+        for category in data['list_category']:
+            tournament_repo.assign_category_tournament(category, tournament_new.id, data.get('has_consalation',False))
+
+        tournament_repo.create_tatami(tournament_new.id,tournament_new.tatami_count)
+
+        return jsonify({
+            'id': tournament_new.id,
+            'name': tournament_new.name,
+            'start_date': tournament_new.start_date.isoformat(),
+            'end_date': tournament_new.end_date.isoformat(),
+            'status': tournament_new.status.value
+        }), 201
     except Exception as e:
         return jsonify({
             'success': False,
@@ -383,6 +385,36 @@ def get_tournament_athletes(tournament_id):
             'success': False,
             'message': f'Ошибка при получении атлетов турнира: {str(e)}'
         }), 500
+
+@tournaments_bp.route('/<int:tournament_id>/tatami', methods=['GET'])
+def get_tournament_tatami(tournament_id):
+    try:
+        tournament = tournament_repo.get_tournament_by_id(tournament_id)
+
+        if not tournament:
+            return jsonify({
+                'message': 'Нет такого турнира'
+            }), 404
+
+        tatamis = tournament_repo.get_tatami_by_tournament(tournament_id)
+        athlete_repo = AthleteRepository()
+        tatami_dto = [{
+            'tatami_number': tatami.tatami_number,
+            'status': tatami.status.value,
+            'fight': {
+                'white_athlete': athlete_repo.get_athlete_name_data(tatami.fight.white_athlete_id),
+                'blue_athlete':  athlete_repo.get_athlete_name_data(tatami.fight.blue_athlete_id)
+            } if tatami.fight_id and tatami.fight else None,
+        } for tatami in tatamis]
+
+        return jsonify(tatami_dto),200
+    except Exception as e:
+        print('Error ',e)
+        return jsonify({
+            'message':f'Ошибка вывода {e}'
+        }), 500
+
+
 @tournaments_bp.route('/<int:tournament_id>/add-athletes', methods=['POST'])
 def add_athletes_to_tournament(tournament_id):
     """Добавить участников к турниру"""

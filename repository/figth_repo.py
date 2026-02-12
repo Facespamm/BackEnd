@@ -3,12 +3,12 @@ from datetime import timedelta
 from sqlalchemy import select, update, insert, delete
 
 from database.db import create_session
-from new_model.Enums import text_to_fight_status, FightStatus
+from new_model.Enums import text_to_fight_status, FightStatus, TatamiStatus
 from new_model.handbook.new_referee import RefereeNew
 from new_model.head_model.fight_new import FightNew
 from new_model.new_associations import FightReferee, TournamentCategory
 from new_model.result_new import ResultNew
-
+from new_model.tatami_fight import TatamiFight
 
 class FightRepository:
     def __init__(self):
@@ -116,7 +116,22 @@ class FightRepository:
                 fight.tatami_number = tatami_number
                 fight.start_time = timedelta(minutes=0, seconds=0)
 
-                self.session.commit()
+                tournament_id = (
+                    self.session.query(TournamentCategory.tournament_id)
+                    .filter(TournamentCategory.tournament_category_id == fight.tournament_category_id)
+                    .distinct(TournamentCategory.tournament_id)
+                    .first()
+                )
+
+                if tournament_id:
+                    update_tatami_fight = (
+                        update(TatamiFight)
+                        .filter_by(tournament_id=tournament_id,tatami_number=tatami_number)
+                        .values(fight_id=fight.id, status=TatamiStatus.TAKEN)
+                    )
+                    self.session.execute(update_tatami_fight)
+
+            self.session.commit()
         except Exception as e:
             print('Error: ',e)
             self.session.rollback()
@@ -153,12 +168,19 @@ class FightRepository:
         try:
             fight = self.get_fight_by_id(fight_id)
 
-            start_time = self._text_to_time(data['start_time'])
+            start_time = fight.start_time
             end_time = self._text_to_time(data['end_time'])
 
-            fight.start_time = start_time
             fight.end_time = end_time
             fight.status = FightStatus.COMPLETED
+
+            taken_tatami_fight = self.session.query(TatamiFight).filter_by(fight_id=fight.id).first()
+
+            if not taken_tatami_fight:
+                raise Exception('Tatami fight not found')
+
+            taken_tatami_fight.fight_id = None
+            taken_tatami_fight.status = TatamiStatus.FREE
 
             fight_duration = end_time - start_time
             athlete_id = int(data.get('winner_athlete_id'))

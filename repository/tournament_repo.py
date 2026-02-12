@@ -8,6 +8,7 @@ from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
 from new_model.new_associations import TournamentCategory, AthleteRegistration
+from new_model.tatami_fight import TatamiFight
 from repository.category_repo import CategoryRepository
 
 
@@ -369,3 +370,21 @@ class TournamentRepository:
         except Exception as e:
             print(f"Error getting tournament by id {tournament_category_id}: {e}")
             return None
+
+    def get_tatami_by_tournament(self, tournament_id):
+        return self.session.query(TatamiFight).filter_by(tournament_id=tournament_id).all()
+
+    def create_tatami(self, tournament_id,tatami_number):
+        try:
+            for i in range(tatami_number):
+                new_tatami_fight = TatamiFight(
+                    tournament_id=tournament_id,
+                    tatami_number=i
+                )
+
+                self.session.add(new_tatami_fight)
+
+            self.session.commit()
+        except Exception as e:
+            print(f"Error creating tatami: {e}")
+            self.session.rollback()

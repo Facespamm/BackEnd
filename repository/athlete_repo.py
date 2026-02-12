@@ -281,7 +281,7 @@ class AthleteRepository:
             'gender': athlete[4]
         }
 
-    def get_winer_data(self, athlete_id):
+    def get_athlete_name_data(self, athlete_id):
         result = (
             self.session.query(UserNew.last_name, UserNew.first_name, UserNew.middle_name)
             .join(AthleteNew, AthleteNew.user_id == UserNew.id)

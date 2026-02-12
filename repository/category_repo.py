@@ -104,3 +104,6 @@ class CategoryRepository:
         )
 
         return category_id
+
+    def get_category_by_name(self, name:str) -> CategoryNew | None:
+        return self.session.query(CategoryNew).filter_by(name=name).first()

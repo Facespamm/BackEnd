@@ -99,24 +99,24 @@ def init_category():
 
     categories = [
         # -------- MALE --------
-        CategoryNew(name="-23 kg", gender=Gender.male, min_weight=0, max_weight=23, min_year=2014, max_year=2015),
-        CategoryNew(name="-26 kg", gender=Gender.male, min_weight=23, max_weight=26, min_year=2014, max_year=2015),
-        CategoryNew(name="-30 kg", gender=Gender.male, min_weight=26, max_weight=30, min_year=2014, max_year=2015),
-        CategoryNew(name="-34 kg", gender=Gender.male, min_weight=30, max_weight=34, min_year=2014, max_year=2015),
-        CategoryNew(name="-38 kg", gender=Gender.male, min_weight=34, max_weight=38, min_year=2014, max_year=2015),
-        CategoryNew(name="-42 kg", gender=Gender.male, min_weight=38, max_weight=42, min_year=2014, max_year=2015),
-        CategoryNew(name="-46 kg", gender=Gender.male, min_weight=42, max_weight=46, min_year=2014, max_year=2015),
-        CategoryNew(name="+46 kg", gender=Gender.male, min_weight=46, max_weight=None, min_year=2014, max_year=2015),
+        CategoryNew(name="-23 kg, ПОЛ: мужчины, ГОД: c 2014 по 2015", gender=Gender.male, min_weight=0, max_weight=23, min_year=2014, max_year=2015),
+        CategoryNew(name="-26 kg, ПОЛ: мужчины, ГОД: c 2014 по 2015", gender=Gender.male, min_weight=23, max_weight=26, min_year=2014, max_year=2015),
+        CategoryNew(name="-30 kg, ПОЛ: мужчины, ГОД: c 2014 по 2015", gender=Gender.male, min_weight=26, max_weight=30, min_year=2014, max_year=2015),
+        CategoryNew(name="-34 kg, ПОЛ: мужчины, ГОД: c 2014 по 2015", gender=Gender.male, min_weight=30, max_weight=34, min_year=2014, max_year=2015),
+        CategoryNew(name="-38 kg, ПОЛ: мужчины, ГОД: c 2014 по 2015", gender=Gender.male, min_weight=34, max_weight=38, min_year=2014, max_year=2015),
+        CategoryNew(name="-42 kg, ПОЛ: мужчины, ГОД: c 2014 по 2015", gender=Gender.male, min_weight=38, max_weight=42, min_year=2014, max_year=2015),
+        CategoryNew(name="-46 kg, ПОЛ: мужчины, ГОД: c 2014 по 2015", gender=Gender.male, min_weight=42, max_weight=46, min_year=2014, max_year=2015),
+        CategoryNew(name="+46 kg, ПОЛ: мужчины, ГОД: c 2014 по 2015", gender=Gender.male, min_weight=46, max_weight=None, min_year=2014, max_year=2015),
 
         # -------- FEMALE --------
-        CategoryNew(name="-22 kg", gender=Gender.female, min_weight=0, max_weight=22, min_year=2014, max_year=2015),
-        CategoryNew(name="-25 kg", gender=Gender.female, min_weight=22, max_weight=25, min_year=2014, max_year=2015),
-        CategoryNew(name="-28 kg", gender=Gender.female, min_weight=25, max_weight=28, min_year=2014, max_year=2015),
-        CategoryNew(name="-32 kg", gender=Gender.female, min_weight=28, max_weight=32, min_year=2014, max_year=2015),
-        CategoryNew(name="-36 kg", gender=Gender.female, min_weight=32, max_weight=36, min_year=2014, max_year=2015),
-        CategoryNew(name="-40 kg", gender=Gender.female, min_weight=36, max_weight=40, min_year=2014, max_year=2015),
-        CategoryNew(name="-44 kg", gender=Gender.female, min_weight=40, max_weight=44, min_year=2014, max_year=2015),
-        CategoryNew(name="+44 kg", gender=Gender.female, min_weight=44, max_weight=None, min_year=2014, max_year=2015),
+        CategoryNew(name="-22 kg, ПОЛ: женский, ГОД: c 2014 по 2015", gender=Gender.female, min_weight=0, max_weight=22, min_year=2014, max_year=2015),
+        CategoryNew(name="-25 kg, ПОЛ: женский, ГОД: c 2014 по 2015", gender=Gender.female, min_weight=22, max_weight=25, min_year=2014, max_year=2015),
+        CategoryNew(name="-28 kg, ПОЛ: женский, ГОД: c 2014 по 2015", gender=Gender.female, min_weight=25, max_weight=28, min_year=2014, max_year=2015),
+        CategoryNew(name="-32 kg, ПОЛ: женский, ГОД: c 2014 по 2015", gender=Gender.female, min_weight=28, max_weight=32, min_year=2014, max_year=2015),
+        CategoryNew(name="-36 kg, ПОЛ: женский, ГОД: c 2014 по 2015", gender=Gender.female, min_weight=32, max_weight=36, min_year=2014, max_year=2015),
+        CategoryNew(name="-40 kg, ПОЛ: женский, ГОД: c 2014 по 2015", gender=Gender.female, min_weight=36, max_weight=40, min_year=2014, max_year=2015),
+        CategoryNew(name="-44 kg, ПОЛ: женский, ГОД: c 2014 по 2015", gender=Gender.female, min_weight=40, max_weight=44, min_year=2014, max_year=2015),
+        CategoryNew(name="+44 kg, ПОЛ: женский, ГОД: c 2014 по 2015", gender=Gender.female, min_weight=44, max_weight=None, min_year=2014, max_year=2015),
     ]
 
     # Получаем уже существующие категории
@@ -141,5 +141,3 @@ def init_category():
         print(f"Добавлено {len(categories_new)} категорий")
 
     session.close()
-
-

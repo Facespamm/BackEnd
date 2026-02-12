@@ -27,7 +27,7 @@ def get_results():
             result_data.append({
                 'id': result.id,
                 'fight_id': result.fight_id,
-                'winner_name': athlete_repo.get_winer_data(result.winner_id),
+                'winner_name': athlete_repo.get_athlete_name_data(result.winner_id),
                 'victory_type': result.victory_type.value,
                 'fight_duration': result.fight_duration,
             })
@@ -93,7 +93,7 @@ def get_result(result_id):
         return jsonify({
             'id': result.id,
             'fight_id': result.fight_id,
-            'winner_name': athlete_repo.get_winer_data(result.winner_id),
+            'winner_name': athlete_repo.get_athlete_name_data(result.winner_id),
             'victory_type': result.victory_type.value,
             'fight_duration': result.fight_duration,
         }), 200

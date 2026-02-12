@@ -57,10 +57,10 @@ def create_category():
                 'message': 'Не передан JSON'
             }), 400
 
-        if not data.get('name') or not data.get('gender'):
+        if not data.get('gender'):
             return jsonify({
                 'success': False,
-                'message': 'Обязательные поля: name, tournament_id, gender'
+                'message': 'Обязательные поля: gender'
             }), 400
 
         if data['min_weight'] > data['max_weight']:
@@ -81,10 +81,18 @@ def create_category():
                 'message':'Дата "c" не может быть меньше даты "по "'
             }),400
 
+        under_or_over_weight = f'-{data.get('max_weight')}'if data.get('max_weight') else f'+{data.get('min_weight')}'
+        generate_name = f'{under_or_over_weight}кг, ПОЛ: {data.get('gender')}, ГОДА:с {data.get('min_age')} по {data.get('max_age')}'
+
+        existing_category = category_repo.get_category_by_name(generate_name)
+        if existing_category:
+            return jsonify({
+                'message': 'Такая категория существует'
+            }), 400
 
         translate_gender_ =  translate_gender(data['gender'])
         category = CategoryNew(
-            name=data['name'],
+            name=generate_name,
             gender=translate_gender_,
             min_weight=data.get('min_weight'),
             max_weight=data.get('max_weight'),
@@ -97,8 +105,7 @@ def create_category():
         if is_create:
             return jsonify({
                 'success': True,
-                'message': 'Категория успешно создана',
-                'category_id': category.id
+                'message': f'Категория успешно создана {category.name}',
             }), 201
         else:
             return jsonify({
