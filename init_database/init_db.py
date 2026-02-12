@@ -1,7 +1,8 @@
 from config import USER_ROLES
 from database.db import create_session
 
-from new_model.Enums import RoleName
+from new_model.Enums import RoleName, Gender
+from new_model.handbook.category_new import CategoryNew
 from new_model.handbook.new_dan import DanNew
 from new_model.handbook.role_new import RoleNew
 from utils.constants import JUDO_RANKS
@@ -92,3 +93,53 @@ def init_dans_new():
         session.add_all(dans)
         session.commit()
         session.close()
+
+def init_category():
+    session = get_session()
+
+    categories = [
+        # -------- MALE --------
+        CategoryNew(name="-23 kg", gender=Gender.male, min_weight=0, max_weight=23, min_year=2014, max_year=2015),
+        CategoryNew(name="-26 kg", gender=Gender.male, min_weight=23, max_weight=26, min_year=2014, max_year=2015),
+        CategoryNew(name="-30 kg", gender=Gender.male, min_weight=26, max_weight=30, min_year=2014, max_year=2015),
+        CategoryNew(name="-34 kg", gender=Gender.male, min_weight=30, max_weight=34, min_year=2014, max_year=2015),
+        CategoryNew(name="-38 kg", gender=Gender.male, min_weight=34, max_weight=38, min_year=2014, max_year=2015),
+        CategoryNew(name="-42 kg", gender=Gender.male, min_weight=38, max_weight=42, min_year=2014, max_year=2015),
+        CategoryNew(name="-46 kg", gender=Gender.male, min_weight=42, max_weight=46, min_year=2014, max_year=2015),
+        CategoryNew(name="+46 kg", gender=Gender.male, min_weight=46, max_weight=None, min_year=2014, max_year=2015),
+
+        # -------- FEMALE --------
+        CategoryNew(name="-22 kg", gender=Gender.female, min_weight=0, max_weight=22, min_year=2014, max_year=2015),
+        CategoryNew(name="-25 kg", gender=Gender.female, min_weight=22, max_weight=25, min_year=2014, max_year=2015),
+        CategoryNew(name="-28 kg", gender=Gender.female, min_weight=25, max_weight=28, min_year=2014, max_year=2015),
+        CategoryNew(name="-32 kg", gender=Gender.female, min_weight=28, max_weight=32, min_year=2014, max_year=2015),
+        CategoryNew(name="-36 kg", gender=Gender.female, min_weight=32, max_weight=36, min_year=2014, max_year=2015),
+        CategoryNew(name="-40 kg", gender=Gender.female, min_weight=36, max_weight=40, min_year=2014, max_year=2015),
+        CategoryNew(name="-44 kg", gender=Gender.female, min_weight=40, max_weight=44, min_year=2014, max_year=2015),
+        CategoryNew(name="+44 kg", gender=Gender.female, min_weight=44, max_weight=None, min_year=2014, max_year=2015),
+    ]
+
+    # Получаем уже существующие категории
+    existing = session.query(CategoryNew).all()
+
+    # Делаем set для быстрого поиска
+    existing_keys = {
+        (c.name, c.gender, c.min_year, c.max_year)
+        for c in existing
+    }
+
+    categories_new = [
+        c for c in categories
+        if (c.name, c.gender, c.min_year, c.max_year) not in existing_keys
+    ]
+
+    if not categories_new:
+        print("Данные уже есть")
+    else:
+        session.add_all(categories_new)
+        session.commit()
+        print(f"Добавлено {len(categories_new)} категорий")
+
+    session.close()
+
+

@@ -7,7 +7,7 @@ from flask_restx import Api
 from database.db import init_db
 from flasgger import Swagger
 
-from init_database.init_db import init_dans_new, init_roles_new
+from init_database.init_db import init_dans_new, init_roles_new, init_category
 
 app = Flask(__name__)
 
@@ -25,6 +25,7 @@ init_db(app)
 with app.app_context():
     init_dans_new()
     init_roles_new()
+    init_category()
 
 swagger_config = {
     "headers": [],
