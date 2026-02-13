@@ -181,7 +181,7 @@ def create_weighing():
                 'message': 'Участник не найден'
             }), 404
 
-        is_valid, correct_category_name = _is_valid_for_category(data, athlete)
+        is_valid, correct_category_name = _is_valid_for_category(data, tournament,athlete)
 
         if not is_valid:
             if correct_category_name:
@@ -286,15 +286,15 @@ def _is_valid_for_category(data, tournament_category:TournamentCategory,athlete:
     category_repo = CategoryRepository()
 
     # Получаем ID категории по параметрам спортсмена
-    category_id = category_repo.get_id_by_athlete_feature(
-        data['weight'],
-        athlete.birth_date.year,
-        athlete.gender
-    )
+    # category_id = category_repo.get_id_by_athlete_feature(
+    #     data['weight'],
+    #     athlete.birth_date.year,
+    #     athlete.gender
+    # )
 
     # Если категория не найдена
-    if category_id is None:
-        return (False, None)
+    # if category_id is None:
+    #     return (False, None)
 
     categories = tournament_repo.get_categories(tournament_category.tournament_id)
 
@@ -303,9 +303,14 @@ def _is_valid_for_category(data, tournament_category:TournamentCategory,athlete:
 
     category_has_in_tournament = 0
     for category in categories:
-        if category.id == category_id:
-            category_has_in_tournament = category.id
-            break
+        if category.min_year <= athlete.birth_date.year <= category.max_year and category.gender.name == athlete.gender:
+            if category.max_weight and category.min_weight <= data['weight'] <= category.max_weight:
+                category_has_in_tournament = category.id
+                break
+                # Открытая категория (больше X кг)
+            elif not category.max_weight and data['weight'] >= category.min_weight:
+                category_has_in_tournament = category.id
+                break
 
     if category_has_in_tournament == 0:
         raise Exception('Нет подходящей категории в турнире')
@@ -318,6 +323,6 @@ def _is_valid_for_category(data, tournament_category:TournamentCategory,athlete:
         return (False, None)
 
     # Проверяем соответствие
-    is_valid = data['category_id'] == category_id
+    is_valid = data['category_id'] == category_has_in_tournament
 
     return (is_valid, category.name)
