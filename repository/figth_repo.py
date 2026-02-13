@@ -126,7 +126,7 @@ class FightRepository:
                 if tournament_id:
                     update_tatami_fight = (
                         update(TatamiFight)
-                        .filter_by(tournament_id=tournament_id,tatami_number=tatami_number)
+                        .filter_by(tournament_id=tournament_id[0],tatami_number=tatami_number)
                         .values(fight_id=fight.id, status=TatamiStatus.TAKEN)
                     )
                     self.session.execute(update_tatami_fight)
@@ -135,6 +135,8 @@ class FightRepository:
         except Exception as e:
             print('Error: ',e)
             self.session.rollback()
+            self.session.close()
+            raise e
 
     def update_fight(self, fight_id,  next_fight_id):
         try:
