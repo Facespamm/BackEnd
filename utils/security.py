@@ -94,21 +94,3 @@ def scoreboard_required(f):
 
         return f(*args, **kwargs)
     return decorated_function
-
-def check_tatami_access(tatami_number):
-    """
-    Проверка доступа судьи к татами
-    """
-    user = get_current_user()
-    if not user:
-        return False
-
-    # Админы имеют доступ ко всем татами
-    if user.is_admin:
-        return True
-
-    # Судьи имеют доступ только к назначенным татами
-    if user.is_referee and user.tatami_assigned:
-        return user.tatami_assigned == tatami_number
-
-    return False
