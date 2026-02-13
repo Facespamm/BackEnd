@@ -3,7 +3,7 @@ from sqlalchemy import update
 
 from database.db import create_session
 from new_model.head_model.new_athlete import AthleteNew
-from new_model.new_associations import AthleteRegistration
+from new_model.new_associations import AthleteRegistration, TournamentCategory
 from new_model.weighing_new import WeighingNew
 from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
@@ -181,20 +181,23 @@ def create_weighing():
                 'message': 'Участник не найден'
             }), 404
 
-        is_valid_for_category = _is_valid_for_category(data, athlete)
+        is_valid, correct_category_name = _is_valid_for_category(data, athlete)
 
-        if not is_valid_for_category:
-            return jsonify({
-                'message': 'Атлетне подходит для этой категории'
-            }), 400
+        if not is_valid:
+            if correct_category_name:
+                message = f'Атлет не подходит для выбранной категории. Рекомендуемая категория: {correct_category_name}'
+            else:
+                message = 'Не удалось определить подходящую категорию для атлета'
+
+            return jsonify({'message': message}), 400
 
         weighing = WeighingNew(
             tournament_category_id=tournament.tournament_category_id,  # Правильный ID
             athlete_id=data['athlete_id'],
             weight=data['weight'],
             notes=data.get('notes'),
-            weight_category= data.get('category_id') if is_valid_for_category else athlete.category_id,
-            is_valid = True  if is_valid_for_category else False
+            weight_category= data.get('category_id') if is_valid else athlete.category_id,
+            is_valid = is_valid
         )
 
         is_added = weighing_repo.create_weighting(weighing)
@@ -261,11 +264,11 @@ def change_category(tournament_id):
 
             return jsonify({
               'message': f'Участник перенесен в категорию {category.name}'
-            })
+            }),200
     except Exception as e:
         return jsonify({
             'message': f'Ошибка выполнения {e}'
-        })
+        }),500
 
 def _is_within_weight_category_limits(weighing: WeighingNew) -> bool:
     tc = weighing.tournament_categories
@@ -279,9 +282,42 @@ def _is_within_weight_category_limits(weighing: WeighingNew) -> bool:
 
     return cat.min_weight <= weighing.weight <= cat.max_weight
 
-def _is_valid_for_category(data, athlete:AthleteNew) -> bool:
+def _is_valid_for_category(data, tournament_category:TournamentCategory,athlete:AthleteNew):
     category_repo = CategoryRepository()
-    category_id = category_repo.get_id_by_athlete_feature(data['weight'], athlete.birth_date.year, athlete.gender)
 
+    # Получаем ID категории по параметрам спортсмена
+    category_id = category_repo.get_id_by_athlete_feature(
+        data['weight'],
+        athlete.birth_date.year,
+        athlete.gender
+    )
+
+    # Если категория не найдена
+    if category_id is None:
+        return (False, None)
+
+    categories = tournament_repo.get_categories(tournament_category.tournament_id)
+
+    if not categories:
+        raise Exception('Нет категорий за турнир')
+
+    category_has_in_tournament = 0
+    for category in categories:
+        if category.id == category_id:
+            category_has_in_tournament = category.id
+            break
+
+    if category_has_in_tournament == 0:
+        raise Exception('Нет подходящей категории в турнире')
+
+    # Получаем объект категории
+    category = category_repo.get_category_by_id(category_has_in_tournament)
+
+    # Дополнительная проверка на случай если категория не найдена
+    if category is None:
+        return (False, None)
+
+    # Проверяем соответствие
     is_valid = data['category_id'] == category_id
-    return is_valid
+
+    return (is_valid, category.name)
