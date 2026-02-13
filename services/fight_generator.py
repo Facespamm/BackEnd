@@ -70,44 +70,14 @@ class FightGenerator:
         """Генерация утешительных схваток за 3 место"""
         # Находим полуфиналистов которые проиграли
         semifinal_round = max_rounds-1
-        all_fights = fight_repo.get_semi_final_fights(tournament_category_id, semifinal_round)
-
-        if len(all_fights) < 2:
-            raise Exception("❌ Недостаточно полуфиналистов для утешительных боев")
-
-        semifinal_fights = [fight for fight in all_fights if fight.round_number == semifinal_round]
-        if len(semifinal_fights) != 2 or not len(semifinal_fights):
-            raise Exception('❌ Нет боев полуфиналистов')
-
-        group_a = self._generate_group(all_fights,semifinal_fights[0])
-        group_b = self._generate_group(all_fights,semifinal_fights[1])
-
-        consolation_fights_a = self._generate_fights_by_group(group_a, tournament_category_id, tatami_number,BracketType.CONSOLATION_GROUP_A)
-        consolation_fights_b = self._generate_fights_by_group(group_b, tournament_category_id, tatami_number,BracketType.CONSOLATION_GROUP_B)
-
-        return consolation_fights_a + consolation_fights_b
+        return self._generate_consalation_fight(tournament_category_id, semifinal_round, max_rounds)
 
     def generate_consolation_fights_finalist(self, tournament_category_id, tatami_number,max_rounds):
         """Генерация утешительных схваток за 3 место"""
 
         # Находим полуфиналистов которые проиграли
         final_round = max_rounds
-        all_fights = fight_repo.get_semi_final_fights(tournament_category_id, final_round)
-
-        if len(all_fights) < 2:
-            raise Exception("❌ Недостаточно полуфиналистов для утешительных боев")
-
-        final_fights = [fight for fight in all_fights if fight.round_number == final_round]
-        if len(final_fights) != 2 or not len(final_fights):
-            raise Exception('❌ Нет боев полуфиналистов')
-
-        group_a = self._generate_group(all_fights, final_fights[0])
-        group_b = self._generate_group(all_fights, final_fights[1])
-
-        consolation_fights_a = self._generate_fights_by_group(group_a, tournament_category_id, tatami_number, BracketType.CONSOLATION_GROUP_A)
-        consolation_fights_b = self._generate_fights_by_group(group_b, tournament_category_id,tatami_number, BracketType.CONSOLATION_GROUP_B)
-
-        return consolation_fights_a + consolation_fights_b
+        return self._generate_consalation_fight(tournament_category_id, final_round, max_rounds)
 
     # def _generate_group(self, fights:list[FightNew], semi_or_final_fights:FightNew)-> list[FightNew]:
     #     group = []
@@ -228,3 +198,23 @@ class FightGenerator:
             consolation_fights.append(bronze_fight)
 
         return consolation_fights
+
+    def _generate_consalation_fight(self, tournament_category_id, round, tatami_number) -> list[FightNew]:
+        all_fights = fight_repo.get_semi_final_fights(tournament_category_id, round)
+
+        if len(all_fights) < 2:
+            raise Exception("❌ Недостаточно полуфиналистов для утешительных боев")
+
+        semifinal_fights = [fight for fight in all_fights if fight.round_number == round]
+        if len(semifinal_fights) != 2 or not len(semifinal_fights):
+            raise Exception('❌ Нет боев полуфиналистов')
+
+        group_a = self._generate_group(all_fights, semifinal_fights[0])
+        group_b = self._generate_group(all_fights, semifinal_fights[1])
+
+        consolation_fights_a = self._generate_fights_by_group(group_a, tournament_category_id, tatami_number,
+                                                              BracketType.CONSOLATION_GROUP_A)
+        consolation_fights_b = self._generate_fights_by_group(group_b, tournament_category_id, tatami_number,
+                                                              BracketType.CONSOLATION_GROUP_B)
+
+        return consolation_fights_a + consolation_fights_b
