@@ -2,7 +2,7 @@ import os
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy_utils import database_exists, create_database
 
 db = SQLAlchemy()
@@ -42,4 +42,4 @@ def init_db(app):
 def create_session():
     engine = create_engine(os.getenv('LOCALHOST_CONNECTION',DATABASE_URI))
     session = sessionmaker(bind=engine)
-    return session()  # Возвращайте экземпляр сессии
+    return  scoped_session(session)  # Возвращайте экземпляр сессии

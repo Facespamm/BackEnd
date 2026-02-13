@@ -78,6 +78,10 @@ class ConsolationType(Enum):
     SEMIFINALISTS = 'SEMIFINALISTS'
     FINALISTS = 'FINALISTS'
 
+class TatamiStatus(Enum):
+    FREE = 'Свободно'
+    TAKEN = 'Занята'
+
 def translate_gender(gender):
     return Gender.male.name if gender == 'мужской' else Gender.female.name
 

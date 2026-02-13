@@ -22,6 +22,7 @@ def get_clubs():
                 'city': club.city,
                 'country': club.country,
                 'coach_name': club.coach_name,
+                'athletes_count':athlete_repo.count_athletes_in_club(club.id)
             })
 
         return jsonify({

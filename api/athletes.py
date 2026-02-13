@@ -1,9 +1,11 @@
 from flask import request, Blueprint, jsonify
+
 from database.db import db
 from new_model.Enums import translate_gender, RoleName
 from datetime import datetime
 
 from new_model.head_model.new_athlete import AthleteNew
+from new_model.head_model.new_user import UserNew
 from repository.athlete_repo import AthleteRepository
 from repository.auth_repo import AuthRepository
 from dateutil.relativedelta import relativedelta
@@ -81,7 +83,7 @@ def create_athlete(user_id):
             user_id=user_id,
             birth_date=datetime.fromisoformat(data['birth_date']).date(),
             gender=data['gender'],
-            club_id=data['club_id', None],
+            club_id=data.get('club_id', None),
             rank_id=data['rank_id'],
             license_number=data['license_number'],
             medical_check=data['medical_check'],
@@ -174,7 +176,7 @@ def update_athlete(athlete_id):
         athlete_fields = ['birth_date', 'gender', 'club_id', 'rank_id',
                           'license_number', 'medical_check', 'insurance_number']
 
-        is_updated = athlete_repo.update_athlete(athlete, data, user_fields, athlete_fields,data)
+        is_updated = athlete_repo.update_athlete(athlete, athlete_fields,user_fields,data)
 
         if is_updated:
             return jsonify({
@@ -264,3 +266,73 @@ def search_athlete():
             'success': False,
             'message': f'Ошибка при поиске участника: {str(e)}'
         }), 500
+
+@athletes_bp.route('/private/create-athlete-admin', methods=['POST'])
+def create_athlete_registration():
+    try:
+        data = request.get_json()
+
+        required_fields = ['login', 'fullname', 'email', 'phone', 'password', 'birth_date', 'gender', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
+        missing = [field for field in required_fields if field not in data]
+        if missing:
+            return jsonify({
+                'success': False,
+                'message': f'Обязательные поля: {", ".join(missing)}'
+            }), 400
+
+        names = data['fullname'].strip().split(' ')
+        if 'gender' in data:
+            data['gender'] = translate_gender(data['gender'])
+
+        date_now = datetime.now()
+        birth_date = datetime.fromisoformat(data['birth_date'])
+        years = relativedelta(date_now, birth_date).years
+
+        auth_repo = AuthRepository()
+        existing_user = auth_repo.get_user_by_username(data['login'])
+        if existing_user:
+            return jsonify({'success': False, 'message': 'Пользователь с таким логином уже существует'}), 400
+
+        new_user = UserNew(
+            username=data['login'],
+            password_hash = auth_repo.hash_password(data['password']),
+            first_name=names[0],
+            middle_name=names[1] if len(names) > 1 else '',
+            last_name=names[2] if len(names) > 1 else '',
+            email = data['email'],
+            phone = data['phone'],
+        )
+
+        is_created = auth_repo.create_user(new_user)
+        user_id = new_user.id if is_created else None
+
+        if not user_id:
+            return jsonify({
+                'message': 'Не получилось создать пользователя'
+            }), 500
+
+        new_athlete = AthleteNew(
+                user_id=user_id,
+                birth_date=datetime.fromisoformat(data['birth_date']).date(),
+                gender=data['gender'],
+                club_id=data.get('club_id', None),
+                rank_id=data['rank_id'],
+                license_number=data['license_number'],
+                medical_check=data['medical_check'],
+                insurance_number=data['insurance_number'],
+                age = years,
+                is_active=True
+        )
+
+        if athlete_repo.create_athlete(new_athlete):
+            return jsonify({
+                'message': 'Вы создали участника'
+            }), 200
+        else:
+            return jsonify({
+                'message': 'Не получилось создать пользователя'
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'message': f'Ошибка регистрации пользователя: {e}'
+        })

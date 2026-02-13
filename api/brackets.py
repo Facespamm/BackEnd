@@ -7,8 +7,6 @@ from repository.tournament_repo import TournamentRepository
 from services.bracket_generator import BracketGenerator
 from operator import and_
 
-from services.fight_generator import FightGenerator
-
 brackets_bp = Blueprint('brackets', __name__, url_prefix='/api/brackets')
 
 @brackets_bp.route('/<int:tournament_id>', methods=['POST'])
