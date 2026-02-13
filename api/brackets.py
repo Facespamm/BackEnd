@@ -21,12 +21,11 @@ def create_bracket(tournament_id):
             return jsonify({'success': False, 'message': 'Не выбрана категория'}), 400
 
         tatami_number = request.args.get('tatami_number')
-
         if not tatami_number:
             return jsonify({
                 'success': False,
                 'message': 'Татами не указан'
-            })
+            }), 400
 
         try:
             category_id = int(category_str)
@@ -38,12 +37,13 @@ def create_bracket(tournament_id):
         if not tournament:
             return jsonify({'success': False, 'message': 'Турнир не найден'}), 404
 
-        categories = tournament_repo.get_category(tournament_id)
-        if not any(cat.id == category_id for cat in categories):  # проверяем, что категория принадлежит турниру
+        # Исправленный блок
+        category = tournament_repo.get_category(tournament_id, category_id)
+        if not category:
             return jsonify({'success': False, 'message': 'Категория не найдена в этом турнире'}), 404
 
         bracket_generator = BracketGenerator(tournament_id)
-        generate_fights = bracket_generator.generate_olympic(category_id,tatami_number)
+        generate_fights = bracket_generator.generate_olympic(category_id, tatami_number)
 
         if not generate_fights:
             return jsonify({
@@ -55,6 +55,7 @@ def create_bracket(tournament_id):
             'success': True,
             'message': 'Сетка успешно создана'
         }), 201
+
     except Exception as e:
         return jsonify({'success': False, 'message': f'Ошибка создания сетки: {str(e)}'}), 500
 
