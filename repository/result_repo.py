@@ -1,3 +1,6 @@
+from sqlalchemy import delete, true
+
+from api.referee import delete_referee
 from database.db import create_session
 from new_model.head_model.fight_new import FightNew
 from new_model.head_model.new_athlete import AthleteNew
@@ -10,6 +13,14 @@ from repository.athlete_repo import AthleteRepository
 class ResultRepository:
     def __init__(self):
         self.session = create_session()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.session.rollback()
+        self.session.close()
 
     def get_loser(self,fight_id):
         fight = (
@@ -54,3 +65,20 @@ class ResultRepository:
 
     def get_result_by_fight(self, fight_id):
         return self.session.query(ResultNew).filter_by(fight_id=fight_id).one_or_none()
+
+    def delete_result(self, fight_id):
+        try:
+            delete_query = (
+                delete(ResultNew)
+                .where(ResultNew.fight_id == fight_id)
+            )
+
+            self.session.execute(delete_query)
+            self.session.commit()
+            self.session.close()
+            return True
+        except Exception as e:
+            print("Error ", e)
+            self.session.rollback()
+            self.session.close()
+            return False

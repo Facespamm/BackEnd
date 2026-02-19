@@ -223,6 +223,13 @@ def update_fight_status(fight_id):
                 'message': 'Схватка не найдена'
             }), 404
 
+        is_taken_tatami = fight_repo.tatami_is_taken(fight_id, tatami_number)
+
+        if is_taken_tatami:
+            return jsonify({
+                'message': 'На татами уже идет бой'
+            }), 400
+
         fight_repo.set_live_status(fight_id, tatami_number)
 
         return jsonify({

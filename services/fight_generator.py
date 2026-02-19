@@ -70,14 +70,16 @@ class FightGenerator:
         """Генерация утешительных схваток за 3 место"""
         # Находим полуфиналистов которые проиграли
         semifinal_round = max_rounds-1
-        return self._generate_consalation_fight(tournament_category_id, semifinal_round, max_rounds)
+        eight_round = semifinal_round -1
+        return self._generate_consalation_fight(tournament_category_id, semifinal_round, eight_round, tatami_number)
 
     def generate_consolation_fights_finalist(self, tournament_category_id, tatami_number,max_rounds):
         """Генерация утешительных схваток за 3 место"""
 
         # Находим полуфиналистов которые проиграли
         final_round = max_rounds
-        return self._generate_consalation_fight(tournament_category_id, final_round, max_rounds)
+        eight_fight = max_rounds - 2
+        return self._generate_consalation_fight(tournament_category_id, final_round, eight_fight, max_rounds)
 
     # def _generate_group(self, fights:list[FightNew], semi_or_final_fights:FightNew)-> list[FightNew]:
     #     group = []
@@ -122,6 +124,9 @@ class FightGenerator:
                         # Избегаем дубликатов
                         if fight not in group:
                             group.append(fight)
+
+        for fight in group:
+            all_fights.remove(fight)
 
         # Сортируем по раундам (от раннего к позднему)
         group.sort(key=lambda x: x.round_number)
@@ -199,8 +204,8 @@ class FightGenerator:
 
         return consolation_fights
 
-    def _generate_consalation_fight(self, tournament_category_id, round, tatami_number) -> list[FightNew]:
-        all_fights = fight_repo.get_semi_final_fights(tournament_category_id, round)
+    def _generate_consalation_fight(self, tournament_category_id, round, eight_round,tatami_number) -> list[FightNew]:
+        all_fights = fight_repo.get_semi_final_fights(tournament_category_id, round, eight_round)
 
         if len(all_fights) < 2:
             raise Exception("❌ Недостаточно полуфиналистов для утешительных боев")

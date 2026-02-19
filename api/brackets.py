@@ -102,7 +102,7 @@ def has_consolation_fights(tournament_id):
     return jsonify({'success': True}), 200
 
 @brackets_bp.route('/<int:tournament_id>/semifinals-consalation', methods=['POST'])
-def generate_consolation_fights(tournament_id):
+def generate_semifinals_consolation_fights(tournament_id):
     """Создание утешительных боев от полуфиналистов"""
     try:
         if not tournament_id:
