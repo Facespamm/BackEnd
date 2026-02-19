@@ -1,6 +1,6 @@
 from datetime import datetime
-from models.result import Result
-from models.fight import Fight
+from new_model.result_new import ResultNew
+from new_model.head_model.fight_new import FightNew
 from database.db import db
 from config import SCORE_VALUES, OSAEKOMI_TIMES, MAX_PENALTIES
 from sqlalchemy.orm.attributes import flag_modified
@@ -8,22 +8,18 @@ from sqlalchemy.orm.attributes import flag_modified
 
 class ScoreManager:
     def __init__(self, fight_id):
-        self.fight = Fight.query.get(fight_id)
+        self.fight = FightNew.query.get(fight_id)
         if not self.fight:
             raise ValueError(f"Fight {fight_id} not found")
 
         # Создаем или получаем результат
         if not self.fight.result:
-            self.result = Result(fight_id=fight_id)
+            self.result = ResultNew(fight_id=fight_id)
             db.session.add(self.result)
             db.session.commit()
         else:
             self.result = self.fight.result
 
-        # Инициализируем events_log если None
-        if self.fight.events_log is None:
-            self.fight.events_log = []
-            db.session.commit()
 
     def _add_event(self, event_data):
         """Добавить событие в единый журнал боя"""
@@ -134,22 +130,6 @@ class ScoreManager:
 
         self.result.add_score(athlete_color, 'IPPON', technique)
 
-        # Добавляем событие в журнал
-        event = self._add_event({
-            'type': 'SCORE',
-            'subtype': 'IPPON',
-            'athlete_color': athlete_color,
-            'points': SCORE_VALUES['IPPON'],
-            'technique': technique,
-            'description': f'ИППОН - {athlete_color}' + (f' ({technique})' if technique else ''),
-            'resulted_in_victory': True,
-            'details': {
-                'score_value': SCORE_VALUES['IPPON'],
-                'technique': technique,
-                'victory_type': 'IPPON'
-            }
-        })
-
         db.session.commit()
 
         # Автоматически завершаем бой при ИППОН
@@ -158,10 +138,10 @@ class ScoreManager:
         return {
             'success': True,
             'message': f'ИППОН добавлено для {athlete_color}. Схватка завершена!',
-            'event': event,
             'winner': self.result.winner_id,
             'victory_type': self.result.victory_type
         }
+
 
     def start_osaekomi(self, athlete_color):
         """Начать отсчет времени удержания"""
@@ -211,42 +191,18 @@ class ScoreManager:
             'osaekomi_duration': self.result.osaekomi_duration
         }
 
-        # Добавляем событие остановки в журнал
-        event = self._add_event({
-            'type': 'OSAEKOMI',
-            'subtype': 'STOP',
-            'athlete_color': self.result.osaekomi_athlete_color,
-            'description': f'Остановка ОСАЕКОМИ - {duration} сек',
-            'details': {
-                'duration': duration,
-                'total_osaekomi_duration': self.result.osaekomi_duration
-            }
-        })
-
-        # Проверяем, не привело ли удержание к победе
         if duration >= OSAEKOMI_TIMES['IPPON']:
             result['ippon_awarded'] = True
             result['winner'] = self.result.winner_id
-            event['resulted_in_victory'] = True
-            event['details']['awarded_score'] = 'IPPON'
-            # Завершаем бой
             self._complete_fight_for_winner()
         elif duration >= OSAEKOMI_TIMES['WAZAARI']:
             result['wazaari_awarded'] = True
-            event['details']['awarded_score'] = 'WAZAARI'
-
-            # Проверяем, не стало ли это вторым ваза-ари
             if self.result.victory_type == 'WAZAARI_AWASETE_IPPON':
-                event['resulted_in_victory'] = True
-                event['details']['victory_type'] = 'WAZAARI_AWASETE_IPPON'
                 self._complete_fight_for_winner()
 
-        flag_modified(self.fight, "events_log")
         db.session.commit()
-        result['event'] = event
 
         return result
-
     def add_penalty(self, athlete_color, penalty_type):
         """Добавить штраф"""
         if self.fight.status != 'LIVE':
@@ -621,8 +577,7 @@ class ScoreManager:
                 'wazaari': self.result.white_wazaari,
                 'ippon': self.result.white_ippon,
                 'penalties': self.result.white_penalties,
-                'penalty_count': self.result.get_penalty_count('WHITE'),
-                'total_events': len([e for e in (self.fight.events_log or []) if e.get('athlete_color') == 'WHITE'])
+                'penalty_count': self.result.get_penalty_count('WHITE')
             },
             'blue': {
                 'score': self.result.blue_score,
@@ -630,25 +585,18 @@ class ScoreManager:
                 'wazaari': self.result.blue_wazaari,
                 'ippon': self.result.blue_ippon,
                 'penalties': self.result.blue_penalties,
-                'penalty_count': self.result.get_penalty_count('BLUE'),
-                'total_events': len([e for e in (self.fight.events_log or []) if e.get('athlete_color') == 'BLUE'])
+                'penalty_count': self.result.get_penalty_count('BLUE')
             },
             'osaekomi': {
                 'active': self.result.osaekomi_start_time is not None,
                 'athlete_color': self.result.osaekomi_athlete_color,
-                'time': self.result.osaekomi_time,
-                'total_duration': self.result.osaekomi_duration,
-                'events': len([e for e in (self.fight.events_log or []) if e.get('type') == 'OSAEKOMI'])
+                'time': self.result.osaekomi_time if hasattr(self.result, 'osaekomi_time') else 0,
+                'total_duration': self.result.osaekomi_duration
             },
             'victory_type': self.result.victory_type,
             'winner_id': self.result.winner_id,
-            'fight_status': self.fight.status,
-            'events_summary': {
-                'total_events': len(self.fight.events_log or []),
-                'last_event': self.fight.events_log[-1] if self.fight.events_log else None
-            }
+            'fight_status': self.fight.status
         }
-
     def _complete_fight_for_winner(self):
         """Завершить бой для текущего победителя"""
         if self.result.winner_id:

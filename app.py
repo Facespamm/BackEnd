@@ -4,6 +4,8 @@ from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_restx import Api
+
+from api.scores import scores_bp
 from database.db import init_db
 from flasgger import Swagger
 
@@ -91,7 +93,7 @@ app.register_blueprint(categories_bp)
 # app.register_blueprint(registrations_bp)
 app.register_blueprint(dans_bp)
 app.register_blueprint(referee_bp)
-# app.register_blueprint(scores_bp)
+app.register_blueprint(scores_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
