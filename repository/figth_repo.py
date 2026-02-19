@@ -62,7 +62,9 @@ class FightRepository:
             self.session.commit()
         except Exception as e:
             self.session.rollback()
+            self.session.close()
             print('Error: ',e)
+            raise e
 
     def get_fight_by_tournament(self, tournament_category_id, status : FightStatus = None):
         fights_query = self.session.query(FightNew).filter_by(tournament_category_id = tournament_category_id)
@@ -106,6 +108,7 @@ class FightRepository:
             'role': referee.role
         } for referee in fight_referees]
 
+        self.session.close()
         return referee_list
 
     def set_live_status(self, fight_id, tatami_number):
@@ -132,6 +135,7 @@ class FightRepository:
                     self.session.execute(update_tatami_fight)
 
             self.session.commit()
+            self.session.close()
         except Exception as e:
             print('Error: ',e)
             self.session.rollback()
@@ -165,6 +169,8 @@ class FightRepository:
         except Exception as e:
             print('Error: ', e)
             self.session.rollback()
+            self.session.close()
+            raise e
 
     def end_fight(self, fight_id, data: dict):
         try:
@@ -201,6 +207,8 @@ class FightRepository:
         except Exception as e:
             print('Error: ', e)
             self.session.rollback()
+            self.session.close()
+            raise e
 
     def move_athlete_next_fight(self, fight_id, athlete_id):
         try:
@@ -227,16 +235,20 @@ class FightRepository:
                 return
 
             self.session.commit()
+            self.session.close()
         except Exception as e:
             print('Error: ', e)
             self.session.rollback()
+            self.session.close()
+            raise e
 
-    def get_semi_final_fights(self, tournament_category_id, semi_final_round_number):
+    def get_semi_final_fights(self, tournament_category_id, semi_final_round_number, eight_round):
         semi_final_fights = (
             self.session.query(FightNew)
             .filter(
                 FightNew.tournament_category_id == tournament_category_id,
-                FightNew.round_number <=  semi_final_round_number
+                FightNew.round_number <=  semi_final_round_number,
+                FightNew.round_number >= eight_round
             )
             .all()
         )
@@ -267,7 +279,9 @@ class FightRepository:
             self.session.commit()
         except Exception as e:
             self.session.rollback()
+            self.session.close()
             print('Error: ', e)
+            raise e
 
     def update_end_time(self, fight_id, end_time:timedelta):
         try:
@@ -278,3 +292,42 @@ class FightRepository:
         except Exception as e:
             print('Error: ', e)
             self.session.rollback()
+            self.session.close()
+
+    def tatami_is_taken(self, fight_id, tatami_number):
+        fight = self.get_fight_by_id(fight_id)
+
+        tournament_id = (
+            self.session.query(TournamentCategory.tournament_id)
+            .filter(TournamentCategory.tournament_category_id == fight.tournament_category_id)
+            .distinct(TournamentCategory.tournament_id)
+            .first()
+        )
+
+        tatami_fight = (
+            self.session.query(TatamiFight)
+            .filter_by(
+                tournament_id=tournament_id,
+                fight_id=fight_id,
+                tatami_number=tatami_number
+            )
+            .scalar()
+        )
+
+        if tatami_fight and tatami_fight.status == TatamiStatus.TAKEN:
+            return True
+
+        return False
+
+    def remove_winner_from_next_fight(self, next_fight_id, winner_id):
+        try:
+            next_fight = self.get_fight_by_id(next_fight_id)
+            if next_fight and next_fight.blue_athlete_id == winner_id:
+                next_fight.blue_athlete_id = None
+            elif next_fight and not next_fight.white_athlete_id == winner_id:
+                next_fight.white_athlete_id = None
+
+            self.session.commit()
+            self.session.close()
+        except Exception as e:
+            raise e
