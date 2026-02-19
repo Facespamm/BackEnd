@@ -318,3 +318,16 @@ class FightRepository:
             return True
 
         return False
+
+    def remove_winner_from_next_fight(self, next_fight_id, winner_id):
+        try:
+            next_fight = self.get_fight_by_id(next_fight_id)
+            if next_fight and next_fight.blue_athlete_id == winner_id:
+                next_fight.blue_athlete_id = None
+            elif next_fight and not next_fight.white_athlete_id == winner_id:
+                next_fight.white_athlete_id = None
+
+            self.session.commit()
+            self.session.close()
+        except Exception as e:
+            raise e

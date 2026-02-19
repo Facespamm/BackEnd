@@ -106,38 +106,39 @@ def get_result(result_id):
             'message': f'Ошибка при получении результата: {str(e)}'
         }), 500
 
-#TODO доделать отмена боя
-# @results_bp.route('/<int:fight_id>/cancel-result', methods=['PATCH'])
-# def cancel_result(fight_id):
-#     fight_repo = FightRepository()
-#     fight = fight_repo.get_fight_by_id(fight_id)
-#
-#     if not fight:
-#         return jsonify({
-#             'message': 'Бой не найден'
-#         }), 404
-#
-#     fight.status = FightStatus.CANCELLED
-#     result = result_repo.get_result_by_fight(fight_id)
-#
-#     if not result:
-#         return jsonify({
-#             'message':'Не найден резулльтат по бою'
-#         }), 404
-#
-#     winner_id = result.winner_id
-#     is_deleted_result = result_repo.delete_result(fight_id)
-#
-#     if not is_deleted_result:
-#         return jsonify({
-#             'message':'Не получилось удалить результат боя'
-#         }), 500
-#
-#     if fight.next_fight_id:
-#         next_fight = fight_repo.get_fight_by_id(fight.next_fight_id)
-#         if next_fight and next_fight.blue_athlete_id == winner_id:
-#             next_fight.blue_athlete_id = None
-#         elif next_fight and not next_fight.white_athlete_id == winner_id:
-#             next_fight.white_athlete_id = None
-#
-#
+@results_bp.route('/<int:fight_id>/cancel-result', methods=['PATCH'])
+def cancel_result(fight_id):
+    try:
+        fight_repo = FightRepository()
+        fight = fight_repo.get_fight_by_id(fight_id)
+
+        if not fight:
+            return jsonify({
+                'message': 'Бой не найден'
+            }), 404
+
+        fight.status = FightStatus.CANCELLED
+        result = result_repo.get_result_by_fight(fight_id)
+
+        if not result:
+            return jsonify({
+                'message':'Не найден резулльтат по бою'
+            }), 404
+
+        winner_id = result.winner_id
+        is_deleted_result = result_repo.delete_result(fight_id)
+
+        if not is_deleted_result:
+            return jsonify({
+                'message':'Не получилось удалить результат боя'
+            }), 500
+
+        fight_repo.remove_winner_from_next_fight(fight_id, winner_id)
+
+        return jsonify({
+            'message':'Отменнены результаты боя'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'message': f'Ошибка {e}'
+        }), 500
