@@ -1,3 +1,6 @@
+import math
+
+from api.athletes import athlete_repo
 from new_model.Enums import FightStatus, BracketType
 from new_model.head_model.fight_new import FightNew
 from repository.figth_repo import FightRepository
@@ -147,11 +150,11 @@ class FightGenerator:
 
         # Собираем всех остальных проигравших (кроме полуфинала)
         losers = []
-        for fight in group_of_fights[:-1]:  # Исключаем сам полуфинал
+        for fight in group_of_fights:  # Исключаем сам полуфинал
             loser = result_repo.get_loser(fight.id)
-            if loser and loser.id != semifinal_loser_id:  # Исключаем полуфиналиста
+            if loser:  # Исключаем полуфиналиста
                 losers.append({
-                    'athlete_id': loser.id,
+                    'athlete_id': athlete_repo.get_athlete_by_id(loser.id),
                     'round_lost': fight.round_number
                 })
 
@@ -166,6 +169,11 @@ class FightGenerator:
         current_fighters = [l['athlete_id'] for l in losers]
         round_number = 1
 
+        athlete_count = len(current_fighters)
+        total_rounds = self.temp_calculate_rounds(athlete_count)
+
+        first_fights = self.generate_first_round_fights(current_fighters, total_rounds,round_number,tournament_category_id,tatami_number, branch_name)
+
         # Бои между обычными проигравшими
         while len(current_fighters) > 1:
             next_round_fighters = []
@@ -175,7 +183,7 @@ class FightGenerator:
                     new_fight = FightNew(
                         tournament_category_id=tournament_category_id,
                         white_athlete_id=current_fighters[i],
-                        blue_athlete_id=current_fighters[i + 1],
+                        blue_athlete_id=current_fighters[i + 1] if current_fighters < len(current_fighters) - 1 else None,
                         round_number=round_number,
                         status=FightStatus.SCHEDULED,
                         type_bracket=branch_name,
@@ -223,3 +231,12 @@ class FightGenerator:
                                                               BracketType.CONSOLATION_GROUP_B)
 
         return consolation_fights_a + consolation_fights_b
+
+    def temp_calculate_rounds(self,participants_count):
+        """
+        Расчет количества раундов для сетки
+        """
+        if participants_count <= 0:
+            return 0
+
+        return math.ceil(math.log2(participants_count))

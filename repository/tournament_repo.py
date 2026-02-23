@@ -379,7 +379,7 @@ class TournamentRepository:
             for i in range(tatami_number):
                 new_tatami_fight = TatamiFight(
                     tournament_id=tournament_id,
-                    tatami_number=i
+                    tatami_number=i+1
                 )
 
                 self.session.add(new_tatami_fight)

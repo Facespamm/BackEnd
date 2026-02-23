@@ -301,14 +301,13 @@ class FightRepository:
             self.session.query(TournamentCategory.tournament_id)
             .filter(TournamentCategory.tournament_category_id == fight.tournament_category_id)
             .distinct(TournamentCategory.tournament_id)
-            .first()
+            .scalar()
         )
 
         tatami_fight = (
             self.session.query(TatamiFight)
             .filter_by(
                 tournament_id=tournament_id,
-                fight_id=fight_id,
                 tatami_number=tatami_number
             )
             .scalar()
