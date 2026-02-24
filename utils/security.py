@@ -6,7 +6,9 @@ import hashlib
 import secrets
 import string
 from functools import wraps
-from flask import session, redirect, url_for, flash, request
+from flask import session, redirect, url_for, flash, request, jsonify
+from flask_jwt_extended import get_jwt
+
 
 def generate_referee_code(length=6):
     """
@@ -21,58 +23,19 @@ def generate_api_key():
     """
     return secrets.token_urlsafe(32)
 
-def login_required(role=None):
-    """
-    Декоратор для проверки аутентификации и роли
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
-                flash('Требуется авторизация', 'warning')
-                return redirect(url_for('main.login'))
+def role_required(*roles):
+    def decorated_function(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            claims = get_jwt()
+            user_role = claims.get('role')
 
-            # Проверка роли если указана
-            if role and session.get('user_role') != role:
-                flash('Недостаточно прав', 'danger')
-                return redirect(url_for('main.dashboard'))
-
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def admin_required(f):
-    """
-    Декоратор для проверки прав администратора
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Требуется авторизация', 'warning')
-            return redirect(url_for('main.login'))
-
-        if session.get('user_role') != 'ADMIN':
-            flash('Требуются права администратора', 'danger')
-            return redirect(url_for('main.dashboard'))
-
-        return f(*args, **kwargs)
-    return decorated_function
-
-def referee_required(f):
-    """
-    Декоратор для проверки прав судьи
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Требуется авторизация', 'warning')
-            return redirect(url_for('referee.login'))
-
-        if session.get('user_role') not in ['ADMIN', 'REFEREE']:
-            flash('Требуются права судьи', 'danger')
-            return redirect(url_for('main.dashboard'))
-
-        return f(*args, **kwargs)
+            if user_role not in roles:
+                return jsonify({
+                    'message':'Доступ запришен'
+                }), 403
+            return fn(*args, **kwargs)
+        return wrapper
     return decorated_function
 
 def scoreboard_required(f):
