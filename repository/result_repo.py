@@ -11,8 +11,8 @@ from repository.athlete_repo import AthleteRepository
 
 
 class ResultRepository:
-    def __init__(self):
-        self.session = create_session()
+    def __init__(self,session = None):
+        self.session = session if session else create_session()
 
     def __enter__(self):
         return self

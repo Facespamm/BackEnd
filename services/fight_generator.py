@@ -1,15 +1,19 @@
 import math
 
-from api.athletes import athlete_repo
+from database.db import create_session
 from new_model.Enums import FightStatus, BracketType
 from new_model.head_model.fight_new import FightNew
+from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
 from repository.result_repo import ResultRepository
 
-fight_repo = FightRepository()
-result_repo = ResultRepository()
-
 class FightGenerator:
+
+    def __init__(self, session):
+        self.fight_repo = FightRepository(session)
+        self.result_repo = ResultRepository(session)
+        self.athlete_repo = AthleteRepository(session)
+
     def generate_first_round_fights(self,athletes, round_number, start_fight_number, tournament_category_id, tatami_number,type_bracket=BracketType.MAIN):
         """Генерация схваток для одного раунда"""
         fights = []
@@ -36,7 +40,7 @@ class FightGenerator:
             )
 
             #сохроняем бой
-            fight_repo.create_fight(fight)
+            self.fight_repo.create_fight(fight)
 
             fights.append(fight)
             fight_number += 1
@@ -62,7 +66,7 @@ class FightGenerator:
             )
 
             # сохроняем бой
-            fight_repo.create_fight(fight)
+            self.fight_repo.create_fight(fight)
 
             fights.append(fight)
             fight_number += 1
@@ -105,9 +109,9 @@ class FightGenerator:
         Включает всех, кто проиграл обоим полуфиналистам (победителю И проигравшему).
         """
 
-        result = result_repo.get_result_by_fight(semifinal_fight.id)
+        result = self.result_repo.get_result_by_fight(semifinal_fight.id)
         winner_id = result.winner_id
-        loser_id = result_repo.get_loser(semifinal_fight.id).id
+        loser_id = self.result_repo.get_loser(semifinal_fight.id).id
 
         # Оба полуфиналиста формируют эту ветку
         semifinalists = [winner_id, loser_id]
@@ -120,7 +124,7 @@ class FightGenerator:
 
             for semifinalist_id in semifinalists:
                 if semifinalist_id in fight_participants:
-                    fight_result = result_repo.get_result_by_fight(fight.id)
+                    fight_result = self.result_repo.get_result_by_fight(fight.id)
 
                     # Если полуфиналист выиграл этот бой, добавляем его в группу
                     if fight_result and fight_result.winner_id == semifinalist_id:
@@ -146,15 +150,15 @@ class FightGenerator:
 
         # Находим проигравшего полуфиналиста
         semifinal_fight = group_of_fights[-1]  # Последний бой - это полуфинал
-        semifinal_loser_id = result_repo.get_loser(semifinal_fight.id).id
+        semifinal_loser_id = self.result_repo.get_loser(semifinal_fight.id).id
 
         # Собираем всех остальных проигравших (кроме полуфинала)
         losers = []
         for fight in group_of_fights:  # Исключаем сам полуфинал
-            loser = result_repo.get_loser(fight.id)
-            if loser:  # Исключаем полуфиналиста
+            loser = self.result_repo.get_loser(fight.id)
+            if loser and loser.id != semifinal_loser_id:  # Исключаем полуфиналиста
                 losers.append({
-                    'athlete_id': athlete_repo.get_athlete_by_id(loser.id),
+                    'athlete_id': self.athlete_repo.get_athlete_by_id(loser.id),
                     'round_lost': fight.round_number
                 })
 
@@ -167,53 +171,41 @@ class FightGenerator:
         # Генерируем утешительные бои между проигравшими
         consolation_fights = []
         current_fighters = [l['athlete_id'] for l in losers]
-        round_number = 1
+        current_round = 1
+        fight_number = 1
 
-        athlete_count = len(current_fighters)
-        total_rounds = self.temp_calculate_rounds(athlete_count)
+        first_fights = self.generate_first_round_fights(current_fighters,current_round,fight_number,tournament_category_id,tatami_number, branch_name)
+        if not first_fights:
+            raise Exception('Error create consalation fights')
 
-        first_fights = self.generate_first_round_fights(current_fighters, total_rounds,round_number,tournament_category_id,tatami_number, branch_name)
+        consolation_fights.extend(first_fights)
+        fight_number += len(consolation_fights)
+        current_round += 1
 
-        # Бои между обычными проигравшими
-        while len(current_fighters) > 1:
-            next_round_fighters = []
+        if len(consolation_fights) == 1:
+            first_fight = consolation_fights[0]
 
-            for i in range(0, len(current_fighters), 2):
-                if i + 1 < len(current_fighters):
-                    new_fight = FightNew(
-                        tournament_category_id=tournament_category_id,
-                        white_athlete_id=current_fighters[i],
-                        blue_athlete_id=current_fighters[i + 1] if current_fighters < len(current_fighters) - 1 else None,
-                        round_number=round_number,
-                        status=FightStatus.SCHEDULED,
-                        type_bracket=branch_name,
-                        tatami_number = tatami_number
-                    )
-                    consolation_fights.append(new_fight)
-                    next_round_fighters.append(None)  # Placeholder для победителя
-                else:
-                    next_round_fighters.append(current_fighters[i])
+            color_loser_semifinalist = 'white' if semifinal_loser_id == semifinal_fight.white_athlete_id else 'blue'
 
-            current_fighters = [f for f in next_round_fighters if f is not None]
-            round_number += 1
-
-        # Финальный бой за бронзу: победитель утешительной сетки vs проигравший полуфиналист
-        if len(current_fighters) == 1:
-            bronze_fight = FightNew(
+            next_figth = FightNew(
                 tournament_category_id=tournament_category_id,
-                white_athlete_id=current_fighters[0],  # Победитель утешительных боев
-                blue_athlete_id=semifinal_loser_id,  # Проигравший полуфиналист
-                round_number=round_number,
+                white_athlete_id= semifinal_loser_id if color_loser_semifinalist == 'blue' else None,
+                blue_athlete_id=semifinal_loser_id if color_loser_semifinalist == 'white' else None,
+                round_number=current_round,
+                fight_number=fight_number,
                 status=FightStatus.SCHEDULED,
-                type_bracket=branch_name,  # Финал за бронзу
-                tatami_number = tatami_number
+                type_bracket=branch_name,
+                tatami_number=tatami_number
             )
-            consolation_fights.append(bronze_fight)
+
+            is_added = self.fight_repo.create_fight(next_figth)
+            self.fight_repo.update_fight(first_fight.id, next_figth.id)
+            consolation_fights.append(next_figth)
 
         return consolation_fights
 
     def _generate_consalation_fight(self, tournament_category_id, round, eight_round,tatami_number) -> list[FightNew]:
-        all_fights = fight_repo.get_semi_final_fights(tournament_category_id, round, eight_round)
+        all_fights = self.fight_repo.get_semi_final_fights(tournament_category_id, round, eight_round)
 
         if len(all_fights) < 2:
             raise Exception("❌ Недостаточно полуфиналистов для утешительных боев")

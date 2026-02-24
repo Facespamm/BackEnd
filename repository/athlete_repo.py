@@ -15,8 +15,8 @@ from repository.category_repo import CategoryRepository
 
 
 class AthleteRepository:
-    def __init__(self):
-        self.session = create_session()
+    def __init__(self, session = None):
+        self.session =session if session else create_session()
 
     def get_athletes(self, club_id:int, search_name: str):
         query = self.session.query(AthleteNew).join(AthleteNew.user).filter_by(is_active = True)

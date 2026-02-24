@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from selenium.webdriver.support.expected_conditions import none_of
 
 from new_model.Enums import text_to_referee_level
 from new_model.handbook.new_referee import RefereeNew
@@ -14,9 +15,7 @@ def get_referees():
     try:
         referees = referee_repo.get_referees()
 
-        results = []
-        for referee in referees:
-            referee_dto = {
+        results = [ {
                 'id': referee.id,
                 'first_name': referee.first_name,
                 'last_name': referee.last_name,
@@ -24,10 +23,7 @@ def get_referees():
                 'email': referee.email,
                 'phone': referee.phone,
                 'certification_level': referee.certification_level.value,
-            }
-
-            results.append(referee_dto)
-
+            } for referee in referees]
 
         return jsonify({
             'referees': results,
@@ -82,13 +78,20 @@ def create_referee():
                 'message': f'Не заполненно следующие поля {missing_fields}'
             }), 400
 
+        certificat_level = text_to_referee_level(data['certification_level'])
+
+        if not certificat_level:
+            return jsonify({
+                'message': 'Нет такого сертификата'
+            }), 500
+
         new_referee = RefereeNew(
             first_name=data['first_name'],
             last_name=data['last_name'],
             middle_name=data['middle_name'],
             email=data['email'],
             phone=data['phone'],
-            certification_level=text_to_referee_level(data['certification_level']),
+            certification_level=certificat_level,
         )
 
         is_added = referee_repo.create_referee(new_referee)
@@ -167,6 +170,13 @@ def assign_referees_to_fights(tournament_id):
         data = request.get_json()
 
         required_fields = ['referees']
+
+        try:
+            category = int(category)
+        except ValueError as e:
+            return jsonify({
+                'message': f'Ошибка назначения судей на бои {e}'
+            }), 500
 
         if not all(field in data for field in required_fields):
             return jsonify({
