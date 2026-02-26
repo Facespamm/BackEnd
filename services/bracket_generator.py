@@ -18,8 +18,7 @@ from utils.helpers import calculate_rounds
 
 tournament_repo = TournamentRepository()
 fight_repo = FightRepository()
-fight_generator = FightGenerator()
-athlete_repo = AthleteRepository()
+fight_generator = FightGenerator(create_session())
 
 class BracketGenerator:
     """Генератор турнирных сеток"""
@@ -75,7 +74,9 @@ class BracketGenerator:
             if total_rounds == 0:
                 raise Exception("❌ Invalid number of rounds calculated")
 
-            fights = fight_generator.generate_consolation_fights_semifinalist(tournament_category.tournament_category_id,tatami_number,total_rounds)
+            session = create_session()
+            generator = FightGenerator(session)
+            fights = generator.generate_consolation_fights_semifinalist(tournament_category.tournament_category_id,tatami_number,total_rounds)
 
             for fight in fights:
                 fight_repo.create_fight(fight)

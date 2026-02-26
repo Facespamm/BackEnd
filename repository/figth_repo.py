@@ -11,8 +11,17 @@ from new_model.result_new import ResultNew
 from new_model.tatami_fight import TatamiFight
 
 class FightRepository:
-    def __init__(self):
-        self.session = create_session()
+    def __init__(self, session = None):
+        self.session = session if session else create_session()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.session.rollback()
+        self.session.close()
+
 
     def assign_referee(self, referee_id, fight_id ,role):
         """Назначить судью на бой"""
@@ -60,6 +69,7 @@ class FightRepository:
         try:
             self.session.add(fight)
             self.session.commit()
+            return True
         except Exception as e:
             self.session.rollback()
             self.session.close()
@@ -330,3 +340,12 @@ class FightRepository:
             self.session.close()
         except Exception as e:
             raise e
+
+    def flush_create(self,fight):
+        try:
+            self.session.add(fight)
+            self.session.flush()
+        except Exception as e:
+            print('Error: ', e)
+            self.session.rollback()
+            self.session.close()
