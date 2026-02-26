@@ -5,6 +5,16 @@
 from datetime import datetime, timedelta
 import math
 
+
+def calculate_rounds(participants_count):
+    """
+    Расчет количества раундов для сетки
+    """
+    if participants_count <= 0:
+        return 0
+
+    return math.ceil(math.log2(participants_count))
+
 def format_duration(seconds):
     """
     Форматирование длительности в читаемый вид

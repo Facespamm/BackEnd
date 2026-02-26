@@ -1,11 +1,9 @@
-import math
-
-from database.db import create_session
 from new_model.Enums import FightStatus, BracketType
 from new_model.head_model.fight_new import FightNew
 from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
 from repository.result_repo import ResultRepository
+from utils.helpers import calculate_rounds
 
 class FightGenerator:
 
@@ -15,7 +13,24 @@ class FightGenerator:
         self.athlete_repo = AthleteRepository(session)
 
     def generate_first_round_fights(self,athletes, round_number, start_fight_number, tournament_category_id, tatami_number,type_bracket=BracketType.MAIN):
-        """Генерация схваток для одного раунда"""
+        """    Генерирует схватки для первого раунда турнира.
+
+            Разбивает список спортсменов на пары (белый/синий).
+            Если спортсменов нечётное количество — последний получает пустого соперника (None).
+            Схватки, где оба участника None, пропускаются.
+
+            Args:
+                athletes: Список спортсменов для жеребьёвки.
+                round_number: Номер раунда.
+                start_fight_number: Стартовый номер схватки.
+                tournament_category_id: ID категории турнира.
+                tatami_number: Номер татами.
+                type_bracket: Тип сетки (основная, утешительная и т.д.).
+
+            Returns:
+                Список созданных и сохранённых схваток.
+          """
+
         fights = []
         fight_number = start_fight_number
 
@@ -48,7 +63,23 @@ class FightGenerator:
         return fights
 
     def generate_next_rounds_fights(self,next_fight,round_number, next_fight_number, tournament_category_id, tatami_number,type_bracket=BracketType.MAIN):
-        """Генерация схваток для следующих раунда"""
+        """Генерирует пустые схватки для последующих раундов турнира.
+
+            Создаёт схватки без участников (white/blue = None) —
+            победители заполняются по мере завершения предыдущего раунда.
+
+            Args:
+                next_fight: Список схваток предыдущего раунда,
+                            определяет количество новых схваток.
+                round_number: Номер раунда.
+                next_fight_number: Стартовый номер схватки.
+                tournament_category_id: ID категории турнира.
+                tatami_number: Номер татами.
+                type_bracket: Тип сетки (основная, утешительная и т.д.).
+
+            Returns:
+                Список созданных и сохранённых схваток.
+        """
         fights = []
         fight_number = next_fight_number
 
@@ -132,9 +163,6 @@ class FightGenerator:
                         if fight not in group:
                             group.append(fight)
 
-        for fight in group:
-            all_fights.remove(fight)
-
         # Сортируем по раундам (от раннего к позднему)
         group.sort(key=lambda x: x.round_number)
         return group
@@ -144,6 +172,7 @@ class FightGenerator:
                                   tatami_number:int,
                                   branch_name: BracketType) -> list[FightNew]:
         """Создает утешительные бои для одной ветки"""
+        consolation_fights = []
 
         if len(group_of_fights) < 2:
             raise Exception(f'❌ Недостаточно боев в ветке {branch_name.name}')
@@ -153,20 +182,19 @@ class FightGenerator:
         semifinal_loser_id = self.result_repo.get_loser(semifinal_fight.id).id
 
         # Собираем всех остальных проигравших (кроме полуфинала)
-        losers = []
-        for fight in group_of_fights:  # Исключаем сам полуфинал
-            loser = self.result_repo.get_loser(fight.id)
-            if loser and loser.id != semifinal_loser_id:  # Исключаем полуфиналиста
-                losers.append({
-                    'athlete_id': self.athlete_repo.get_athlete_by_id(loser.id),
-                    'round_lost': fight.round_number
-                })
+        losers = [
+            {'athlete_id': loser, 'round_lost': fight.round_number}
+            for fight in group_of_fights
+            if (loser := result_repo.get_loser(fight.id)) and loser.id != semifinal_loser_id
+        ]
 
         if len(losers) == 0:
             raise Exception(f'❌ Нет участников для утешительной сетки в ветке {branch_name.name}')
 
         # Сортируем по раунду поражения (позже проигравшие начинают выше)
         losers.sort(key=lambda x: x['round_lost'], reverse=True)
+        athlete_count = len(losers)
+        total_round = calculate_rounds(athlete_count)
 
         # Генерируем утешительные бои между проигравшими
         consolation_fights = []
@@ -223,12 +251,3 @@ class FightGenerator:
                                                               BracketType.CONSOLATION_GROUP_B)
 
         return consolation_fights_a + consolation_fights_b
-
-    def temp_calculate_rounds(self,participants_count):
-        """
-        Расчет количества раундов для сетки
-        """
-        if participants_count <= 0:
-            return 0
-
-        return math.ceil(math.log2(participants_count))

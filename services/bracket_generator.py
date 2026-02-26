@@ -14,6 +14,7 @@ from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
 from repository.tournament_repo import TournamentRepository
 from services.fight_generator import FightGenerator
+from utils.helpers import calculate_rounds
 
 tournament_repo = TournamentRepository()
 fight_repo = FightRepository()
@@ -29,7 +30,6 @@ class BracketGenerator:
 
     def generate_olympic(self, category_id: int, tatami_number: int):
         try:
-            athlete_repo = AthleteRepository()
             athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
             athlete_count = len(athletes)
@@ -43,7 +43,7 @@ class BracketGenerator:
             self.init_fight_table(tournament_category.tournament_category_id)
 
             # Определяем количество раундов
-            total_rounds = self.calculate_rounds(participants_count=athlete_count)
+            total_rounds = calculate_rounds(participants_count=athlete_count)
 
             if total_rounds == 0:
                 raise Exception("❌ Invalid number of rounds calculated")
@@ -59,7 +59,6 @@ class BracketGenerator:
 
     def generate_olympic_consolation_fight_semifinal(self,category_id, tatami_number):
         try:
-            athlete_repo = AthleteRepository()
             athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
             athlete_count = len(athletes)
@@ -70,7 +69,7 @@ class BracketGenerator:
             if not tournament_category:
                 raise Exception("❌ Tournament category not found")
 
-            total_rounds = self.calculate_rounds(participants_count=athlete_count)
+            total_rounds = calculate_rounds(participants_count=athlete_count)
 
             if total_rounds == 0:
                 raise Exception("❌ Invalid number of rounds calculated")
@@ -89,7 +88,6 @@ class BracketGenerator:
 
     def generate_olympic_consolation_fight_final(self,category_id, tatami_number):
         try:
-            athlete_repo = AthleteRepository()
             athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
             athlete_count = len(athletes)
@@ -100,7 +98,7 @@ class BracketGenerator:
             if not tournament_category:
                 raise Exception("❌ Tournament category not found")
 
-            total_rounds = self.calculate_rounds(participants_count=athlete_count)
+            total_rounds = calculate_rounds(participants_count=athlete_count)
 
             if total_rounds == 0:
                 raise Exception("❌ Invalid number of rounds calculated")
@@ -173,7 +171,6 @@ class BracketGenerator:
         athlete_count = len(athletes)
         max_athlete = 2 ** math.ceil(math.log2(athlete_count))
 
-        athlete_repo = AthleteRepository()
         # Попытка сортировки по рейтингу (можно добавить логику рейтинга)
         athletes.sort(key=lambda a: athlete_repo.get_victory_count(a.id))
 
@@ -378,16 +375,6 @@ class BracketGenerator:
             positions.append(pos)
 
         return positions
-
-    @staticmethod
-    def calculate_rounds(participants_count):
-        """
-        Расчет количества раундов для сетки
-        """
-        if participants_count <= 0:
-            return 0
-
-        return math.ceil(math.log2(participants_count))
 
     def init_fight_table(self, tournament_category_id):
         delete_results = (
