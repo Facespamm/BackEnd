@@ -1,3 +1,4 @@
+from api.fights import fight_repo
 from new_model.Enums import FightStatus, BracketType
 from new_model.head_model.fight_new import FightNew
 from repository.athlete_repo import AthleteRepository
@@ -109,7 +110,7 @@ class FightGenerator:
         # Находим полуфиналистов которые проиграли
         semifinal_round = max_rounds-1
         eight_round = semifinal_round -1
-        return self._generate_consalation_fight(tournament_category_id, semifinal_round, eight_round, tatami_number)
+        return self._generate_semifinalist_fight(tournament_category_id, semifinal_round, eight_round, tatami_number)
 
     def generate_consolation_fights_finalist(self, tournament_category_id, tatami_number,max_rounds):
         """Генерация утешительных схваток за 3 место"""
@@ -117,22 +118,7 @@ class FightGenerator:
         # Находим полуфиналистов которые проиграли
         final_round = max_rounds
         eight_fight = max_rounds - 2
-        return self._generate_consalation_fight(tournament_category_id, final_round, eight_fight, max_rounds)
-
-    # def _generate_group(self, fights:list[FightNew], semi_or_final_fights:FightNew)-> list[FightNew]:
-    #     group = []
-    #     result = result_repo.get_result_by_fight(semi_or_final_fights.id)
-    #     loser = result_repo.get_loser(semi_or_final_fights.id)
-    #
-    #     for fight in fights:
-    #         if or_(fight.white_athlete_id == result.winner_id, fight.blue_athlete_id == result.winner_id):
-    #             group.append(fight)
-    #         elif or_(fight.white_athlete_id == loser.id, fight.blue_athlete_id==loser.id):
-    #             group.append(fight)
-    #
-    #     group.sort(key=lambda x: x.id,)
-    #
-    #     return group
+        return self._generate_finalist_fight(tournament_category_id, final_round, eight_fight, max_rounds)
 
     def _generate_group(self, all_fights: list[FightNew], semifinal_fight: FightNew) -> list[FightNew]:
         """
@@ -167,7 +153,7 @@ class FightGenerator:
         group.sort(key=lambda x: x.round_number)
         return group
 
-    def _generate_fights_by_group(self, group_of_fights: list[FightNew],
+    def _generate_fights_semifinalist_by_group(self, group_of_fights: list[FightNew],
                                   tournament_category_id: int,
                                   tatami_number:int,
                                   branch_name: BracketType) -> list[FightNew]:
@@ -230,7 +216,7 @@ class FightGenerator:
 
         return consolation_fights
 
-    def _generate_consalation_fight(self, tournament_category_id, round, eight_round,tatami_number) -> list[FightNew]:
+    def _generate_semifinalist_fight(self, tournament_category_id, round, eight_round,tatami_number) -> list[FightNew]:
         all_fights = self.fight_repo.get_untracked_semifinal_fights(tournament_category_id, round, eight_round)
 
         if len(all_fights) < 2:
@@ -243,9 +229,83 @@ class FightGenerator:
         group_a = self._generate_group(all_fights, semifinal_fights[0])
         group_b = self._generate_group(all_fights, semifinal_fights[1])
 
-        consolation_fights_a = self._generate_fights_by_group(group_a, tournament_category_id, tatami_number,
-                                                              BracketType.CONSOLATION_GROUP_A)
-        consolation_fights_b = self._generate_fights_by_group(group_b, tournament_category_id, tatami_number,
-                                                              BracketType.CONSOLATION_GROUP_B)
+        consolation_fights_a = self._generate_fights_semifinalist_by_group(group_a, tournament_category_id, tatami_number,
+                                                              BracketType.SEMIFINALIST_CONSOLATION_GROUP_A)
+        consolation_fights_b = self._generate_fights_semifinalist_by_group(group_b, tournament_category_id, tatami_number,
+                                                              BracketType.SEMIFINALIST_CONSOLATION_GROUP_B)
 
         return consolation_fights_a + consolation_fights_b
+
+    def _generate_fights_finalist_by_group(self, group_of_fights: list[FightNew],
+                                  tournament_category_id: int,
+                                  tatami_number:int,
+                                  branch_name: BracketType) -> FightNew:
+        """Создает утешительные бои для одной ветки"""
+        if len(group_of_fights) < 1:
+            raise Exception(f'❌ Недостаточно боев в ветке {branch_name.name}')
+
+        # Собираем всех остальных проигравших (кроме полуфинала)
+        losers = [
+            {'athlete_id': loser, 'round_lost': fight.round_number}
+            for fight in group_of_fights
+            if (loser := self.result_repo.get_loser(fight.id))
+        ]
+
+        if len(losers) == 0:
+            raise Exception(f'❌ Нет участников для утешительной сетки в ветке {branch_name.name}')
+
+        losers.sort(key=lambda x: x['round_lost'], reverse=True)
+        athlete_count = len(losers)
+
+        # Генерируем утешительные бои между проигравшими
+        current_fighters = [l['athlete_id'] for l in losers]
+        current_round = 1
+        fight_number = 1
+
+        first_fights = self.generate_first_round_fights(current_fighters, current_round, fight_number,
+                                                        tournament_category_id, tatami_number, branch_name)
+
+        if first_fights[0] and first_fights[0].white_athlete_id is None or first_fights[0].blue_athlete_id is None:
+            fight_repo.update_status(first_fights[0].id,FightStatus.COMPLETED)
+
+        return first_fights[0]
+
+    def _generate_final_group(self, all_fights: list[FightNew], final_athlete_id: int, final_id: int) -> list[FightNew]:
+        group = []
+
+        for fight in all_fights:
+            # Проверяем, участвовал ли хотя бы один из полуфиналистов в этом бою
+            fight_result = self.result_repo.get_result_by_fight(fight.id)
+
+            if fight_result and fight_result.winner_id == final_athlete_id and fight.id != final_id:
+            # Избегаем дубликатов
+                if fight not in group:
+                    group.append(fight)
+
+        # Сортируем по раундам (от раннего к позднему)
+        group.sort(key=lambda x: x.round_number)
+        return group
+
+
+    def _generate_finalist_fight(self,tournament_category_id, round, eight_round,tatami_number) -> list[FightNew]:
+        all_fights = self.fight_repo.get_untracked_semifinal_fights(tournament_category_id, round, eight_round)
+
+        if len(all_fights) < 2:
+            raise Exception("❌ Недостаточно финалистов для утешительных боев")
+
+        final_fights = [fight for fight in all_fights if fight.round_number == round]
+        if len(final_fights) != 1 or not len(final_fights):
+            raise Exception('❌ Нет боев полуфиналистов')
+
+        winner_id = self.result_repo.get_result_by_fight(final_fights[0].id).winner_id
+        losser_id = self.result_repo.get_loser(final_fights[0].id).id
+
+        group_a = self._generate_final_group(all_fights, winner_id, final_fights[0].id)
+        group_b = self._generate_final_group(all_fights, losser_id, final_fights[0].id)
+
+        fights_group_a = self._generate_fights_finalist_by_group(group_a, tournament_category_id, tatami_number,
+                                                              BracketType.FINALIST_CONSOLATION_GROUP_A)
+        fights_group_b = self._generate_fights_finalist_by_group(group_b, tournament_category_id, tatami_number,
+                                                              BracketType.FINALIST_CONSOLATION_GROUP_B)
+
+        return fights_group_a + fights_group_b

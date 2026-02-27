@@ -3,6 +3,7 @@ from flask import request, Blueprint, jsonify
 from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
 from repository.figth_repo import FightRepository
+from repository.result_repo import ResultRepository
 from repository.tournament_repo import TournamentRepository
 from services.bracket_generator import BracketGenerator
 from operator import and_
@@ -179,7 +180,7 @@ def generate_consolation_fights_finalist(tournament_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Ошибка создания утешительных боев: {str(e)}'}), 500
 
-@brackets_bp.route('/<int:tournament_id>/fights/', methods=['GET'])
+@brackets_bp.route('/<int:tournament_id>/fights', methods=['GET'])
 def fight_bracket(tournament_id):
     try:
         if not tournament_id:
@@ -202,11 +203,8 @@ def fight_bracket(tournament_id):
         fight_repo = FightRepository()
         fights = fight_repo.get_fight_by_tournament(tournament_category_id)
 
-        fights_dtos = []
-
         athlete_repo = AthleteRepository()
-        for fight in fights:
-            fights_dtos.append({
+        fights_dtos = [{
                 'id': fight.id,
                 'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
                 'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
@@ -214,12 +212,21 @@ def fight_bracket(tournament_id):
                 'round': fight.round_number,
                 'status_fight': fight.status.value,
                 'next_fight': fight.next_fight_id,
-            })
+            } for fight in fights]
 
         tournament_repo = TournamentRepository()
         tournament_name = tournament_repo.get_tournament_name_by_tournament_category(tournament_category_id)
         category_repo = CategoryRepository()
         category  = category_repo.get_category_by_id(category_id)
+
+        last_fight = fights[-1]
+        with ResultRepository() as result_repo:
+            has_result = result_repo.get_result_by_fight(last_fight.id)
+            if has_result:
+                winner_id = has_result.winner_id
+                winner = athlete_repo.get_athlete_by_fight(winner_id, last_fight.id)
+
+
         if not fights_dtos:
             return jsonify({
                 'success': False,
@@ -234,7 +241,8 @@ def fight_bracket(tournament_id):
                 'id': category.id,
                 'name': category.name,
                 'weight_range': f'от {category.min_weight} до {category.max_weight}'
-            }
+            },
+            'winner': winner,
         })
     except Exception as e:
         return jsonify({

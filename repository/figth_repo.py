@@ -159,21 +159,22 @@ class FightRepository:
 
             current_fight.next_fight_id = next_fight_id
 
-            # Только белый атлет в текущем бою (белого нет - walkover)
-            if current_fight.white_athlete_id and not current_fight.blue_athlete_id:
-                if not next_fight.white_athlete_id:
-                    next_fight.white_athlete_id = current_fight.white_athlete_id
-                elif not next_fight.blue_athlete_id:
-                    next_fight.blue_athlete_id = current_fight.white_athlete_id
-                current_fight.status = FightStatus.COMPLETED
+            if current_fight.round_number == 1: # только для 1 раунда
+                # Только белый атлет в текущем бою
+                if current_fight.white_athlete_id and not current_fight.blue_athlete_id:
+                    if not next_fight.white_athlete_id:
+                        next_fight.white_athlete_id = current_fight.white_athlete_id
+                    elif not next_fight.blue_athlete_id:
+                        next_fight.blue_athlete_id = current_fight.white_athlete_id
+                    current_fight.status = FightStatus.COMPLETED
 
-            # Только синий атлет в текущем бою (белого нет - walkover)
-            elif current_fight.blue_athlete_id and not current_fight.white_athlete_id:
-                if not next_fight.white_athlete_id:
-                    next_fight.white_athlete_id = current_fight.blue_athlete_id
-                elif not next_fight.blue_athlete_id:
-                    next_fight.blue_athlete_id = current_fight.blue_athlete_id
-                current_fight.status = FightStatus.COMPLETED
+                # Только синий атлет в текущем бою
+                elif current_fight.blue_athlete_id and not current_fight.white_athlete_id:
+                    if not next_fight.white_athlete_id:
+                        next_fight.white_athlete_id = current_fight.blue_athlete_id
+                    elif not next_fight.blue_athlete_id:
+                        next_fight.blue_athlete_id = current_fight.blue_athlete_id
+                    current_fight.status = FightStatus.COMPLETED
 
             self.session.commit()
         except Exception as e:
@@ -275,8 +276,7 @@ class FightRepository:
             .all()
         )
 
-        self.session.expunge_all(semi_final_fights)
-
+        self.session.expunge_all()
         return semi_final_fights
 
     def get_final_fights(self, tournament_category_id, final_round_number):
@@ -364,3 +364,17 @@ class FightRepository:
             print('Error: ', e)
             self.session.rollback()
             self.session.close()
+
+    def update_status(self, fight_id, status):
+        try:
+            fight = self.get_fight_by_id(fight_id)
+
+            if fight:
+                fight.status = status
+                self.session.commit()
+                self.session.close()
+        except Exception as e:
+            print('Error: ', e)
+            self.session.rollback()
+            self.session.close()
+            raise e

@@ -41,7 +41,7 @@ def get_fights():
                 'id': fight.id,
                 'tournament_id': fight.tournament_category_id,
                 'tatami': fight.tatami_number,
-                'status': fight.status,
+                'status': fight.status.value,
                 'round_number': fight.round_number,
                 'fight_number': fight.fight_number,
                 'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
