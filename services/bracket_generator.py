@@ -30,6 +30,7 @@ class BracketGenerator:
 
     def generate_olympic(self, category_id: int, tatami_number: int):
         try:
+            athlete_repo = AthleteRepository()
             athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
             athlete_count = len(athletes)
@@ -172,6 +173,7 @@ class BracketGenerator:
         max_athlete = 2 ** math.ceil(math.log2(athlete_count))
 
         # Попытка сортировки по рейтингу (можно добавить логику рейтинга)
+        athlete_repo = AthleteRepository()
         athletes.sort(key=lambda a: athlete_repo.get_victory_count(a.id))
 
         # Применяем seeding позиции
@@ -212,16 +214,16 @@ class BracketGenerator:
                 next_round = fight_generator.generate_next_rounds_fights(next_fights,current_round, fight_number, tournament_category_id,tatami_number,type_bracket)
 
                 # Обновляем ссылки на следующие схватки
-                for i in range(0, len(current_round_fights), 2):
-                    next_fight_index = i // 2
+                for i in range(0, len(current_round_fights)):
+                    next_fight_index = i
 
                     # Первый бой из пары
                     if i < len(current_round_fights):
                         fight_repo.update_fight(current_round_fights[i].id,next_round[next_fight_index].id)
 
-                    # Второй бой из пары
-                    if i + 1 < len(current_round_fights):
-                        fight_repo.update_fight(current_round_fights[i + 1].id,next_round[next_fight_index].id)
+                    # # Второй бой из пары
+                    # if i + 1 < len(current_round_fights):
+                    #     fight_repo.update_fight(current_round_fights[i + 1].id,next_round[next_fight_index].id)
 
                 fights.extend(next_round)
 

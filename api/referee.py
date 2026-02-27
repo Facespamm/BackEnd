@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request
-from selenium.webdriver.support.expected_conditions import none_of
 
 from new_model.Enums import text_to_referee_level
 from new_model.handbook.new_referee import RefereeNew

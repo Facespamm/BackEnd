@@ -172,8 +172,6 @@ class FightGenerator:
                                   tatami_number:int,
                                   branch_name: BracketType) -> list[FightNew]:
         """Создает утешительные бои для одной ветки"""
-        consolation_fights = []
-
         if len(group_of_fights) < 2:
             raise Exception(f'❌ Недостаточно боев в ветке {branch_name.name}')
 
@@ -185,7 +183,7 @@ class FightGenerator:
         losers = [
             {'athlete_id': loser, 'round_lost': fight.round_number}
             for fight in group_of_fights
-            if (loser := result_repo.get_loser(fight.id)) and loser.id != semifinal_loser_id
+            if (loser := self.result_repo.get_loser(fight.id)) and loser.id != semifinal_loser_id
         ]
 
         if len(losers) == 0:
@@ -233,7 +231,7 @@ class FightGenerator:
         return consolation_fights
 
     def _generate_consalation_fight(self, tournament_category_id, round, eight_round,tatami_number) -> list[FightNew]:
-        all_fights = self.fight_repo.get_semi_final_fights(tournament_category_id, round, eight_round)
+        all_fights = self.fight_repo.get_untracked_semifinal_fights(tournament_category_id, round, eight_round)
 
         if len(all_fights) < 2:
             raise Exception("❌ Недостаточно полуфиналистов для утешительных боев")
