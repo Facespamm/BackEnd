@@ -1,4 +1,3 @@
-from api.fights import fight_repo
 from new_model.Enums import FightStatus, BracketType
 from new_model.head_model.fight_new import FightNew
 from repository.athlete_repo import AthleteRepository
@@ -266,7 +265,7 @@ class FightGenerator:
                                                         tournament_category_id, tatami_number, branch_name)
 
         if first_fights[0] and first_fights[0].white_athlete_id is None or first_fights[0].blue_athlete_id is None:
-            fight_repo.update_status(first_fights[0].id,FightStatus.COMPLETED)
+            self.fight_repo.update_status(first_fights[0].id,FightStatus.COMPLETED)
 
         return first_fights[0]
 

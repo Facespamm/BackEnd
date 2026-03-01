@@ -225,6 +225,8 @@ def fight_bracket(tournament_id):
             if has_result:
                 winner_id = has_result.winner_id
                 winner = athlete_repo.get_athlete_by_fight(winner_id, last_fight.id)
+            else:
+                winner = None
 
 
         if not fights_dtos:

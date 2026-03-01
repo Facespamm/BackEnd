@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 
+from database.db import create_session
 from new_model.Enums import FightStatus
 from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
@@ -8,7 +9,6 @@ from repository.referee_repo import RefereeRepository
 from repository.tournament_repo import TournamentRepository
 
 fights_bp = Blueprint('fights', __name__, url_prefix='/api/fights')
-fight_repo = FightRepository()
 
 @fights_bp.route('/', methods=['GET'])
 def get_fights():
@@ -24,30 +24,32 @@ def get_fights():
                 'message': 'Обязательный параметр: tournament_id'
             }), 400
 
-        tournament_repo = TournamentRepository()
-        tournament = tournament_repo.get_tournament_by_id(tournament_id)
-        if not tournament:
-            return jsonify({
-                'success': False,
-                'message': 'Турнир не найден'
-            }), 404
+        with create_session() as session:
+            tournament_repo = TournamentRepository(session)
+            tournament = tournament_repo.get_tournament_by_id(tournament_id)
+            if not tournament:
+                return jsonify({
+                    'success': False,
+                    'message': 'Турнир не найден'
+                }), 404
 
-        fights = fight_repo.get_fights_by_search_params(tournament_id, status, tatami)
+            fight_repo = FightRepository(session)
+            fights = fight_repo.get_fights_by_search_params(tournament_id, status, tatami)
 
-        result = []
-        athlete_repo = AthleteRepository()
-        for fight in fights:
-            fight_data = {
-                'id': fight.id,
-                'tournament_id': fight.tournament_category_id,
-                'tatami': fight.tatami_number,
-                'status': fight.status.value,
-                'round_number': fight.round_number,
-                'fight_number': fight.fight_number,
-                'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
-                'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
-            }
-            result.append(fight_data)
+            result = []
+            athlete_repo = AthleteRepository(session)
+            for fight in fights:
+                fight_data = {
+                    'id': fight.id,
+                    'tournament_id': fight.tournament_category_id,
+                    'tatami': fight.tatami_number,
+                    'status': fight.status.value,
+                    'round_number': fight.round_number,
+                    'fight_number': fight.fight_number,
+                    'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+                    'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
+                }
+                result.append(fight_data)
 
         return jsonify({
             'success': True,
@@ -71,25 +73,27 @@ def get_fight(fight_id):
                 'message': 'Обязательный параметр: fight_id'
             }), 400
 
-        fight = fight_repo.get_fight_by_id(fight_id)
+        with create_session() as session:
+            fight_repo = FightRepository(session)
+            fight = fight_repo.get_fight_by_id(fight_id)
 
-        if not fight:
-            return jsonify({
-                'success': False,
-                'message': 'Схватка не найдена'
-            }), 404
+            if not fight:
+                return jsonify({
+                    'success': False,
+                    'message': 'Схватка не найдена'
+                }), 404
 
-        athlete_repo = AthleteRepository()
-        fight_data = {
-            'id': fight.id,
-            'tournament_id': fight.tournament_category_id,
-            'tatami': fight.tatami_number,
-            'status': fight.status.value,
-            'round_number': fight.round_number,
-            'fight_number': fight.fight_number,
-            'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
-            'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
-        }
+            athlete_repo = AthleteRepository(session)
+            fight_data = {
+                'id': fight.id,
+                'tournament_id': fight.tournament_category_id,
+                'tatami': fight.tatami_number,
+                'status': fight.status.value,
+                'round_number': fight.round_number,
+                'fight_number': fight.fight_number,
+                'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+                'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
+            }
 
         return jsonify(fight_data), 200
 
@@ -103,15 +107,16 @@ def get_fight(fight_id):
 def get_fight_referees(fight_id):
     """Получить судей, назначенных на схватку"""
     try:
-        fight = fight_repo.get_fight_by_id(fight_id)
-        if not fight:
-            return jsonify({
-                'success': False,
-                'message': 'Схватка не найдена'
-            }), 404
+        with FightRepository() as fight_repo:
+            fight = fight_repo.get_fight_by_id(fight_id)
+            if not fight:
+                return jsonify({
+                    'success': False,
+                    'message': 'Схватка не найдена'
+                }), 404
 
-        referees = fight_repo.get_fight_referees(fight_id)
-        referee_list = referees
+            referees = fight_repo.get_fight_referees(fight_id)
+            referee_list = referees
 
 
         return jsonify({
@@ -139,22 +144,24 @@ def assign_referee_to_fight(fight_id):
                 'message': f'Обязательное поле: {missing_fields}'
             }), 400
 
-        fight = fight_repo.get_fight_by_id(fight_id)
-        if not fight:
-            return jsonify({
-                'success': False,
-                'message': 'Схватка не найдена'
-            }), 404
+        with create_session() as session:
+            fight_repo = FightRepository(session)
+            fight = fight_repo.get_fight_by_id(fight_id)
+            if not fight:
+                return jsonify({
+                    'success': False,
+                    'message': 'Схватка не найдена'
+                }), 404
 
-        referee_repo = RefereeRepository()
-        referee = referee_repo.get_referee(data['referee_id'])
-        if not referee:
-            return jsonify({
-                'success': False,
-                'message': 'Судья не найден'
-            }), 404
+            referee_repo = RefereeRepository(session)
+            referee = referee_repo.get_referee(data['referee_id'])
+            if not referee:
+                return jsonify({
+                    'success': False,
+                    'message': 'Судья не найден'
+                }), 404
 
-        fight_repo.assign_referee(fight.id, data['referee_id'], data['role'])
+            fight_repo.assign_referee(fight.id, data['referee_id'], data['role'])
 
         return jsonify({
             'success': True,
@@ -178,22 +185,24 @@ def remove_referee_from_fight(fight_id):
                 'message': 'Обязательный параметр: role'
             }), 400
 
-        fight = fight_repo.get_fight_by_id(fight_id)
+        with create_session() as session:
+            fight_repo = FightRepository(session)
+            fight = fight_repo.get_fight_by_id(fight_id)
 
-        if not fight:
-            return jsonify({
-                'success': False,
-                'message': 'Схватка не найдена'
-            }), 404
+            if not fight:
+                return jsonify({
+                    'success': False,
+                    'message': 'Схватка не найдена'
+                }), 404
 
-        referee_repo = RefereeRepository()
-        if not referee_repo.has_assign_referee(role , fight.id):
-            return jsonify({
-                'success': False,
-                'message': f'Судья на роль {role} не назначен'
-            }), 404
+            referee_repo = RefereeRepository(session)
+            if not referee_repo.has_assign_referee(role , fight.id):
+                return jsonify({
+                    'success': False,
+                    'message': f'Судья на роль {role} не назначен'
+                }), 404
 
-        fight_repo.remove_referee(fight.id, role)
+            fight_repo.remove_referee(fight.id, role)
 
         return jsonify({
             'success': True,
@@ -216,21 +225,22 @@ def update_fight_status(fight_id):
 
         tatami_number = request.args.get('tatami_number', type=int)
 
-        exiting_fight = fight_repo.get_fight_by_id(fight_id)
-        if not exiting_fight:
-            return jsonify({
-                'success': False,
-                'message': 'Схватка не найдена'
-            }), 404
+        with FightRepository() as fight_repo:
+            exiting_fight = fight_repo.get_fight_by_id(fight_id)
+            if not exiting_fight:
+                return jsonify({
+                    'success': False,
+                    'message': 'Схватка не найдена'
+                }), 404
 
-        is_taken_tatami = fight_repo.tatami_is_taken(fight_id, tatami_number)
+            is_taken_tatami = fight_repo.tatami_is_taken(fight_id, tatami_number)
 
-        if is_taken_tatami:
-            return jsonify({
-                'message': 'На татами уже идет бой'
-            }), 400
+            if is_taken_tatami:
+                return jsonify({
+                    'message': 'На татами уже идет бой'
+                }), 400
 
-        fight_repo.set_live_status(fight_id, tatami_number)
+            fight_repo.set_live_status(fight_id, tatami_number)
 
         return jsonify({
             'success': True,
@@ -260,14 +270,15 @@ def end_fight(fight_id):
                 'message': f'Обязательное поле: {missing_fields}'
             }), 400
 
-        exiting_fight = fight_repo.get_fight_by_id(fight_id)
-        if not exiting_fight:
-            return jsonify({
-                'success': False,
-                'message': 'Схватка не найдена'
-            }), 404
+        with FightRepository() as fight_repo:
+            exiting_fight = fight_repo.get_fight_by_id(fight_id)
+            if not exiting_fight:
+                return jsonify({
+                    'success': False,
+                    'message': 'Схватка не найдена'
+                }), 404
 
-        fight_repo.end_fight(fight_id, data)
+            fight_repo.end_fight(fight_id, data)
 
         return jsonify({
             'success': True,
@@ -290,36 +301,38 @@ def fight_bracket(tournament_id):
         if not category_id and type(category_id) != int:
             return jsonify({'success': False, 'message': 'Не выброна категория'}), 400
 
-        tournament_repo = TournamentRepository()
-        tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
-        if not tournament_category:
-            return jsonify({
-                'success': False,
-                'message': 'Категория турнира не найдена'
-            }), 404
+        with create_session() as session:
+            tournament_repo = TournamentRepository(session)
+            tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
+            if not tournament_category:
+                return jsonify({
+                    'success': False,
+                    'message': 'Категория турнира не найдена'
+                }), 404
 
-        tournament_category_id = tournament_category.tournament_category_id
-        fight_repo = FightRepository()
-        fights = fight_repo.get_fight_by_tournament(tournament_category_id,FightStatus.SCHEDULED)
+            tournament_category_id = tournament_category.tournament_category_id
+            fight_repo = FightRepository(session)
+            fights = fight_repo.get_fight_by_tournament(tournament_category_id,FightStatus.SCHEDULED)
 
-        fights_dtos = []
+            fights_dtos = []
 
-        athlete_repo = AthleteRepository()
-        for fight in fights:
-            fights_dtos.append({
-                'id': fight.id,
-                'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
-                'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
-                'tatami_number': fight.tatami_number,
-                'round': fight.round_number,
-                'status_fight': fight.status.value,
-                'next_fight': fight.next_fight_id,
-            })
+            athlete_repo = AthleteRepository(session)
+            for fight in fights:
+                fights_dtos.append({
+                    'id': fight.id,
+                    'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
+                    'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+                    'tatami_number': fight.tatami_number,
+                    'round': fight.round_number,
+                    'status_fight': fight.status.value,
+                    'next_fight': fight.next_fight_id,
+                })
 
-        tournament_repo = TournamentRepository()
-        tournament_name = tournament_repo.get_tournament_name_by_tournament_category(tournament_category_id)
-        category_repo = CategoryRepository()
-        category  = category_repo.get_category_by_id(category_id)
+            tournament_repo = TournamentRepository(session)
+            tournament_name = tournament_repo.get_tournament_name_by_tournament_category(tournament_category_id)
+            category_repo = CategoryRepository(session)
+            category  = category_repo.get_category_by_id(category_id)
+
         if not fights_dtos:
             return jsonify({
                 'success': False,

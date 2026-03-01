@@ -7,7 +7,6 @@ from new_model.handbook.category_new import CategoryNew
 from repository.category_repo import CategoryRepository
 
 categories_bp = Blueprint('categories', __name__, url_prefix='/api/categories')
-category_repo = CategoryRepository()
 
 @categories_bp.route('/', methods=['GET'])
 def get_categories():
@@ -15,23 +14,24 @@ def get_categories():
     try:
         tournament_id = request.args.get('tournament_id', type=int)
 
-        categories =category_repo.get_categories(tournament_id)
+        with CategoryRepository() as category_repo:
+            categories =category_repo.get_categories(tournament_id)
 
-        result = []
-        for category in categories:
-            tournament_ids = [t.tournament_category_id for t in category.tournament_categories]
+            result = []
+            for category in categories:
+                tournament_ids = [t.tournament_category_id for t in category.tournament_categories]
 
-            result.append({
-                'id': category.id,
-                'name': category.name,
-                'gender': category.gender.value,
-                'min_weight': category.min_weight,
-                'max_weight': category.max_weight,
-                'min_age': category.min_year,
-                'max_age': category.max_year,
-                'athletes_count': category_repo.get_all_athletes(category.id),
-                'tournament_id': tournament_ids
-            })
+                result.append({
+                    'id': category.id,
+                    'name': category.name,
+                    'gender': category.gender.value,
+                    'min_weight': category.min_weight,
+                    'max_weight': category.max_weight,
+                    'min_age': category.min_year,
+                    'max_age': category.max_year,
+                    'athletes_count': category_repo.get_all_athletes(category.id),
+                    'tournament_id': tournament_ids
+                })
 
         return jsonify({
             'success': True,
@@ -84,23 +84,24 @@ def create_category():
         under_or_over_weight = f'-{data.get('max_weight')}'if data.get('max_weight') else f'+{data.get('min_weight')}'
         generate_name = f'{under_or_over_weight}кг, ПОЛ: {data.get('gender')}, ГОДА:с {data.get('min_age')} по {data.get('max_age')}'
 
-        existing_category = category_repo.get_category_by_name(generate_name)
-        if existing_category:
-            return jsonify({
-                'message': 'Такая категория существует'
-            }), 400
+        with CategoryRepository() as category_repo:
+            existing_category = category_repo.get_category_by_name(generate_name)
+            if existing_category:
+                return jsonify({
+                    'message': 'Такая категория существует'
+                }), 400
 
-        translate_gender_ =  translate_gender(data['gender'])
-        category = CategoryNew(
-            name=generate_name,
-            gender=translate_gender_,
-            min_weight=data.get('min_weight'),
-            max_weight=data.get('max_weight'),
-            min_year=data.get('min_age'),
-            max_year=data.get('max_age')
-        )
+            translate_gender_ =  translate_gender(data['gender'])
+            category = CategoryNew(
+                name=generate_name,
+                gender=translate_gender_,
+                min_weight=data.get('min_weight'),
+                max_weight=data.get('max_weight'),
+                min_year=data.get('min_age'),
+                max_year=data.get('max_age')
+            )
 
-        is_create = category_repo.create_category(category)
+            is_create = category_repo.create_category(category)
 
         if is_create:
             return jsonify({
@@ -122,7 +123,8 @@ def create_category():
 def get_category(category_id):
     """Получить информацию о категории"""
     try:
-        category = category_repo.get_category_by_id(category_id)
+        with CategoryRepository() as category_repo:
+            category = category_repo.get_category_by_id(category_id)
 
         if not category:
             return jsonify({
@@ -163,8 +165,8 @@ def update_category(category_id):
         for field in list_of_fields:
             if field not in data:
                 return jsonify({'success': False, 'message': f'Поле {field} обязательно'}), 400
-
-        is_update = category_repo.update_category(category_id, data)
+        with CategoryRepository() as category_repo:
+            is_update = category_repo.update_category(category_id, data)
 
         if is_update:
             return jsonify({
@@ -188,15 +190,16 @@ def update_category(category_id):
 def delete_category(category_id):
     """Удалить категорию"""
     try:
-        category = category_repo.get_category_by_id(category_id)
+        with CategoryRepository() as category_repo:
+            category = category_repo.get_category_by_id(category_id)
 
-        if not category:
-            return jsonify({
-                'success': False,
-                'message': 'Категория не найдена'
-            }), 404
+            if not category:
+                return jsonify({
+                    'success': False,
+                    'message': 'Категория не найдена'
+                }), 404
 
-        is_delete = category_repo.delete_category(category)
+            is_delete = category_repo.delete_category(category)
 
         if is_delete:
             return jsonify({
@@ -220,22 +223,23 @@ def delete_category(category_id):
 def get_category_athletes(category_id):
     """Получить участников категории"""
     try:
-        category = category_repo.get_category_by_id(category_id)
-        if not category:
-            return jsonify({
-                'success': False,
-                'message': 'Категория не найдена'
-            }), 404
+        with CategoryRepository() as category_repo:
+            category = category_repo.get_category_by_id(category_id)
+            if not category:
+                return jsonify({
+                    'success': False,
+                    'message': 'Категория не найдена'
+                }), 404
 
-        athletes = []
-        for athlete in category.athletes:
-            athletes.append({
-                'id': athlete.id,
-                'full_name': athlete.name,
-                'club': athlete.club_id,
-                'age': athlete.age,
-                'rank': athlete.rank_id
-            })
+            athletes = []
+            for athlete in category.athletes:
+                athletes.append({
+                    'id': athlete.id,
+                    'full_name': athlete.name,
+                    'club': athlete.club_id,
+                    'age': athlete.age,
+                    'rank': athlete.rank_id
+                })
 
         return jsonify({
             'success': True,

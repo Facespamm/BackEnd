@@ -3,8 +3,16 @@ from new_model.weighing_new import WeighingNew
 
 
 class WeightRepository:
-    def __init__(self):
-        self.session = create_session()
+    def __init__(self, session = None):
+        self.session = session if session else create_session()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.session.rollback()
+        self.session.close()
 
     def get_weights(self, tournament_category_id: int, athlete_id:int) -> list[WeighingNew] | None:
         try:

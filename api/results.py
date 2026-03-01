@@ -1,12 +1,12 @@
 from flask import Blueprint, request, jsonify
 
+from database.db import create_session
 from new_model.Enums import FightStatus
 from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
 from repository.result_repo import ResultRepository
 
 results_bp = Blueprint('results', __name__, url_prefix='/api/results')
-result_repo = ResultRepository()
 
 @results_bp.route('/', methods=['GET'])
 def get_results():
@@ -21,18 +21,20 @@ def get_results():
                 'message': 'Обязательные параметры: tournament_id, category_id'
             }), 400
 
-        results = result_repo.get_results_by_tournament(tournament_id, category_id)
+        with create_session() as session:
+            result_repo = ResultRepository(session)
+            results = result_repo.get_results_by_tournament(tournament_id, category_id)
 
-        athlete_repo = AthleteRepository()
-        result_data = []
-        for result in results:
-            result_data.append({
-                'id': result.id,
-                'fight_id': result.fight_id,
-                'winner_name': athlete_repo.get_athlete_name_data(result.winner_id),
-                'victory_type': result.victory_type.value,
-                'fight_duration': result.fight_duration,
-            })
+            athlete_repo = AthleteRepository(session)
+            result_data = []
+            for result in results:
+                result_data.append({
+                    'id': result.id,
+                    'fight_id': result.fight_id,
+                    'winner_name': athlete_repo.get_athlete_name_data(result.winner_id),
+                    'victory_type': result.victory_type.value,
+                    'fight_duration': result.fight_duration,
+                })
 
         return jsonify({
             'success': True,
@@ -84,21 +86,23 @@ def get_results():
 def get_result(result_id):
     """Получить конкретный результат"""
     try:
-        result = result_repo.get_result_by_id(result_id)
+        with create_session() as session:
+            result_repo = ResultRepository(session)
+            result = result_repo.get_result_by_id(result_id)
 
-        if not result:
+            if not result:
+                return jsonify({
+                    'success': False,
+                    'message': 'Результат не найден'
+                }), 404
+            athlete_repo = AthleteRepository(session)
             return jsonify({
-                'success': False,
-                'message': 'Результат не найден'
-            }), 404
-        athlete_repo = AthleteRepository()
-        return jsonify({
-            'id': result.id,
-            'fight_id': result.fight_id,
-            'winner_name': athlete_repo.get_athlete_name_data(result.winner_id),
-            'victory_type': result.victory_type.value,
-            'fight_duration': result.fight_duration,
-        }), 200
+                'id': result.id,
+                'fight_id': result.fight_id,
+                'winner_name': athlete_repo.get_athlete_name_data(result.winner_id),
+                'victory_type': result.victory_type.value,
+                'fight_duration': result.fight_duration,
+            }), 200
 
     except Exception as e:
         return jsonify({
@@ -109,31 +113,34 @@ def get_result(result_id):
 @results_bp.route('/<int:fight_id>/cancel-result', methods=['PATCH'])
 def cancel_result(fight_id):
     try:
-        fight_repo = FightRepository()
-        fight = fight_repo.get_fight_by_id(fight_id)
 
-        if not fight:
-            return jsonify({
-                'message': 'Бой не найден'
-            }), 404
+        with create_session() as session:
+            fight_repo = FightRepository(session)
+            fight = fight_repo.get_fight_by_id(fight_id)
 
-        fight.status = FightStatus.CANCELLED
-        result = result_repo.get_result_by_fight(fight_id)
+            if not fight:
+                return jsonify({
+                    'message': 'Бой не найден'
+                }), 404
 
-        if not result:
-            return jsonify({
-                'message':'Не найден резулльтат по бою'
-            }), 404
+            fight.status = FightStatus.CANCELLED
+            result_repo = ResultRepository(session)
+            result = result_repo.get_result_by_fight(fight_id)
 
-        winner_id = result.winner_id
-        is_deleted_result = result_repo.delete_result(fight_id)
+            if not result:
+                return jsonify({
+                    'message':'Не найден резулльтат по бою'
+                }), 404
 
-        if not is_deleted_result:
-            return jsonify({
-                'message':'Не получилось удалить результат боя'
-            }), 500
+            winner_id = result.winner_id
+            is_deleted_result = result_repo.delete_result(fight_id)
 
-        fight_repo.remove_winner_from_next_fight(fight_id, winner_id)
+            if not is_deleted_result:
+                return jsonify({
+                    'message':'Не получилось удалить результат боя'
+                }), 500
+
+            fight_repo.remove_winner_from_next_fight(fight_id, winner_id)
 
         return jsonify({
             'message':'Отменнены результаты боя'

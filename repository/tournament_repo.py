@@ -13,8 +13,16 @@ from repository.category_repo import CategoryRepository
 
 
 class TournamentRepository:
-    def __init__(self):
-        self.session = create_session()
+    def __init__(self, session = None):
+        self.session = session if session else create_session()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.session.rollback()
+        self.session.close()
 
     def add_club_to_tournament(self, tournament_id, club_id):
         """Добавить клуб к турниру"""

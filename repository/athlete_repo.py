@@ -18,6 +18,14 @@ class AthleteRepository:
     def __init__(self, session = None):
         self.session =session if session else create_session()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.session.rollback()
+        self.session.close()
+
     def get_athletes(self, club_id:int, search_name: str):
         query = self.session.query(AthleteNew).join(AthleteNew.user).filter_by(is_active = True)
 

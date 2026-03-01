@@ -1,6 +1,6 @@
 from flask import request, Blueprint, jsonify
 
-from database.db import db
+from database.db import db, create_session
 from new_model.Enums import translate_gender, RoleName
 from datetime import datetime
 
@@ -11,7 +11,6 @@ from repository.auth_repo import AuthRepository
 from dateutil.relativedelta import relativedelta
 
 athletes_bp = Blueprint('athletes', __name__, url_prefix='/api/athletes')
-athlete_repo = AthleteRepository()
 
 @athletes_bp.route('/', methods=['GET'])
 def get_athletes():
@@ -19,8 +18,8 @@ def get_athletes():
     try:
         club_id = request.args.get('club_id', type=int)
         search = request.args.get('search', '').strip()
-
-        basic_information = athlete_repo.get_basic_info(club_id, search)
+        with AthleteRepository() as athlete_repo:
+            basic_information = athlete_repo.get_basic_info(club_id, search)
 
         result = [
             {
@@ -51,8 +50,8 @@ def create_athlete(user_id):
 
         if not user_id:
             return jsonify({'success': False,'message': f"Нет user id"})
-
-        has_athlete = athlete_repo.has_athlete(user_id)
+        with AthleteRepository() as athlete_repo:
+            has_athlete = athlete_repo.has_athlete(user_id)
 
         if has_athlete:
             return jsonify({'success': False,'message': f"У этого пользователя уже есть профиль участника"}), 400
@@ -92,12 +91,13 @@ def create_athlete(user_id):
             is_active=True
         )
 
-        auth_repo = AuthRepository()
-        role_id = auth_repo.get_role_id(RoleName.ATHLETE.value)
-        auth_repo.update_user_role(user_id, role_id)
+        with create_session() as session:
+            auth_repo = AuthRepository(session)
+            athlete_repo = AthleteRepository(session)
 
-        # athlete_repo.set_category(athlete,data['weight'])
-        athlete_is_added = athlete_repo.create_athlete(athlete)
+            role_id = auth_repo.get_role_id(RoleName.ATHLETE.value)
+            auth_repo.update_user_role(user_id, role_id)
+            athlete_is_added = athlete_repo.create_athlete(athlete)
 
         if not athlete_is_added:
             return jsonify({
@@ -122,34 +122,36 @@ def create_athlete(user_id):
 def get_athlete_by_id(athlete_id):
     """Получить информацию об участнике"""
     try:
-        athlete = athlete_repo.get_athlete_by_id(athlete_id)
-        if not athlete or not athlete.is_active:
-            return jsonify({
-                'success': False,
-                'message': 'Участник не найден'
-            }), 404
+        with AthleteRepository() as athlete_repo:
+            athlete = athlete_repo.get_athlete_by_id(athlete_id)
 
-        return jsonify({
-            'success': True,
-            'athlete': {
-                'id': athlete.id,
-                'first_name': athlete.user.first_name,
-                'last_name': athlete.user.last_name,
-                'middle_name': athlete.user.middle_name,
-                'birth_date': athlete.birth_date.isoformat(),
-                'age': athlete.age,
-                'gender': athlete.gender,
-                'club_id': athlete.club_id,
-                'club_name': athlete.club.name if athlete.club else None,
-                'rank': athlete.rank.level if athlete.rank else None,
-                'rank_id': athlete.rank_id,
-                'license_number': athlete.license_number,
-                'phone': athlete.user.phone,
-                'email': athlete.user.email,
-                'medical_check': athlete.medical_check,
-                'insurance_number': athlete.insurance_number
-            }
-        })
+            if not athlete or not athlete.is_active:
+                return jsonify({
+                    'success': False,
+                    'message': 'Участник не найден'
+                }), 404
+
+            return jsonify({
+                'success': True,
+                'athlete': {
+                    'id': athlete.id,
+                    'first_name': athlete.user.first_name,
+                    'last_name': athlete.user.last_name,
+                    'middle_name': athlete.user.middle_name,
+                    'birth_date': athlete.birth_date.isoformat(),
+                    'age': athlete.age,
+                    'gender': athlete.gender,
+                    'club_id': athlete.club_id,
+                    'club_name': athlete.club.name if athlete.club else None,
+                    'rank': athlete.rank.level if athlete.rank else None,
+                    'rank_id': athlete.rank_id,
+                    'license_number': athlete.license_number,
+                    'phone': athlete.user.phone,
+                    'email': athlete.user.email,
+                    'medical_check': athlete.medical_check,
+                    'insurance_number': athlete.insurance_number
+                }
+            })
 
     except Exception as e:
         return jsonify({
@@ -161,13 +163,6 @@ def get_athlete_by_id(athlete_id):
 def update_athlete(athlete_id):
     """Обновить информацию об участнике"""
     try:
-        athlete = athlete_repo.get_athlete_by_id(athlete_id)
-        if not athlete or not athlete.is_active:
-            return jsonify({
-                'success': False,
-                'message': 'Участник не найден'
-            }), 404
-
         data = request.get_json() or {}
 
         # Обновляем данные пользователя
@@ -176,7 +171,16 @@ def update_athlete(athlete_id):
         athlete_fields = ['birth_date', 'gender', 'club_id', 'rank_id',
                           'license_number', 'medical_check', 'insurance_number']
 
-        is_updated = athlete_repo.update_athlete(athlete, athlete_fields,user_fields,data)
+        with AthleteRepository() as repo:
+            athlete = repo.get_athlete_by_id(athlete_id)
+
+            if not athlete or not athlete.is_active:
+                return jsonify({
+                    'success': False,
+                    'message': 'Участник не найден'
+                }), 404
+
+            is_updated = repo.update_athlete(athlete, athlete_fields,user_fields,data)
 
         if is_updated:
             return jsonify({
@@ -200,15 +204,16 @@ def update_athlete(athlete_id):
 def delete_athlete(athlete_id):
     """Удалить участника (мягкое удаление)"""
     try:
-        athlete = athlete_repo.get_athlete_by_id(athlete_id)
-        if not athlete or not athlete.is_active:
-            return jsonify({
-                'success': False,
-                'message': 'Участник не найден'
-            }), 404
+        with AthleteRepository() as athlete_repo:
+            athlete = athlete_repo.get_athlete_by_id(athlete_id)
+            if not athlete or not athlete.is_active:
+                return jsonify({
+                    'success': False,
+                    'message': 'Участник не найден'
+                }), 404
 
-        # Мягкое удаление - помечаем как неактивного
-        is_deleted = athlete_repo.delete_athlete(athlete)
+            # Мягкое удаление - помечаем как неактивного
+            is_deleted = athlete_repo.delete_athlete(athlete)
 
         if is_deleted:
             return jsonify({
@@ -249,7 +254,9 @@ def search_athlete():
             'middle_name': middle_name
         }
 
-        athletes = athlete_repo.search_athletes_by_name(name_query, club_id)
+        with AthleteRepository() as athlete_repo:
+            athletes = athlete_repo.search_athletes_by_name(name_query, club_id)
+
         result = [
             {
                 'id': athlete[0],
@@ -288,43 +295,47 @@ def create_athlete_registration():
         birth_date = datetime.fromisoformat(data['birth_date'])
         years = relativedelta(date_now, birth_date).years
 
-        auth_repo = AuthRepository()
-        existing_user = auth_repo.get_user_by_username(data['login'])
-        if existing_user:
-            return jsonify({'success': False, 'message': 'Пользователь с таким логином уже существует'}), 400
+        with create_session() as session:
+            auth_repo = AuthRepository(session)
+            existing_user = auth_repo.get_user_by_username(data['login'])
+            if existing_user:
+                return jsonify({'success': False, 'message': 'Пользователь с таким логином уже существует'}), 400
 
-        new_user = UserNew(
-            username=data['login'],
-            password_hash = auth_repo.hash_password(data['password']),
-            first_name=names[0],
-            middle_name=names[1] if len(names) > 1 else '',
-            last_name=names[2] if len(names) > 1 else '',
-            email = data['email'],
-            phone = data['phone'],
-        )
+            new_user = UserNew(
+                username=data['login'],
+                password_hash = auth_repo.hash_password(data['password']),
+                first_name=names[0],
+                middle_name=names[1] if len(names) > 1 else '',
+                last_name=names[2] if len(names) > 1 else '',
+                email = data['email'],
+                phone = data['phone'],
+            )
 
-        is_created = auth_repo.create_user(new_user)
-        user_id = new_user.id if is_created else None
+            is_created = auth_repo.create_user(new_user)
+            user_id = new_user.id if is_created else None
 
-        if not user_id:
-            return jsonify({
-                'message': 'Не получилось создать пользователя'
-            }), 500
+            if not user_id:
+                return jsonify({
+                    'message': 'Не получилось создать пользователя'
+                }), 500
 
-        new_athlete = AthleteNew(
-                user_id=user_id,
-                birth_date=datetime.fromisoformat(data['birth_date']).date(),
-                gender=data['gender'],
-                club_id=data.get('club_id', None),
-                rank_id=data['rank_id'],
-                license_number=data['license_number'],
-                medical_check=data['medical_check'],
-                insurance_number=data['insurance_number'],
-                age = years,
-                is_active=True
-        )
+            new_athlete = AthleteNew(
+                    user_id=user_id,
+                    birth_date=datetime.fromisoformat(data['birth_date']).date(),
+                    gender=data['gender'],
+                    club_id=data.get('club_id', None),
+                    rank_id=data['rank_id'],
+                    license_number=data['license_number'],
+                    medical_check=data['medical_check'],
+                    insurance_number=data['insurance_number'],
+                    age = years,
+                    is_active=True
+            )
+            athlete_repo = AthleteRepository(session)
 
-        if athlete_repo.create_athlete(new_athlete):
+            is_created = athlete_repo.create_athlete(new_athlete)
+
+        if is_created:
             return jsonify({
                 'message': 'Вы создали участника'
             }), 200

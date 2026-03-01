@@ -9,8 +9,16 @@ from new_model.new_associations import new_user_roles
 
 
 class AuthRepository:
-    def __init__(self):
-        self.session = create_session()
+    def __init__(self, session = None):
+        self.session = session if session else create_session()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.session.rollback()
+        self.session.close()
 
     def set_user_role(self,user_id,role_id):
         """Установить роль пользователя"""
