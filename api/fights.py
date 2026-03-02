@@ -7,7 +7,7 @@ from repository.category_repo import CategoryRepository
 from repository.figth_repo import FightRepository
 from repository.referee_repo import RefereeRepository
 from repository.tournament_repo import TournamentRepository
-
+from new_model.Enums import BracketType
 fights_bp = Blueprint('fights', __name__, url_prefix='/api/fights')
 
 @fights_bp.route('/', methods=['GET'])
@@ -102,6 +102,191 @@ def get_fight(fight_id):
             'success': False,
             'message': f'Ошибка при получении схватки: {str(e)}'
         }), 500
+
+@fights_bp.route('/<int:tournament_id>/consolation/finalists', methods=['GET'])
+
+def get_finalists_consolation(tournament_id):
+
+    """Утешительные бои финалистов (группа A и B)"""
+
+    try:
+
+        category_id = request.args.get('category', type=int)
+
+        group = request.args.get('group', '').upper()  # A, B или пусто = обе
+
+        if not category_id:
+
+            return jsonify({'success': False, 'message': 'Не выбрана категория'}), 400
+
+        with create_session() as session:
+
+            tournament_repo = TournamentRepository(session)
+
+            tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
+
+            if not tournament_category:
+
+                return jsonify({'success': False, 'message': 'Категория турнира не найдена'}), 404
+
+            tournament_category_id = tournament_category.tournament_category_id
+
+            fight_repo = FightRepository(session)
+
+            athlete_repo = AthleteRepository(session)
+
+            result = {}
+
+            groups = {
+
+                'A': BracketType.FINALIST_CONSOLATION_GROUP_A,
+
+                'B': BracketType.FINALIST_CONSOLATION_GROUP_B,
+
+            }
+
+            # если group не указан — отдаём обе
+
+            groups_to_fetch = {group: groups[group]} if group in groups else groups
+
+            for group_name, bracket_type in groups_to_fetch.items():
+
+                fights = fight_repo.get_fights_by_bracket_type(tournament_category_id, bracket_type)
+
+                result[f'group_{group_name}'] = [
+
+                    {
+
+                        'id': fight.id,
+
+                        'round': fight.round_number,
+
+                        'fight_number': fight.fight_number,
+
+                        'status': fight.status.value,
+
+                        'tatami_number': fight.tatami_number,
+
+                        'next_fight': fight.next_fight_id,
+
+                        'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+
+                        'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
+
+                    }
+
+                    for fight in fights
+
+                ]
+
+            if not any(result.values()):
+
+                return jsonify({'success': False, 'message': 'Утешительные бои финалистов не найдены'}), 404
+
+        return jsonify({
+
+            'success': True,
+
+            **result,
+
+            'total': sum(len(v) for v in result.values())
+
+        }), 200
+
+    except Exception as e:
+
+        return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
+
+
+@fights_bp.route('/<int:tournament_id>/consolation/semifinalists', methods=['GET'])
+def get_semifinalists_consolation(tournament_id):
+    """Утешительные бои полуфиналистов — обе группы A и B одним запросом"""
+    try:
+        category_id = request.args.get('category', type=int)
+
+        if not category_id:
+            return jsonify({'success': False, 'message': 'Не выбрана категория'}), 400
+
+        with create_session() as session:
+            tournament_repo = TournamentRepository(session)
+            tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
+            if not tournament_category:
+                return jsonify({'success': False, 'message': 'Категория турнира не найдена'}), 404
+
+            tournament_category_id = tournament_category.tournament_category_id
+
+            fight_repo = FightRepository(session)
+            athlete_repo = AthleteRepository(session)
+
+            # Получаем обе группы за один раз
+            fights_a = fight_repo.get_fights_by_bracket_type(
+                tournament_category_id,
+                BracketType.SEMIFINALIST_CONSOLATION_GROUP_A
+            )
+
+            fights_b = fight_repo.get_fights_by_bracket_type(
+                tournament_category_id,
+                BracketType.SEMIFINALIST_CONSOLATION_GROUP_B
+            )
+
+            # Если вообще нет боёв — возвращаем пустые группы (удобнее, чем 404)
+            if not fights_a and not fights_b:
+                return jsonify({
+                    'success': True,
+                    'message': 'Утешительные бои пока не созданы',
+                    'groups': {'A': [], 'B': []},
+                    'total': 0
+                }), 200
+
+            # Формируем DTO для группы A
+            fights_dto_a = [
+                {
+                    'id': fight.id,
+                    'round': fight.round_number,
+                    'fight_number': fight.fight_number,
+                    'status': fight.status.value,
+                    'tatami_number': fight.tatami_number,
+                    'next_fight': fight.next_fight_id,
+                    'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+                    'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
+                }
+                for fight in fights_a
+            ]
+
+            # Формируем DTO для группы B
+            fights_dto_b = [
+                {
+                    'id': fight.id,
+                    'round': fight.round_number,
+                    'fight_number': fight.fight_number,
+                    'status': fight.status.value,
+                    'tatami_number': fight.tatami_number,
+                    'next_fight': fight.next_fight_id,
+                    'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+                    'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
+                }
+                for fight in fights_b
+            ]
+
+        return jsonify({
+            'success': True,
+            'groups': {
+                'A': {
+                    'fights': fights_dto_a,
+                    'total': len(fights_dto_a)
+                },
+                'B': {
+                    'fights': fights_dto_b,
+                    'total': len(fights_dto_b)
+                }
+            },
+            'total': len(fights_dto_a) + len(fights_dto_b)
+        }), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
+
+
 
 @fights_bp.route('/<int:fight_id>/referees', methods=['GET'])
 def get_fight_referees(fight_id):

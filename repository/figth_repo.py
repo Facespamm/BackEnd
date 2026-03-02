@@ -55,6 +55,17 @@ class FightRepository:
             self.session.execute(insert_query)
         self.session.commit()
 
+    def get_fights_by_bracket_type(self, tournament_category_id, bracket_type: BracketType):
+        return (
+            self.session.query(FightNew)
+            .filter(
+                FightNew.tournament_category_id == tournament_category_id,
+                FightNew.type_bracket == bracket_type
+            )
+            .order_by(FightNew.round_number, FightNew.fight_number)
+            .all()
+        )
+
     def remove_referee(self, fight_id,role):
         """Убрать судью с определенной роли"""
         delete_query = (
@@ -133,25 +144,37 @@ class FightRepository:
                     self.session.query(TournamentCategory.tournament_id)
                     .filter(TournamentCategory.tournament_category_id == fight.tournament_category_id)
                     .distinct(TournamentCategory.tournament_id)
-                    .first()
+                    .scalar()
                 )
 
                 if tournament_id:
-                    update_tatami_fight = (
-                        update(TatamiFight)
-                        .filter_by(tournament_id=tournament_id[0],tatami_number=tatami_number)
-                        .values(fight_id=fight.id, status=TatamiStatus.TAKEN)
+                    tatami_fight = (
+                        self.session.query(TatamiFight)
+                        .filter_by(tournament_id=tournament_id, tatami_number=tatami_number)
+                        .first()
                     )
-                    self.session.execute(update_tatami_fight)
+
+                    if tatami_fight:
+                        # запись есть — обновляем
+                        tatami_fight.fight_id = fight.id
+                        tatami_fight.status = TatamiStatus.TAKEN
+                    else:
+                        # записи нет — создаём
+                        new_tatami_fight = TatamiFight(
+                            tournament_id=tournament_id,
+                            tatami_number=tatami_number,
+                            fight_id=fight.id,
+                            status=TatamiStatus.TAKEN
+                        )
+                        self.session.add(new_tatami_fight)
 
             self.session.commit()
             self.session.close()
         except Exception as e:
-            print('Error: ',e)
+            print('Error: ', e)
             self.session.rollback()
             self.session.close()
             raise e
-
     def update_fight(self, fight_id,  next_fight_id):
         try:
             current_fight = self.get_fight_by_id(fight_id)

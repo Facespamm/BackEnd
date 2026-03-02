@@ -212,6 +212,7 @@ def fight_bracket(tournament_id):
                 'round': fight.round_number,
                 'status_fight': fight.status.value,
                 'next_fight': fight.next_fight_id,
+                'type_bracket':fight.type_bracket.value,
             } for fight in fights]
 
         tournament_repo = TournamentRepository()
