@@ -15,6 +15,7 @@ from repository.figth_repo import FightRepository
 from repository.tournament_repo import TournamentRepository
 from services.fight_generator import FightGenerator
 from utils.helpers import calculate_rounds
+from repository.weight_repo import WeightRepository
 
 tournament_repo = TournamentRepository()
 fight_repo = FightRepository()
@@ -31,33 +32,45 @@ class BracketGenerator:
     def generate_olympic(self, category_id: int, tatami_number: int):
         try:
             athlete_repo = AthleteRepository()
-            athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
-
-            athlete_count = len(athletes)
-            if not athletes or athlete_count < 2 or athlete_count == 0:
-                raise Exception('No athletes found')
+            all_athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
             tournament_category = tournament_repo.get_tournament_category(self.tournament_id, category_id)
             if not tournament_category:
                 raise Exception("❌ Tournament category not found")
 
+            # Фильтр по взвешиванию — только is_valid=True (один вызов get_weights)
+            with WeightRepository() as weight_repo:
+                athletes = [
+                    a for a in all_athletes
+                    if any(
+                        w.is_valid
+                        for w in weight_repo.get_weights(tournament_category.tournament_category_id, a.id) or []
+                    )
+                ]
+
+            athlete_count = len(athletes)
+            if athlete_count < 2:
+                raise Exception('Недостаточно атлетов прошедших взвешивание')
+
             self.init_fight_table(tournament_category.tournament_category_id)
 
-            # Определяем количество раундов
             total_rounds = calculate_rounds(participants_count=athlete_count)
-
             if total_rounds == 0:
                 raise Exception("❌ Invalid number of rounds calculated")
 
-            #распределение участников
             seeded_athletes = self._seed_athletes(athletes)
+            fights = self._generate_fights(
+                seeded_athletes,
+                total_rounds,
+                tournament_category.tournament_category_id,
+                tatami_number
+            )
 
-            fights = self._generate_fights(seeded_athletes, total_rounds, tournament_category.tournament_category_id,tatami_number)
             return fights
-        except Exception as e:
-            print('Error: ', e)
-            return None
 
+        except Exception as e:
+            print('Error in generate_olympic:', e)
+            return None
     def generate_olympic_consolation_fight_semifinal(self,category_id, tatami_number):
         try:
             athlete_repo = AthleteRepository()

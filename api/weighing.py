@@ -81,7 +81,6 @@ def get_weighings():
 
 @weighing_bp.route('/<int:weighing_id>/toggle-validation', methods=['PATCH'])
 def toggle_weighing_validation(weighing_id):
-    """Изменить статус валидации взвешивания"""
     try:
         with WeightRepository() as weighing_repo:
             weighing = weighing_repo.get_weight(weighing_id)
@@ -91,35 +90,33 @@ def toggle_weighing_validation(weighing_id):
                     'message': 'Взвешивание не найдено'
                 }), 404
 
-            # Меняем статус на противоположный
             is_change = weighing_repo.change_weighing_validation(weighing_id)
 
-        if is_change:
-            return jsonify({
-                'success': True,
-                'message': f'Статус валидации изменен на {"валидно" if weighing.is_valid else "невалидно"}',
-                'is_valid': weighing.is_valid,
-                'status_display': _is_within_weight_category_limits(weighing)
-            }), 200
-        else:
-            return jsonify({
-                'message': 'Не получилось обновить статус'
-            }), 500
+            # Читаем is_valid ВНУТРИ сессии
+            if is_change:
+                return jsonify({
+                    'success': True,
+                    'message': f'Статус изменен на {"валидно" if weighing.is_valid else "невалидно"}',
+                    'is_valid': weighing.is_valid,
+                    'status_display': _is_within_weight_category_limits(weighing)
+                }), 200
+            else:
+                return jsonify({
+                    'message': 'Не получилось обновить статус'
+                }), 500
+
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'Ошибка при изменении статуса валидации: {str(e)}'
+            'message': f'Ошибка при изменении статуса: {str(e)}'
         }), 500
 
 @weighing_bp.route('/<int:weighing_id>', methods=['PUT'])
 def update_weighing(weighing_id):
-    """Обновить запись о взвешивании"""
     try:
         data = request.get_json()
         if not data:
-            return jsonify({
-                'message': 'Нет данных для изменения'
-            }),400
+            return jsonify({'message': 'Нет данных для изменения'}), 400
 
         with WeightRepository() as weighing_repo:
             weighing = weighing_repo.get_weight(weighing_id)
@@ -131,18 +128,20 @@ def update_weighing(weighing_id):
                 }), 404
 
             is_update = weighing_repo.update_weighing_information(weighing_id, data)
-        if is_update:
-            return jsonify({
-                'success': True,
-                'message': 'Взвешивание успешно обновлено',
-                'weight_category': weighing.weight_category,
-                'status': weighing.status_display,
-                'is_valid': weighing.is_valid
-            }), 200
-        else:
-            return jsonify({
-                'message': 'Не получилось обновить данные для звешивания'
-            }), 500
+
+            if is_update:
+                # Читаем данные ВНУТРИ сессии пока объект ещё привязан
+                return jsonify({
+                    'success': True,
+                    'message': 'Взвешивание успешно обновлено',
+                    'weight_category': weighing.weight_category,
+                    'is_valid': weighing.is_valid
+                }), 200
+            else:
+                return jsonify({
+                    'message': 'Не получилось обновить данные взвешивания'
+                }), 500
+
     except Exception as e:
         return jsonify({
             'success': False,

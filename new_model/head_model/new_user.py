@@ -25,5 +25,9 @@ class UserNew(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Связи
-    athlete_profile = db.relationship('AthleteNew', back_populates='user')
+    athlete_profile = db.relationship(
+        'AthleteNew',
+        back_populates='user',
+        cascade='all, delete-orphan'
+    )
     roles = db.relationship('RoleNew', secondary=new_user_roles, back_populates='users')

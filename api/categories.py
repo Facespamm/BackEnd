@@ -68,19 +68,22 @@ def create_category():
                 'message': 'Минемальный вес не может быть больше максимального'
             }),400
 
-        # if data['min_age'] > data['max_age']:
-        #     return jsonify({
-        #         'message': 'Минимальный год не может быть меньше максимального года'
-        #     }),400
+        # === Проверка веса ===
+        if data.get('min_weight') is not None and data.get('max_weight') is not None:
+            if data['min_weight'] > data['max_weight']:
+                return jsonify({
+                    'message': 'Минимальный вес не может быть больше максимального'
+                }), 400
 
-        date_min = date(year=date['min_age'])
-        date_max = date(year=date['max_age'])
+        # === Проверка возраста (только годы) ===
+        min_age = data.get('min_age')
+        max_age = data.get('max_age')
 
-        if date_max > date_min:
-            return jsonify({
-                'message':'Дата "c" не может быть меньше даты "по "'
-            }),400
-
+        if min_age is not None and max_age is not None:
+            if int(min_age) > int(max_age):
+                return jsonify({
+                    'message': 'Минимальный год не может быть больше максимального года'
+                }), 400
         under_or_over_weight = f'-{data.get('max_weight')}'if data.get('max_weight') else f'+{data.get('min_weight')}'
         generate_name = f'{under_or_over_weight}кг, ПОЛ: {data.get('gender')}, ГОДА:с {data.get('min_age')} по {data.get('max_age')}'
 
@@ -91,7 +94,7 @@ def create_category():
                     'message': 'Такая категория существует'
                 }), 400
 
-            translate_gender_ =  translate_gender(data['gender'])
+            translate_gender_ = translate_gender(data['gender'])
             category = CategoryNew(
                 name=generate_name,
                 gender=translate_gender_,
@@ -106,13 +109,14 @@ def create_category():
         if is_create:
             return jsonify({
                 'success': True,
-                'message': f'Категория успешно создана {category.name}',
+                'message': f'Категория успешно создана {generate_name}',  # ← используем переменную!
             }), 201
         else:
             return jsonify({
                 'success': False,
                 'message': 'Ошибка при сохранении категории'
             }), 400
+
     except Exception as e:
         return jsonify({
             'success': False,

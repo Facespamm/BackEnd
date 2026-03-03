@@ -99,57 +99,36 @@ def get_all_users():
 
 @statistics_bp.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    """Удалить пользователя по ID"""
     try:
         with create_session() as session:
             user = session.query(UserNew).filter(UserNew.id == user_id).first()
             if not user:
-                return jsonify({
-                    'success': False,
-                    'message': f'Пользователь с ID {user_id} не найден'
-                }), 404
+                return jsonify({'success': False, 'message': f'Пользователь с ID {user_id} не найден'}), 404
 
-            username = user.username  # сохраняем для сообщения
+            username = user.username
             session.delete(user)
-            try:
-                session.commit()
-            except:
-                session.rollback()
+            session.commit()  # если упадёт — поймает внешний except
 
-        return jsonify({
-            'success': True,
-            'message': f'Пользователь {username} успешно удалён'
-        }), 200
+        return jsonify({'success': True, 'message': f'Пользователь {username} успешно удалён'}), 200
 
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при удалении пользователя: {str(e)}'
-        }), 500
-
+        return jsonify({'success': False, 'message': f'Ошибка при удалении пользователя: {str(e)}'}), 500
 
 # ────────────────────────────────────────────────────────────────
 # ОБНОВЛЕНИЕ данных пользователя по ID
 # ────────────────────────────────────────────────────────────────
 @statistics_bp.route('/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
-    """Обновить информацию о пользователе по ID"""
     try:
         data = request.get_json() or {}
         if not data:
-            return jsonify({
-                'success': False,
-                'message': 'Не переданы данные для обновления'
-            }), 400
+            return jsonify({'success': False, 'message': 'Не переданы данные для обновления'}), 400
 
         with create_session() as session:
             user = session.query(UserNew).filter(UserNew.id == user_id).first()
             if not user:
-                return jsonify({
-                    'success': False,
-                    'message': f'Пользователь с ID {user_id} не найден'
-                }), 404
-            # Обновляем только те поля, которые переданы
+                return jsonify({'success': False, 'message': f'Пользователь с ID {user_id} не найден'}), 404
+
             if 'username' in data:
                 user.username = data['username']
             if 'first_name' in data:
@@ -169,11 +148,10 @@ def update_user(user_id):
                 session.commit()
             except:
                 session.rollback()
+                return jsonify({'success': False, 'message': 'Ошибка при сохранении'}), 500
 
-        return jsonify({
-            'success': True,
-            'message': 'Пользователь успешно обновлён',
-            'user': {
+            # ← собираем ответ пока сессия ещё открыта
+            user_data = {
                 'id': user.id,
                 'username': user.username,
                 'first_name': user.first_name,
@@ -183,14 +161,11 @@ def update_user(user_id):
                 'phone': user.phone,
                 'is_active': user.is_active
             }
-        }), 200
+
+        return jsonify({'success': True, 'message': 'Пользователь успешно обновлён', 'user': user_data}), 200
 
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при обновлении пользователя: {str(e)}'
-        }), 500
-
+        return jsonify({'success': False, 'message': f'Ошибка при обновлении пользователя: {str(e)}'}), 500
 @statistics_bp.route('/users-by-role', methods=['GET'])
 def get_users_by_role_statistics():
     """

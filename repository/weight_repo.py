@@ -27,9 +27,10 @@ class WeightRepository:
             print('Error ',e)
             return None
 
-    def get_weight(self, weighing_id:int) -> WeighingNew | None:
+    # НАДО — правильно
+    def get_weight(self, weighing_id: int) -> WeighingNew | None:
         try:
-            weight = self.session.query(WeighingNew).filter_by(weighing_id=weighing_id).first()
+            weight = self.session.query(WeighingNew).filter_by(id=weighing_id).first()
             return weight
         except Exception as e:
             print('Error ',e)

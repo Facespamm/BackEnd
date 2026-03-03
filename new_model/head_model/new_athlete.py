@@ -26,9 +26,17 @@ class AthleteNew(db.Model):
     rank = db.relationship('DanNew')
     club = db.relationship('ClubNew', back_populates='athletes' )
     user = db.relationship('UserNew', lazy = True,back_populates='athlete_profile')
-    weighings = db.relationship('WeighingNew', back_populates='athlete')
-    registrations = db.relationship('AthleteRegistration',lazy=True, back_populates='athlete')
-
+    weighings = db.relationship(
+        'WeighingNew',
+        back_populates='athlete',
+        cascade='all, delete-orphan'
+    )
+    registrations = db.relationship(
+        'AthleteRegistration',
+        lazy=True,
+        back_populates='athlete',
+        cascade='all, delete-orphan'
+    )
     white_fights = db.relationship('FightNew',
                                    back_populates='white_athlete',
                                    foreign_keys=[FightNew.white_athlete_id])
