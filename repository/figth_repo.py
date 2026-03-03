@@ -206,6 +206,14 @@ class FightRepository:
             self.session.close()
             raise e
 
+    def get_all_fights_by_tournament_category(self, tournament_category_id: int):
+        return (
+            self.session.query(FightNew)
+            .filter(FightNew.tournament_category_id == tournament_category_id)
+            .order_by(FightNew.round_number, FightNew.fight_number)
+            .all()
+        )
+
     def end_fight(self, fight_id, data: dict):
         try:
             fight = self.get_fight_by_id(fight_id)

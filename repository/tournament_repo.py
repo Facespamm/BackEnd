@@ -257,6 +257,13 @@ class TournamentRepository:
             print(f"Error getting category: {e}")
             return None
 
+    def get_tournament_categories(self, tournament_id: int):
+        return (
+            self.session.query(TournamentCategory)
+            .filter(TournamentCategory.tournament_id == tournament_id)
+            .all()
+        )
+
     def get_category(self, tournament_id, category_id) -> CategoryNew | None:
         """Категория по турниру"""
         try:
