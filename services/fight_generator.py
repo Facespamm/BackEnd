@@ -111,13 +111,10 @@ class FightGenerator:
         eight_round = semifinal_round -1
         return self._generate_semifinalist_fight(tournament_category_id, semifinal_round, eight_round, tatami_number)
 
-    def generate_consolation_fights_finalist(self, tournament_category_id, tatami_number,max_rounds):
-        """Генерация утешительных схваток за 3 место"""
-
-        # Находим полуфиналистов которые проиграли
+    def generate_consolation_fights_finalist(self, tournament_category_id, tatami_number, max_rounds):
         final_round = max_rounds
         eight_fight = max_rounds - 2
-        return self._generate_finalist_fight(tournament_category_id, final_round, eight_fight, max_rounds)
+        return self._generate_finalist_fight(tournament_category_id, final_round, eight_fight, tatami_number)
 
     def _generate_group(self, all_fights: list[FightNew], semifinal_fight: FightNew) -> list[FightNew]:
         """
@@ -264,8 +261,8 @@ class FightGenerator:
         first_fights = self.generate_first_round_fights(current_fighters, current_round, fight_number,
                                                         tournament_category_id, tatami_number, branch_name)
 
-        if first_fights[0] and first_fights[0].white_athlete_id is None or first_fights[0].blue_athlete_id is None:
-            self.fight_repo.update_status(first_fights[0].id,FightStatus.COMPLETED)
+        if first_fights[0].white_athlete_id is None or first_fights[0].blue_athlete_id is None:
+            self.fight_repo.update_status(first_fights[0].id, FightStatus.COMPLETED)
 
         return first_fights[0]
 
@@ -307,4 +304,4 @@ class FightGenerator:
         fights_group_b = self._generate_fights_finalist_by_group(group_b, tournament_category_id, tatami_number,
                                                               BracketType.FINALIST_CONSOLATION_GROUP_B)
 
-        return fights_group_a + fights_group_b
+        return [fights_group_a, fights_group_b]

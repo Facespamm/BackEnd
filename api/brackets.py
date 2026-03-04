@@ -141,7 +141,7 @@ def generate_semifinals_consolation_fights(tournament_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Ошибка создания утешительных боев: {str(e)}'}), 500
 
-@brackets_bp.route('/<int:tournament_id>/finals-consalation', methods=['POST'])
+@brackets_bp.route('/<int:tournament_id>/finals-consolation', methods=['POST'])
 def generate_consolation_fights_finalist(tournament_id):
     """Создание сетки для утишительных от финалистов """
     try:
@@ -155,9 +155,13 @@ def generate_consolation_fights_finalist(tournament_id):
 
         tatami_number = request.args.get('tatami_number')
 
-        if not tatami_number and type(tatami_number) != int:
-            return jsonify({'success': False, 'message': 'Не выброн татами'}), 400
+        if not tatami_number:
+            return jsonify({'success': False, 'message': 'Не выбран татами'}), 400
 
+        try:
+            tatami_number = int(tatami_number)
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Татами должен быть числом'}), 400
         tournament_repo = TournamentRepository()
         tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
 

@@ -4,7 +4,7 @@ from new_model.head_model.fight_new import FightNew
 from database.db import db
 from config import SCORE_VALUES, OSAEKOMI_TIMES, MAX_PENALTIES
 from sqlalchemy.orm.attributes import flag_modified
-
+from new_model.Enums import FightStatus
 
 class ScoreManager:
     def __init__(self, fight_id):
@@ -20,6 +20,27 @@ class ScoreManager:
         else:
             self.result = self.fight.result
 
+    def rematch_fight(self):
+        """Переигровка — полный сброс результата и статуса боя"""
+        # Удаляем результат из БД
+        if self.fight.result:
+            db.session.delete(self.fight.result)
+            db.session.flush()  # чтобы delete применился до commit
+            self.result = None
+
+        # Сбрасываем статус боя обратно в SCHEDULED
+        self.fight.status = FightStatus.SCHEDULED
+        self.fight.start_time = None
+        self.fight.end_time = None
+
+        db.session.commit()
+
+        return {
+            'success': True,
+            'message': 'Бой сброшен для переигровки',
+            'fight_id': self.fight.id,
+            'status': self.fight.status.value
+        }
 
     def _add_event(self, event_data):
         """Добавить событие в единый журнал боя"""

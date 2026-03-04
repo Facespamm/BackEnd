@@ -310,6 +310,18 @@ def get_current_scores(fight_id):
             'message': f'Ошибка: {str(e)}'
         }, 500)
 
+@scores_bp.route('/fight/<int:fight_id>/rematch', methods=['POST'])
+def rematch_fight(fight_id):
+    """Переигровка — полный сброс результата боя"""
+    try:
+        score_manager = ScoreManager(fight_id)
+        result = score_manager.rematch_fight()
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
 
 @scores_bp.route('/fight/<int:fight_id>/golden-score', methods=['POST'])
 def enter_golden_score(fight_id):

@@ -5,6 +5,17 @@ Blueprint для генерации PDF результатов турнира.
 Подключить в app.py:
     from pdf_routes import pdf_bp
     app.register_blueprint(pdf_bp)
+
+Endpoint:
+    GET /api/pdf/tournament/<tournament_id>
+
+Query params:
+    category_id (int, optional) — PDF только для одной категории.
+                                   Если не указан — генерирует по всем категориям.
+
+Примеры:
+    GET /api/pdf/tournament/5                  → все категории
+    GET /api/pdf/tournament/5?category_id=12   → только категория 12
 """
 
 from flask import Blueprint, send_file, jsonify, request
@@ -32,11 +43,9 @@ def _build_podium(fights, results_map, athlete_repo):
       1-е место  — победитель финала
       2-е место  — проигравший финала
       3-е место  — победители утешительных финалов (или полуфиналисты)
-      5, 7 место — остальные по вылету
     """
     podium = []
 
-    # Находим финал — бой с максимальным round_number среди MAIN
     main_fights = [f for f in fights if not f.get('type_bracket') or f.get('type_bracket') == 'MAIN']
     if not main_fights:
         return podium
@@ -76,7 +85,6 @@ def _build_podium(fights, results_map, athlete_repo):
         if loser_id:
             podium.append({'pos': 2, 'athlete': get_ath(loser_id),  'club': get_club(loser_id)})
 
-    # 3-е место — победители утешительных финальных боёв
     cons_final_types = [
         str(BracketType.FINALIST_CONSOLATION_GROUP_A),
         str(BracketType.FINALIST_CONSOLATION_GROUP_B),
@@ -86,7 +94,6 @@ def _build_podium(fights, results_map, athlete_repo):
         if str(f.get('type_bracket', '')) in cons_final_types
     ]
 
-    # Берём последний бой каждой группы (максимальный fight_number)
     for group_type in cons_final_types:
         group_fights = sorted(
             [f for f in cons_finals if str(f.get('type_bracket', '')) == group_type],
@@ -112,105 +119,110 @@ def _build_podium(fights, results_map, athlete_repo):
 
 
 # ─────────────────────────────────────────────────────────────
+# Хелпер: собрать данные одной tournament_category
+# ─────────────────────────────────────────────────────────────
+def _build_category_data(tc, category_repo, fight_repo, result_repo, athlete_repo, tournament_id):
+    cat = category_repo.get_category_by_id(tc.category_id)
+    if not cat:
+        return None
+
+    tc_id = tc.tournament_category_id
+
+    all_fights_orm = fight_repo.get_all_fights_by_tournament_category(tc_id)
+
+    fights_dto = []
+    for f in all_fights_orm:
+        fights_dto.append({
+            'id':            f.id,
+            'round':         f.round_number,
+            'fight_number':  f.fight_number,
+            'type_bracket':  f.type_bracket.value if f.type_bracket else 'MAIN',
+            'white_athlete': athlete_repo.get_athlete_by_fight(f.white_athlete_id, f.id),
+            'tatami_number': f.tatami_number,
+            'blue_athlete':  athlete_repo.get_athlete_by_fight(f.blue_athlete_id, f.id),
+        })
+
+    results_orm = result_repo.get_results_by_tournament(tournament_id, tc.category_id)
+    results_dto = []
+    results_map = {}
+    for r in results_orm:
+        dto = {
+            'fight_id':       r.fight_id,
+            'winner_id':      r.winner_id,
+            'victory_type':   r.victory_type.value if r.victory_type else '',
+            'fight_duration': r.fight_duration,
+        }
+        results_dto.append(dto)
+        results_map[r.fight_id] = dto
+
+    podium = _build_podium(fights_dto, results_map, athlete_repo)
+
+    competitors = len(set(
+        ath_id for f in fights_dto
+        for ath_id in [
+            (f.get('white_athlete') or {}).get('id'),
+            (f.get('blue_athlete')  or {}).get('id'),
+        ]
+        if ath_id
+    ))
+
+    return {
+        'id':          cat.id,
+        'name':        cat.name,
+        'tatami':      tc.tatami_number if hasattr(tc, 'tatami_number') else '—',
+        'competitors': competitors,
+        'fights':      fights_dto,
+        'results':     results_dto,
+        'podium':      podium,
+    }
+
+
+# ─────────────────────────────────────────────────────────────
 # Endpoint: GET /api/pdf/tournament/<tournament_id>
 # ─────────────────────────────────────────────────────────────
 @pdf_bp.route('/tournament/<int:tournament_id>', methods=['GET'])
 def get_tournament_pdf(tournament_id):
-    """
-    Генерирует PDF с турнирной сеткой, утешительными боями и результатами.
-
-    Query params:
-        category_id (int, optional) — если передан, генерирует PDF только для одной категории
-    """
     try:
+        # Если передан — генерируем PDF только для этой категории,
+        # если нет — для всех категорий турнира.
         category_id = request.args.get('category_id', type=int)
 
         with create_session() as session:
-            # ── Турнир ──
             tournament_repo = TournamentRepository(session)
             tournament = tournament_repo.get_tournament_by_id(tournament_id)
             if not tournament:
                 return jsonify({'success': False, 'message': 'Турнир не найден'}), 404
 
-            # ── Категории ──
             category_repo = CategoryRepository(session)
             fight_repo    = FightRepository(session)
             result_repo   = ResultRepository(session)
             athlete_repo  = AthleteRepository(session)
 
-            # Получаем tournament_categories
             tc_list = tournament_repo.get_tournament_categories(tournament_id)
             if not tc_list:
                 return jsonify({'success': False, 'message': 'Категории не найдены'}), 404
 
-            # Фильтр по категории если нужно
-            if category_id:
+            # ── Фильтрация по category_id ──────────────────────────
+            if category_id is not None:
                 tc_list = [tc for tc in tc_list if tc.category_id == category_id]
                 if not tc_list:
-                    return jsonify({'success': False, 'message': 'Категория не найдена'}), 404
+                    return jsonify({
+                        'success': False,
+                        'message': f'Категория {category_id} не найдена в турнире {tournament_id}'
+                    }), 404
+            # ───────────────────────────────────────────────────────
 
             categories_data = []
-
             for tc in tc_list:
-                cat = category_repo.get_category_by_id(tc.category_id)
-                if not cat:
-                    continue
-
-                tc_id = tc.tournament_category_id
-
-                # Все бои категории
-                all_fights_orm = fight_repo.get_all_fights_by_tournament_category(tc_id)
-
-                fights_dto = []
-                for f in all_fights_orm:
-                    fights_dto.append({
-                        'id':            f.id,
-                        'round':         f.round_number,
-                        'fight_number':  f.fight_number,
-                        'type_bracket':  f.type_bracket.value if f.type_bracket else 'MAIN',
-                        'white_athlete': athlete_repo.get_athlete_by_fight(f.white_athlete_id, f.id),
-                        'blue_athlete':  athlete_repo.get_athlete_by_fight(f.blue_athlete_id, f.id),
-                    })
-
-                # Результаты
-                results_orm = result_repo.get_results_by_tournament(tournament_id, tc.category_id)
-                results_dto = []
-                results_map = {}
-                for r in results_orm:
-                    dto = {
-                        'fight_id':       r.fight_id,
-                        'winner_id':      r.winner_id,
-                        'victory_type':   r.victory_type.value if r.victory_type else '',
-                        'fight_duration': r.fight_duration,
-                    }
-                    results_dto.append(dto)
-                    results_map[r.fight_id] = dto
-
-                # Пьедестал
-                podium = _build_podium(fights_dto, results_map, athlete_repo)
-
-                # Количество участников
-                competitors = len(set(
-                    f.get('id') for f in
-                    [f.get('white_athlete') or {} for f in fights_dto] +
-                    [f.get('blue_athlete')  or {} for f in fights_dto]
-                    if f.get('id')
-                ))
-
-                categories_data.append({
-                    'id':          cat.id,
-                    'name':        cat.name,
-                    'tatami':      tc.tatami_number if hasattr(tc, 'tatami_number') else '—',
-                    'competitors': competitors,
-                    'fights':      fights_dto,
-                    'results':     results_dto,
-                    'podium':      podium,
-                })
+                cat_data = _build_category_data(
+                    tc, category_repo, fight_repo, result_repo, athlete_repo, tournament_id
+                )
+                if cat_data:
+                    categories_data.append(cat_data)
 
             if not categories_data:
                 return jsonify({'success': False, 'message': 'Нет данных для генерации PDF'}), 404
 
-            # ── Собираем данные для генератора ──
             tournament_payload = {
                 'tournament': {
                     'id':         tournament.id,
@@ -222,12 +234,14 @@ def get_tournament_pdf(tournament_id):
                 'categories': categories_data,
             }
 
-        # ── Генерируем PDF (вне сессии) ──
+        # Генерируем PDF вне сессии
         pdf_bytes = generate_tournament_pdf(tournament_payload)
 
-        filename = f"tournament_{tournament_id}.pdf"
-        if category_id:
-            filename = f"tournament_{tournament_id}_cat_{category_id}.pdf"
+        filename = (
+            f"tournament_{tournament_id}_cat_{category_id}.pdf"
+            if category_id is not None
+            else f"tournament_{tournament_id}.pdf"
+        )
 
         return send_file(
             io.BytesIO(pdf_bytes),
