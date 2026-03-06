@@ -6,6 +6,7 @@ from repository.club_repo import ClubRepository
 
 clubs_bp = Blueprint('clubs', __name__, url_prefix='/api/clubs')
 
+
 @clubs_bp.route('/', methods=['GET'])
 def get_clubs():
     """Получить список клубов"""
@@ -13,80 +14,53 @@ def get_clubs():
         with create_session() as session:
             club_repo = ClubRepository(session)
             athlete_repo = AthleteRepository(session)
-
             clubs = club_repo.get_clubs()
+            result = [{
+                'id': club.id,
+                'name': club.name,
+                'short_name': club.short_name,
+                'city': club.city,
+                'country': club.country,
+                'coach_name': club.coach_name,
+                'athletes_count': athlete_repo.count_athletes_in_club(club.id)
+            } for club in clubs]
 
-            result = []
-            for club in clubs:
-                result.append({
-                    'id': club.id,
-                    'name': club.name,
-                    'short_name': club.short_name,
-                    'city': club.city,
-                    'country': club.country,
-                    'coach_name': club.coach_name,
-                    'athletes_count':athlete_repo.count_athletes_in_club(club.id)
-                })
-
-        return jsonify({
-            'success': True,
-            'clubs': result,
-            'total': len(result)
-        }), 200
+        return jsonify({'success': True, 'clubs': result, 'total': len(result)}), 200
 
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при получении клубов: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': f'Ошибка при получении клубов: {str(e)}'}), 500
 
 
 @clubs_bp.route('/search', methods=['GET'])
 def search_athletes():
-    """Поиск спортсменов по ФИО (частичное совпадение)"""
+    """Поиск спортсменов по ФИО"""
     try:
-        # Параметры запроса: можно передать отдельно или один общий q
-        last_name = request.args.get('last_name', '').strip()
+        last_name  = request.args.get('last_name', '').strip()
         first_name = request.args.get('first_name', '').strip()
         middle_name = request.args.get('middle_name', '').strip()
-        q = request.args.get('q', '').strip()  # альтернативно: "Иванов Иван Иванович"
+        q = request.args.get('q', '').strip()
 
         name_query = {}
-
         if q:
-            # Если передан общий q — разбиваем на части (по пробелам)
             parts = q.split()
-            if len(parts) >= 1:
-                name_query['last_name'] = parts[0]
-            if len(parts) >= 2:
-                name_query['first_name'] = parts[1]
-            if len(parts) >= 3:
-                name_query['middle_name'] = ' '.join(parts[2:])
+            if len(parts) >= 1: name_query['last_name'] = parts[0]
+            if len(parts) >= 2: name_query['first_name'] = parts[1]
+            if len(parts) >= 3: name_query['middle_name'] = ' '.join(parts[2:])
         else:
-            # Отдельные параметры
-            if last_name:
-                name_query['last_name'] = last_name
-            if first_name:
-                name_query['first_name'] = first_name
-            if middle_name:
-                name_query['middle_name'] = middle_name
+            if last_name:   name_query['last_name'] = last_name
+            if first_name:  name_query['first_name'] = first_name
+            if middle_name: name_query['middle_name'] = middle_name
 
         if not name_query:
-            return jsonify({
-                'success': False,
-                'message': 'Не переданы параметры поиска (last_name, first_name, middle_name или q)'
-            }), 400
+            return jsonify({'success': False, 'message': 'Не переданы параметры поиска'}), 400
 
-        # Поиск без ограничения по клубу (club_id=None)
-        with AthleteRepository() as athlete_repo:
+        with create_session() as session:
+            athlete_repo = AthleteRepository(session)
             athletes = athlete_repo.search_athletes_by_name(name_query=name_query, club_id=None)
 
             result = []
             for athlete in athletes:
-                club_name = athlete.club.name if athlete.club else None
-                club_short_name = athlete.club.short_name if athlete.club else None
-
-                athlete_data = {
+                result.append({
                     'id': athlete.id,
                     'user_id': athlete.user_id,
                     'last_name': athlete.user.last_name or 'Неизвестно',
@@ -106,12 +80,11 @@ def search_athletes():
                     'insurance_number': athlete.insurance_number,
                     'is_active': athlete.is_active,
                     'club': {
-                        'id': athlete.club.id if athlete.club else None,
-                        'name': club_name,
-                        'short_name': club_short_name
+                        'id': athlete.club.id,
+                        'name': athlete.club.name,
+                        'short_name': athlete.club.short_name
                     } if athlete.club else None
-                }
-                result.append(athlete_data)
+                })
 
         return jsonify({
             'success': True,
@@ -121,10 +94,7 @@ def search_athletes():
         }), 200
 
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при поиске спортсменов: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': f'Ошибка при поиске спортсменов: {str(e)}'}), 500
 
 
 @clubs_bp.route('/', methods=['POST'])
@@ -132,28 +102,21 @@ def create_club():
     """Создать новый клуб"""
     try:
         data = request.get_json()
-
         if not data:
             return jsonify({"success": False, "message": "Не передан JSON"}), 400
-
         if not data.get('name'):
             return jsonify({"success": False, "message": "Название клуба обязательно"}), 400
 
-        with ClubRepository() as club_repo:
+        with create_session() as session:
+            club_repo = ClubRepository(session)
             existing_club = club_repo.get_club_by_name(data['name'].strip())
-
             if existing_club:
                 return jsonify({"success": False, "message": "Клуб с таким названием уже существует"}), 400
-
             is_create = club_repo.create_club(data)
 
         if is_create:
-            return jsonify({
-                "success": True,
-                "message": "Клуб успешно создан"
-            }), 201
-        else:
-            return jsonify({"success": False, "message": "Ошибка при сохранении в базу"}), 400
+            return jsonify({"success": True, "message": "Клуб успешно создан"}), 201
+        return jsonify({"success": False, "message": "Ошибка при сохранении в базу"}), 400
 
     except Exception as e:
         return jsonify({"success": False, "message": f"Ошибка сервера: {str(e)}"}), 500
@@ -163,34 +126,23 @@ def create_club():
 def delete_club(club_id):
     """Удалить клуб по ID"""
     try:
-        with ClubRepository() as club_repo:
+        with create_session() as session:
+            club_repo = ClubRepository(session)
             club = club_repo.get_club_by_id(club_id)
             if not club:
-                return jsonify({
-                    "success": False,
-                    "message": f"Клуб с ID {club_id} не найден"
-                }), 404
+                return jsonify({"success": False, "message": f"Клуб с ID {club_id} не найден"}), 404
 
-            # Проверка на наличие спортсменов УДАЛЕНА — теперь удаляем всегда
-
+            # ✅ Извлекаем имя ДО удаления, пока сессия открыта
+            club_name = club.name
             is_deleted = club_repo.delete_club(club_id)
 
         if is_deleted:
-            return jsonify({
-                "success": True,
-                "message": f"Клуб '{club.name}' успешно удалён, спортсмены отвязаны"
-            }), 200
-        else:
-            return jsonify({
-                "success": False,
-                "message": "Не удалось удалить клуб"
-            }), 400
+            return jsonify({"success": True, "message": f"Клуб '{club_name}' успешно удалён, спортсмены отвязаны"}), 200
+        return jsonify({"success": False, "message": "Не удалось удалить клуб"}), 400
 
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Ошибка при удалении клуба: {str(e)}"
-        }), 500
+        return jsonify({"success": False, "message": f"Ошибка при удалении клуба: {str(e)}"}), 500
+
 
 @clubs_bp.route('/<int:club_id>', methods=['PUT'])
 def update_club(club_id):
@@ -198,82 +150,44 @@ def update_club(club_id):
     try:
         data = request.get_json() or {}
         if not data:
-            return jsonify({
-                "success": False,
-                "message": "Не переданы данные для обновления"
-            }), 400
+            return jsonify({"success": False, "message": "Не переданы данные для обновления"}), 400
 
         update_data = {}
-
-        # Обработка каждого возможного поля
         if 'name' in data:
             name = data['name'].strip()
             if not name:
                 return jsonify({"success": False, "message": "Название клуба не может быть пустым"}), 400
             update_data['name'] = name
-
-        if 'short_name' in data:
-            update_data['short_name'] = data['short_name'].strip() if data['short_name'] else None
-
-        if 'city' in data:
-            update_data['city'] = data['city'].strip() if data['city'] else None
-
-        if 'country' in data:
-            update_data['country'] = data['country'].strip() if data['country'] else 'Россия'
-
-        if 'address' in data:
-            update_data['address'] = data['address'].strip() if data['address'] else None
-
-        if 'phone' in data:
-            update_data['phone'] = data['phone'].strip() if data['phone'] else None
-
-        if 'email' in data:
-            update_data['email'] = data['email'].strip() if data['email'] else None
-
-        if 'website' in data:
-            update_data['website'] = data['website'].strip() if data['website'] else None
-
-        if 'coach_name' in data:
-            update_data['coach_name'] = data['coach_name'].strip() if data['coach_name'] else None
-
+        if 'short_name' in data:   update_data['short_name']   = data['short_name'].strip() if data['short_name'] else None
+        if 'city' in data:         update_data['city']         = data['city'].strip() if data['city'] else None
+        if 'country' in data:      update_data['country']      = data['country'].strip() if data['country'] else 'Россия'
+        if 'address' in data:      update_data['address']      = data['address'].strip() if data['address'] else None
+        if 'phone' in data:        update_data['phone']        = data['phone'].strip() if data['phone'] else None
+        if 'email' in data:        update_data['email']        = data['email'].strip() if data['email'] else None
+        if 'website' in data:      update_data['website']      = data['website'].strip() if data['website'] else None
+        if 'coach_name' in data:   update_data['coach_name']   = data['coach_name'].strip() if data['coach_name'] else None
         if 'founded_year' in data:
             try:
                 update_data['founded_year'] = int(data['founded_year'])
             except (ValueError, TypeError):
-                return jsonify({
-                    "success": False,
-                    "message": "Поле founded_year должно быть целым числом"
-                }), 400
+                return jsonify({"success": False, "message": "founded_year должно быть целым числом"}), 400
 
         if not update_data:
-            return jsonify({
-                "success": False,
-                "message": "Не передано ни одно поле для обновления"
-            }), 400
+            return jsonify({"success": False, "message": "Не передано ни одно поле для обновления"}), 400
 
-        with ClubRepository() as club_repo:
+        with create_session() as session:
+            club_repo = ClubRepository(session)
             club = club_repo.get_club_by_id(club_id)
             if not club:
-                return jsonify({
-                    "success": False,
-                    "message": f"Клуб с ID {club_id} не найден"
-                }), 404
+                return jsonify({"success": False, "message": f"Клуб с ID {club_id} не найден"}), 404
 
             is_updated = club_repo.update_club(club_id, update_data)
-
             if not is_updated:
-                return jsonify({
-                    "success": False,
-                    "message": "Не удалось обновить данные клуба"
-                }), 400
+                return jsonify({"success": False, "message": "Не удалось обновить данные клуба"}), 400
 
-            # Получаем актуальные данные после обновления
+            # ✅ Извлекаем данные ВНУТРИ сессии
             updated_club = club_repo.get_club_by_id(club_id)
-
-        return jsonify({
-            "success": True,
-            "message": "Клуб успешно обновлён",
-            "club": {
+            club_dto = {
                 "id": updated_club.id,
                 "name": updated_club.name,
                 "short_name": updated_club.short_name,
@@ -286,13 +200,11 @@ def update_club(club_id):
                 "coach_name": updated_club.coach_name,
                 "founded_year": updated_club.founded_year
             }
-        }), 200
+
+        return jsonify({"success": True, "message": "Клуб успешно обновлён", "club": club_dto}), 200
 
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Ошибка при обновлении клуба: {str(e)}"
-        }), 500
+        return jsonify({"success": False, "message": f"Ошибка при обновлении клуба: {str(e)}"}), 500
 
 
 @clubs_bp.route('/<int:club_id>/club-athletes/', methods=['GET'])
@@ -300,19 +212,17 @@ def get_club_athletes(club_id):
     """Получить всех участников клуба"""
     try:
         include_tournament_info = request.args.get('include_tournament_info', 'false').lower() == 'true'
-
-        # tournament_id как int или None (пустой/не передан → None)
         tournament_id = request.args.get('tournament_id', type=int)
 
-        # Проверяем клуб
         with create_session() as session:
             club_repo = ClubRepository(session)
             club = club_repo.get_club_by_id(club_id)
             if not club:
-                return jsonify({
-                    'success': False,
-                    'message': f'Клуб с ID {club_id} не найден'
-                }), 404
+                return jsonify({'success': False, 'message': f'Клуб с ID {club_id} не найден'}), 404
+
+            # ✅ Извлекаем данные клуба ВНУТРИ сессии
+            club_id_val = club.id
+            club_name_val = club.name
 
             athlete_repo = AthleteRepository(session)
             athletes = athlete_repo.get_athletes_by_club_id(
@@ -332,9 +242,6 @@ def get_club_athletes(club_id):
                     'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
                     'age': athlete.age,
                     'gender': athlete.gender,
-                    # ← Главное исправление: rank теперь берём из поля level (или description)
-                    # Если нужно описание — используйте athlete.rank.description
-                    # Если нужно оба — f"{athlete.rank.level} {athlete.rank.description}"
                     'rank': athlete.rank.level if athlete.rank else None,
                     'license_number': athlete.license_number,
                     'medical_check': athlete.medical_check,
@@ -359,14 +266,11 @@ def get_club_athletes(club_id):
 
         return jsonify({
             'success': True,
-            'club_id': club.id,
-            'club_name': club.name,
+            'club_id': club_id_val,
+            'club_name': club_name_val,
             'athletes_count': len(result),
             'athletes': result
         }), 200
 
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при получении участников клуба: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': f'Ошибка при получении участников клуба: {str(e)}'}), 500

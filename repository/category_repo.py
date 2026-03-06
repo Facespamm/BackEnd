@@ -1,25 +1,27 @@
 from sqlalchemy import or_
-from sqlalchemy.sql.functions import count
 
-from database.db import create_session
+from database.db import get_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
 
 
 class CategoryRepository:
-    def __init__(self, session = None):
-        self.session = session if session else create_session()
+    def __init__(self, session=None):
+        self.session = session if session else get_session()
+        self._owns_session = session is None  # закрывать сессию только если создали сами
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if not self._owns_session:
+            return
         if exc_type is not None:
             self.session.rollback()
         self.session.close()
 
-    def add_athlete_to_category(self, athlete : AthleteNew):
+    def add_athlete_to_category(self, athlete: AthleteNew):
         """Добавить участника в категорию"""
         category = (
             self.session.query(CategoryNew)
@@ -39,17 +41,17 @@ class CategoryRepository:
         return False
 
     def update_category(self, category_id, category_data: dict):
-        """Создать новую категорию"""
+        """Обновить категорию"""
         try:
-            category = self.session.query(CategoryNew).filter_by(id = category_id).first()
+            category = self.session.query(CategoryNew).filter_by(id=category_id).first()
             if not category:
                 raise Exception("Category not found")
 
-            category.min_weight = category_data.get('min-weight',category.min_weight)
-            category.max_weight = category_data.get('max-weight',category.max_weight)
-            category.min_age = category_data.get('min-age',category.min_age)
-            category.max_age = category_data.get('max-age',category.max_age)
-            category.name = category_data.get('name',category.name)
+            category.min_weight = category_data.get('min-weight', category.min_weight)
+            category.max_weight = category_data.get('max-weight', category.max_weight)
+            category.min_age = category_data.get('min-age', category.min_age)
+            category.max_age = category_data.get('max-age', category.max_age)
+            category.name = category_data.get('name', category.name)
 
             self.session.commit()
             return True
@@ -58,7 +60,7 @@ class CategoryRepository:
             print(f"Error updating category: {e}")
             return False
 
-    def get_categories(self, tournament_id:int):
+    def get_categories(self, tournament_id: int):
         query = self.session.query(CategoryNew).filter_by(is_active=True)
         if tournament_id:
             query = query.filter(CategoryNew.tournaments.any(TournamentNew.id == tournament_id))
@@ -66,14 +68,15 @@ class CategoryRepository:
 
     def get_all_athletes(self, category_id):
         try:
-            count_athlete = self.session.query(AthleteNew.id).filter(CategoryNew.athletes.any(CategoryNew.id == category_id)).count()
-
+            count_athlete = self.session.query(AthleteNew.id).filter(
+                CategoryNew.athletes.any(CategoryNew.id == category_id)
+            ).count()
             return count_athlete
         except Exception as e:
             print(f"Error getting athletes: {e}")
             return 0
 
-    def create_category(self, category_new:CategoryNew):
+    def create_category(self, category_new: CategoryNew):
         try:
             self.session.add(category_new)
             self.session.commit()
@@ -103,15 +106,14 @@ class CategoryRepository:
                 CategoryNew.min_weight <= weigth,
                 or_(
                     CategoryNew.max_weight >= weigth,
-                    CategoryNew.max_weight.is_(None)  # для открытой категории
+                    CategoryNew.max_weight.is_(None)
                 ),
                 CategoryNew.min_year <= bith_year,
                 CategoryNew.max_year >= bith_year,
                 CategoryNew.gender == gender
             ).scalar()
         )
-
         return category_id
 
-    def get_category_by_name(self, name:str) -> CategoryNew | None:
+    def get_category_by_name(self, name: str) -> CategoryNew | None:
         return self.session.query(CategoryNew).filter_by(name=name).first()

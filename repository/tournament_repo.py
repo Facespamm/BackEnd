@@ -3,7 +3,7 @@ from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.functions import count
 
-from database.db import create_session
+from database.db import get_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
@@ -14,7 +14,7 @@ from repository.category_repo import CategoryRepository
 
 class TournamentRepository:
     def __init__(self, session = None):
-        self.session = session if session else create_session()
+        self.session = session if session else get_session()
 
     def __enter__(self):
         return self

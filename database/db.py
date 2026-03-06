@@ -1,24 +1,79 @@
 import os
+from contextlib import contextmanager
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 
 db = SQLAlchemy()
 
-# Используйте одну строку подключения
-#DATABASE_URI = 'postgresql+psycopg2://postgres:password@192.168.7.83:5434/judo_tournament'
 DATABASE_URI = 'postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament'
-#docker connection
-#DATABASE_URI = 'postgresql+psycopg2://postgres:password@db:5432/judo_tournament'
+
+_engine = None
+_SessionFactory = None
+
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        uri = os.getenv('LOCALHOST_CONNECTION', DATABASE_URI)
+        _engine = create_engine(
+            uri,
+            pool_size=10,
+            max_overflow=5,
+            pool_timeout=30,
+            pool_pre_ping=True,
+        )
+    return _engine
+
+
+def get_session_factory():
+    global _SessionFactory
+    if _SessionFactory is None:
+        _SessionFactory = sessionmaker(bind=get_engine())
+    return _SessionFactory
+
+
+@contextmanager
+def create_session():
+    """Контекстный менеджер для роутов.
+
+    Использование:
+        with create_session() as session:
+            repo = MyRepository(session)
+    """
+    session = get_session_factory()()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def get_session():
+    """Прямое получение сессии для репозиториев и init-скриптов.
+    Вызывающий код сам отвечает за session.close().
+
+    Использование:
+        session = get_session()
+        repo = MyRepository(session)
+        ...
+        session.close()
+    """
+    return get_session_factory()()
+
 
 def init_db(app):
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('LOCALHOST_CONNECTION',DATABASE_URI)
+    uri = os.getenv('LOCALHOST_CONNECTION', DATABASE_URI)
+    app.config['SQLALCHEMY_DATABASE_URI'] = uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    if not database_exists(os.getenv('LOCALHOST_CONNECTION',DATABASE_URI)):
-        create_database(os.getenv('LOCALHOST_CONNECTION',DATABASE_URI))
+    if not database_exists(uri):
+        create_database(uri)
         print("База данных создана!")
 
     db.init_app(app)
@@ -35,12 +90,6 @@ def init_db(app):
         from new_model.result_new import ResultNew
         from new_model.score_event import ScoreEvent
         from new_model.weighing_new import WeighingNew
-        from new_model.new_associations import TournamentCategory, AthleteRegistration,FightReferee
+        from new_model.new_associations import TournamentCategory, AthleteRegistration, FightReferee
         from new_model.tatami_fight import TatamiFight
         db.create_all()
-
-def create_session():
-    engine = create_engine(os.getenv('LOCALHOST_CONNECTION',DATABASE_URI))
-    session = sessionmaker(bind=engine)
-    # return  scoped_session(session)  # Возвращайте экземпляр сессии
-    return session()  # Возвращайте экземпляр сессии

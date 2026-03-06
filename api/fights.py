@@ -237,7 +237,9 @@ def get_semifinalists_consolation(tournament_id):
 def get_fight_referees(fight_id):
     """Получить судей, назначенных на схватку"""
     try:
-        with FightRepository() as fight_repo:
+        # ✅ ИСПРАВЛЕНО: было `with FightRepository() as fight_repo`
+        with create_session() as session:
+            fight_repo = FightRepository(session)
             fight = fight_repo.get_fight_by_id(fight_id)
             if not fight:
                 return jsonify({
@@ -245,9 +247,7 @@ def get_fight_referees(fight_id):
                     'message': 'Схватка не найдена'
                 }), 404
 
-            referees = fight_repo.get_fight_referees(fight_id)
-            referee_list = referees
-
+            referee_list = fight_repo.get_fight_referees(fight_id)
 
         return jsonify({
             'success': True,
@@ -307,7 +307,7 @@ def assign_referee_to_fight(fight_id):
 @fights_bp.route('/<fight_id>/remove_referee', methods=['DELETE'])
 def remove_referee_from_fight(fight_id):
     try:
-        role =request.args.get('role')
+        role = request.args.get('role')
 
         if not role:
             return jsonify({
@@ -326,7 +326,7 @@ def remove_referee_from_fight(fight_id):
                 }), 404
 
             referee_repo = RefereeRepository(session)
-            if not referee_repo.has_assign_referee(role , fight.id):
+            if not referee_repo.has_assign_referee(role, fight.id):
                 return jsonify({
                     'success': False,
                     'message': f'Судья на роль {role} не назначен'
@@ -355,7 +355,9 @@ def update_fight_status(fight_id):
 
         tatami_number = request.args.get('tatami_number', type=int)
 
-        with FightRepository() as fight_repo:
+        # ✅ ИСПРАВЛЕНО: было `with FightRepository() as fight_repo`
+        with create_session() as session:
+            fight_repo = FightRepository(session)
             exiting_fight = fight_repo.get_fight_by_id(fight_id)
             if not exiting_fight:
                 return jsonify({
@@ -400,7 +402,9 @@ def end_fight(fight_id):
                 'message': f'Обязательное поле: {missing_fields}'
             }), 400
 
-        with FightRepository() as fight_repo:
+        # ✅ ИСПРАВЛЕНО: было `with FightRepository() as fight_repo`
+        with create_session() as session:
+            fight_repo = FightRepository(session)
             exiting_fight = fight_repo.get_fight_by_id(fight_id)
             if not exiting_fight:
                 return jsonify({
@@ -442,7 +446,7 @@ def fight_bracket(tournament_id):
 
             tournament_category_id = tournament_category.tournament_category_id
             fight_repo = FightRepository(session)
-            fights = fight_repo.get_fight_by_tournament(tournament_category_id,FightStatus.SCHEDULED)
+            fights = fight_repo.get_fight_by_tournament(tournament_category_id, FightStatus.SCHEDULED)
 
             fights_dtos = []
 
@@ -458,10 +462,9 @@ def fight_bracket(tournament_id):
                     'next_fight': fight.next_fight_id,
                 })
 
-            tournament_repo = TournamentRepository(session)
             tournament_name = tournament_repo.get_tournament_name_by_tournament_category(tournament_category_id)
             category_repo = CategoryRepository(session)
-            category  = category_repo.get_category_by_id(category_id)
+            category = category_repo.get_category_by_id(category_id)
 
         if not fights_dtos:
             return jsonify({
