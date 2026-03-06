@@ -49,22 +49,21 @@ def create_athlete(user_id):
         data = request.get_json() or {}
 
         if not user_id:
-            return jsonify({'success': False,'message': f"Нет user id"})
+            return jsonify({'success': False, 'message': f"Нет user id"})
+
         with AthleteRepository() as athlete_repo:
             has_athlete = athlete_repo.has_athlete(user_id)
 
         if has_athlete:
-            return jsonify({'success': False,'message': f"У этого пользователя уже есть профиль участника"}), 400
+            return jsonify({'success': False, 'message': f"У этого пользователя уже есть профиль участника"}), 400
 
-        # Нормализуем названия полей
         if 'birth_day' in data and 'birth_date' not in data:
             data['birth_date'] = data['birth_day']
 
         if 'gender' in data:
             data['gender'] = translate_gender(data['gender'])
 
-        # Проверяем обязательные поля (только для атлета, без данных пользователя)
-        required = ['birth_date', 'gender', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
+        required = ['birth_date', 'gender', 'rank_id', 'medical_check']
         missing = [field for field in required if field not in data]
         if missing:
             return jsonify({
@@ -74,22 +73,22 @@ def create_athlete(user_id):
 
         date_now = datetime.now()
         birth_date = datetime.fromisoformat(data['birth_date'])
-
         years = relativedelta(date_now, birth_date).years
 
-        # Создаем профиль участника
         athlete = AthleteNew(
             user_id=user_id,
             birth_date=datetime.fromisoformat(data['birth_date']).date(),
             gender=data['gender'],
             club_id=data.get('club_id', None),
             rank_id=data['rank_id'],
-            license_number=data['license_number'],
+            license_number=data.get('license_number', None),  # необязательно
             medical_check=data['medical_check'],
-            insurance_number=data['insurance_number'],
-            age = years,
+            insurance_number=data.get('insurance_number', None),  # необязательно
+            age=years,
             is_active=True
         )
+
+        athlete_id = None  # ← сохраним id до закрытия сессии
 
         with create_session() as session:
             auth_repo = AuthRepository(session)
@@ -99,25 +98,30 @@ def create_athlete(user_id):
             auth_repo.update_user_role(user_id, role_id)
             athlete_is_added = athlete_repo.create_athlete(athlete)
 
+            if athlete_is_added:
+                session.flush()          # ← присваивает id до коммита
+                athlete_id = athlete.id  # ← читаем id пока сессия открыта
+                session.commit()         # ← коммитим
+
         if not athlete_is_added:
             return jsonify({
                 'success': False,
-                'message': 'Ошибка при сохранении участника в категорию'
+                'message': 'Ошибка при сохранении участника'
             }), 400
 
         return jsonify({
             'success': True,
-            'message': 'Участник успешно создан, добавлен в категорию',
-            'athlete_id': athlete.id,
+            'message': 'Участник успешно создан',
+            'athlete_id': athlete_id,  # ← используем сохранённый id
             'user_id': user_id
         }), 201
+
     except Exception as e:
         db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Ошибка при создании участника: {str(e)}'
         }), 500
-
 @athletes_bp.route('/<int:athlete_id>', methods=['GET'])
 def get_athlete_by_id(athlete_id):
     """Получить информацию об участнике"""

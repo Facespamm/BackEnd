@@ -297,19 +297,20 @@ class FightRepository:
         return semi_final_fights
 
     def get_untracked_semifinal_fights(self, tournament_category_id, semi_final_round_number, eight_round):
+        from new_model.Enums import BracketType
         semi_final_fights = (
             self.session.query(FightNew)
             .filter(
                 FightNew.tournament_category_id == tournament_category_id,
-                FightNew.round_number <=  semi_final_round_number,
-                FightNew.round_number >= eight_round
+                FightNew.round_number <= semi_final_round_number,
+                FightNew.round_number >= eight_round,
+                FightNew.type_bracket == BracketType.MAIN  # ← только основная сетка
             )
             .all()
         )
 
         self.session.expunge_all()
         return semi_final_fights
-
     def get_final_fights(self, tournament_category_id, final_round_number):
         semi_final_fights = (
             self.session.query(FightNew)

@@ -102,26 +102,21 @@ def has_consolation_fights(tournament_id):
 
     return jsonify({'success': True}), 200
 
-@brackets_bp.route('/<int:tournament_id>/semifinals-consalation', methods=['POST'])
+@brackets_bp.route('/<int:tournament_id>/semifinals-consolation', methods=['POST'])
 def generate_semifinals_consolation_fights(tournament_id):
     """Создание утешительных боев от полуфиналистов"""
     try:
-        if not tournament_id:
-            return jsonify({'success': False, 'message': 'ID турнира не указан'}), 400
-
         category_id = request.args.get('category')
-
-        if not category_id and type(category_id) != int:
-            return jsonify({'success': False, 'message': 'Не выброна категория'}), 400
-
         tatami_number = request.args.get('tatami_number')
 
-        if not tatami_number and type(tatami_number) != int:
-            return jsonify({'success': False, 'message': 'Не выброн татами'}), 400
+        if not category_id or not tatami_number:
+            return jsonify({'success': False, 'message': 'Не выбрана категория или татами'}), 400
+
+        category_id = int(category_id)
+        tatami_number = int(tatami_number)
 
         tournament_repo = TournamentRepository()
         tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
-
         if not tournament_category:
             return jsonify({'success': False, 'message': 'Категория турнира не найдена'}), 404
 
@@ -129,18 +124,12 @@ def generate_semifinals_consolation_fights(tournament_id):
         generated_fights = bracket_generator.generate_olympic_consolation_fight_semifinal(category_id, tatami_number)
 
         if not generated_fights:
-            return jsonify({
-                'success': False,
-                'message': 'Утешительные бои не созданы'
-            }), 404
+            return jsonify({'success': False, 'message': 'Утешительные бои не созданы'}), 400
 
-        return jsonify({
-            'success': True,
-            'message': 'Утешительные бои успешно созданы'
-        }), 201
+        return jsonify({'success': True, 'message': 'Утешительные бои успешно созданы'}), 201
+
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Ошибка создания утешительных боев: {str(e)}'}), 500
-
+        return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
 @brackets_bp.route('/<int:tournament_id>/finals-consolation', methods=['POST'])
 def generate_consolation_fights_finalist(tournament_id):
     """Создание сетки для утишительных от финалистов """

@@ -71,20 +71,42 @@ class BracketGenerator:
         except Exception as e:
             print('Error in generate_olympic:', e)
             return None
-    def generate_olympic_consolation_fight_semifinal(self,category_id, tatami_number):
-        try:
-            athlete_repo = AthleteRepository()
-            athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
-            athlete_count = len(athletes)
-            if not athletes or athlete_count < 2 or athlete_count == 0:
-                raise Exception('No athletes found')
+    def generate_olympic_consolation_fight_semifinal(self, category_id, tatami_number):
+
+        try:
+
+            athlete_repo = AthleteRepository()
+
+            all_athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
 
             tournament_category = tournament_repo.get_tournament_category(self.tournament_id, category_id)
-            if not tournament_category:
-                raise Exception("❌ Tournament category not found")
+
+            # ← тот же фильтр по взвешиванию что и в generate_olympic
+
+            with WeightRepository() as weight_repo:
+
+                athletes = [
+
+                    a for a in all_athletes
+
+                    if any(
+
+                        w.is_valid
+
+                        for w in weight_repo.get_weights(tournament_category.tournament_category_id, a.id) or []
+
+                    )
+
+                ]
+
+            athlete_count = len(athletes)
+
+            print(f"athletes after weighing filter: {athlete_count}")
 
             total_rounds = calculate_rounds(participants_count=athlete_count)
+
+            print(f"total_rounds: {total_rounds}")
 
             if total_rounds == 0:
                 raise Exception("❌ Invalid number of rounds calculated")

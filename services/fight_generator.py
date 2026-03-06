@@ -104,18 +104,24 @@ class FightGenerator:
 
         return  fights
 
-    def generate_consolation_fights_semifinalist(self, tournament_category_id, tatami_number,max_rounds):
-        """Генерация утешительных схваток за 3 место"""
-        # Находим полуфиналистов которые проиграли
-        semifinal_round = max_rounds-1
-        eight_round = semifinal_round -1
+    def generate_consolation_fights_semifinalist(self, tournament_category_id, tatami_number, max_rounds):
+        semifinal_round = max_rounds - 1
+        eight_round = semifinal_round - 1
+        print(f"max_rounds={max_rounds}, semifinal_round={semifinal_round}, eight_round={eight_round}")
+
+        all_fights = self.fight_repo.get_untracked_semifinal_fights(tournament_category_id, semifinal_round,
+                                                                    eight_round)
+        print(f"all_fights: {[(f.id, f.round_number) for f in all_fights]}")
+
+        semifinal_fights = [f for f in all_fights if f.round_number == semifinal_round]
+        print(f"semifinal_fights: {[(f.id, f.round_number) for f in semifinal_fights]}")
+
         return self._generate_semifinalist_fight(tournament_category_id, semifinal_round, eight_round, tatami_number)
 
     def generate_consolation_fights_finalist(self, tournament_category_id, tatami_number, max_rounds):
         final_round = max_rounds
-        eight_fight = max_rounds - 2
+        eight_fight = max(1, max_rounds - 2)  # минимум 1
         return self._generate_finalist_fight(tournament_category_id, final_round, eight_fight, tatami_number)
-
     def _generate_group(self, all_fights: list[FightNew], semifinal_fight: FightNew) -> list[FightNew]:
         """
         Формирует группу бойцов для утешительной ветки.
@@ -282,16 +288,18 @@ class FightGenerator:
         group.sort(key=lambda x: x.round_number)
         return group
 
-
-    def _generate_finalist_fight(self,tournament_category_id, round, eight_round,tatami_number) -> list[FightNew]:
+    def _generate_finalist_fight(self, tournament_category_id, round, eight_round, tatami_number) -> list[FightNew]:
         all_fights = self.fight_repo.get_untracked_semifinal_fights(tournament_category_id, round, eight_round)
 
         if len(all_fights) < 2:
             raise Exception("❌ Недостаточно финалистов для утешительных боев")
 
-        final_fights = [fight for fight in all_fights if fight.round_number == round]
-        if len(final_fights) != 1 or not len(final_fights):
-            raise Exception('❌ Нет боев полуфиналистов')
+        # ← берём реальный максимальный раунд из боёв а не из параметра
+        real_final_round = max(f.round_number for f in all_fights)
+
+        final_fights = [fight for fight in all_fights if fight.round_number == real_final_round]
+        if len(final_fights) != 1:
+            raise Exception('❌ Нет боев финалистов')
 
         winner_id = self.result_repo.get_result_by_fight(final_fights[0].id).winner_id
         losser_id = self.result_repo.get_loser(final_fights[0].id).id
@@ -300,8 +308,8 @@ class FightGenerator:
         group_b = self._generate_final_group(all_fights, losser_id, final_fights[0].id)
 
         fights_group_a = self._generate_fights_finalist_by_group(group_a, tournament_category_id, tatami_number,
-                                                              BracketType.FINALIST_CONSOLATION_GROUP_A)
+                                                                 BracketType.FINALIST_CONSOLATION_GROUP_A)
         fights_group_b = self._generate_fights_finalist_by_group(group_b, tournament_category_id, tatami_number,
-                                                              BracketType.FINALIST_CONSOLATION_GROUP_B)
+                                                                 BracketType.FINALIST_CONSOLATION_GROUP_B)
 
         return [fights_group_a, fights_group_b]
