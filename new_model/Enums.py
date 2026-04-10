@@ -82,6 +82,14 @@ class TatamiStatus(Enum):
     FREE = 'Свободно'
     TAKEN = 'Занята'
 
+class StatusTournamentRegistration(Enum):
+    """
+    Статусы регистрации спортсмена на турнир (предварительная регистрация)
+    """
+    REGISTERED = "registered"          # Зарегистрирован на турнир
+    WEIGHED_IN = "weighed_in"          # Прошёл взвешивание и допущен к соревнованиям
+    CANCELLED = "cancelled"            # Отменена регистрация (по желанию спортсмена/тренера)
+
 def translate_gender(gender):
     return Gender.male.name if gender == 'мужской' else Gender.female.name
 

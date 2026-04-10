@@ -54,3 +54,4 @@ class TournamentNew(db.Model):
     # fights = db.relationship('FightNew', back_populates='tournament')
     chief_referee = db.relationship('RefereeNew', back_populates='tournament')
     tatami_fight = db.relationship('TatamiFight', back_populates='tournament')
+    registrations = db.relationship('AthleteTournamentRegistration', back_populates='tournament')

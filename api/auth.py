@@ -61,16 +61,16 @@ def get_users():
         with AuthRepository() as auth_repo:
             users = auth_repo.get_users()
 
-        result = []
-        for user in users:
-            result.append({
-                'id': user.id,
-                'username': user.username,
-                'name': user.name,
-                'email': user.email,
-                'phone': user.phone,
-                'role': user.role
-            })
+            result = []
+            for user, role_name in users:
+                result.append({
+                    'id': user.id,
+                    'username': user.username,
+                    'name': f'{user.first_name} {user.middle_name} {user.last_name}',
+                    'email': user.email,
+                    'phone': user.phone,
+                    'role': role_name
+                })
 
         return jsonify({
             'success': True,

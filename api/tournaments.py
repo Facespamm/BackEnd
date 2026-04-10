@@ -157,7 +157,7 @@ def get_tournament(tournament_id):
                 'country': tournament.country,
                 'status': tournament.status.value,
                 'tatami_count': tournament.tatami_count,
-                'athletes_count': tournament_repo.get_athlete_count(tournament.id),
+                'athletes_count': tournament_repo.get_register_athlete_count(tournament.id),
             }), 200
 
     except Exception as e:
@@ -273,7 +273,7 @@ def add_club_to_tournament(tournament_id):
 
 
 @tournaments_bp.route('/<int:tournament_id>/athletes', methods=['GET'])
-def get_tournament_athletes(tournament_id):
+def get_tournament_athletes_after_weighed(tournament_id):
     """Получить список зарегистрированных атлетов на турнир"""
     try:
         category_id = request.args.get('category_id', type=int)
@@ -285,12 +285,12 @@ def get_tournament_athletes(tournament_id):
             if not tournament:
                 return jsonify({'success': False, 'message': 'Турнир не найден'}), 404
 
-            athletes = tournament_repo.get_tournament_athletes(tournament_id, category_id)
+            athletes = tournament_repo.get_preliminary_registrations(tournament_id)
 
             result = []
             for athlete_data in athletes:
                 athlete = athlete_data['athlete']
-                category = athlete_data['category']
+                # category = athlete_data['category']
                 result.append({
                     'athlete_id': athlete.id,
                     'first_name': athlete.user.first_name if athlete.user else None,
@@ -300,8 +300,8 @@ def get_tournament_athletes(tournament_id):
                     'age': athlete.age,
                     'club_name': athlete.club.name if athlete.club else None,
                     'rank': athlete.rank.level if athlete.rank else None,
-                    'category_id': category.id,
-                    'category_name': category.name
+                    # 'category_id': category.id,
+                    # 'category_name': category.name
                 })
 
         return jsonify({
@@ -314,6 +314,41 @@ def get_tournament_athletes(tournament_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Ошибка при получении атлетов турнира: {str(e)}'}), 500
 
+
+@tournaments_bp.route('/<int:tournament_id>/preliminary_registrations', methods=['GET'])
+def get_tournament_preliminary_registrations(tournament_id):
+    try:
+        with create_session() as session:
+            tournament_repo = TournamentRepository(session)
+            tournament = tournament_repo.get_tournament_by_id(tournament_id)
+
+            if not tournament:
+                return jsonify({'success': False, 'message': 'Турнир не найден'}), 404
+
+            athletes = tournament_repo.get_preliminary_registrations(tournament_id)
+
+            result = []
+            for athlete_data in athletes:
+                athlete = athlete_data['athlete']
+                result.append({
+                    'athlete_id': athlete.id,
+                    'first_name': athlete.user.first_name if athlete.user else None,
+                    'last_name': athlete.user.last_name if athlete.user else None,
+                    'gender': athlete.gender,
+                    'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
+                    'age': athlete.age,
+                    'club_name': athlete.club.name if athlete.club else None,
+                    'rank': athlete.rank.level if athlete.rank else None,
+                })
+
+        return jsonify({
+            'success': True,
+            'tournament_id': tournament_id,
+            'athletes_count': len(result),
+            'athletes': result
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Ошибка при получении атлетов турнира: {str(e)}'}), 500
 
 @tournaments_bp.route('/<int:tournament_id>/tatami', methods=['GET'])
 def get_tournament_tatami(tournament_id):
@@ -351,20 +386,17 @@ def add_athletes_to_tournament(tournament_id):
         return jsonify({'success': False, 'message': 'Не переданы участники и категория'}), 400
 
     athlete_ids = data.get('athlete_ids')
-    category_id = data.get('category_id')
 
     if not athlete_ids or not isinstance(athlete_ids, list):
         return jsonify({'success': False, 'message': 'Не переданы участники или неверный формат'}), 400
 
-    if not category_id:
-        return jsonify({'success': False, 'message': 'Не передана категория'}), 400
 
     try:
         with create_session() as session:
             tournament_repo = TournamentRepository(session)
             added_athletes = 0
             for athlete_id in athlete_ids:
-                is_add = tournament_repo.add_athlete_to_tournament(tournament_id, category_id, athlete_id)
+                is_add = tournament_repo.add_athlete_to_tournament(tournament_id,athlete_id)
                 if is_add:
                     added_athletes += 1
 

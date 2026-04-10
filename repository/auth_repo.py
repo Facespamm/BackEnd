@@ -97,7 +97,7 @@ class AuthRepository:
         return hashlib.sha256((password + salt).encode()).hexdigest()
 
     def get_users(self):
-        return self.session.query(UserNew).filter_by(is_active=True).order_by(UserNew.username).all()
+        return self.session.query(UserNew,RoleNew.name.label('role_name')).join(new_user_roles,UserNew.id == new_user_roles.c.user_id).filter(UserNew.is_active==True).order_by(UserNew.username).all()
 
     def get_user_by_id(self, user_id: int):
         try:

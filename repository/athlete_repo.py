@@ -250,3 +250,11 @@ class AthleteRepository:
             print('Error ', e)
             self.session.rollback()
             return False
+
+    def get_athlete_id_by_user(self, user_id):
+        try:
+            athlete_id = self.session.query(AthleteNew.id).filter(AthleteNew.user_id == user_id).scalar()
+            return athlete_id
+        except Exception as e:
+            print('Error ', e)
+            return None
