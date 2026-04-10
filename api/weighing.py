@@ -137,7 +137,7 @@ def create_weighing():
         if not data:
             return jsonify({'success': False, 'message': 'Не передан JSON'}), 400
 
-        if not data.get('tournament_id') or not data.get('category_id') or not data.get('athlete_id') or not data.get('weight'):
+        if not data.get('tournament_id') or not data.get('athlete_id') or not data.get('weight'):
             return jsonify({'success': False, 'message': 'Обязательные поля: tournament_id, category_id, athlete_id, weight'}), 400
 
         with create_session() as session:
@@ -164,17 +164,22 @@ def create_weighing():
                 )
                 return jsonify({'message': message}), 400
 
+            category_repo = CategoryRepository(session)
+            category = category_repo.get_category_by_name(correct_category_name)
+
             weighing = WeighingNew(
                 tournament_category_id=tournament.tournament_category_id,
                 athlete_id=data['athlete_id'],
                 weight=data['weight'],
                 notes=data.get('notes'),
-                weight_category=data.get('category_id') if is_valid else athlete.category_id,
+                weight_category=category.id if is_valid else athlete.category_id,
                 is_valid=is_valid
             )
             is_added = weighing_repo.create_weighting(weighing)
 
-            if not is_added:
+            has_assign_tournament = tournament_repo.assign_athletes_tournament_after_weighting(tournament.tournament_category_id,athlete.id)
+
+            if not is_added and not has_assign_tournament:
                 return jsonify({'message': 'Ошибка создания взвешивания участника'}), 500
 
             # ✅ Читаем данные ВНУТРИ сессии

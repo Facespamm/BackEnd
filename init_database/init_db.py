@@ -4,8 +4,38 @@ from new_model.Enums import RoleName, Gender
 from new_model.handbook.category_new import CategoryNew
 from new_model.handbook.new_dan import DanNew
 from new_model.handbook.role_new import RoleNew
+from repository.auth_repo import AuthRepository
 from utils.constants import JUDO_RANKS
 
+
+def init_admin():
+    session = get_session()
+    from new_model.head_model.new_user import UserNew
+
+    try:
+        admin =  session.query(UserNew).filter_by(username='admin').first()
+        if not admin:
+            role = session.query(RoleNew).filter_by(name='Администратор').first()
+            auth_repository = AuthRepository(session)
+            if role:
+                admin = UserNew(
+                    username='admin',
+                    password_hash=auth_repository.hash_password('admin123'),
+                    first_name='Главный',
+                    middle_name='',
+                    last_name='Администратор',
+                    email='admin@judo.kz',
+                    phone='',
+                    roles=[role]
+                )
+                session.add(admin)
+                session.commit()
+                print("✅ Админ создан: login=admin, password=admin123")
+            else:
+                print("⚠️ Роль 'Администратор' не найдена")
+    except Exception as e:
+        session.rollback()
+        print(f"❌ Ошибка создания админа: {e}")
 
 def init_roles_new():
     session = get_session()
@@ -14,7 +44,7 @@ def init_roles_new():
 
         roles = []
         for role in RoleName:
-            new_role = RoleNew(name=role.value, normalized_name=role.value.upper())
+            new_role = RoleNew(name = role.value, normalized_name = role.value.upper())
             if new_role.name in existing_role:
                 continue
             roles.append(new_role)

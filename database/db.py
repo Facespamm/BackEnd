@@ -24,6 +24,7 @@ def get_engine():
             max_overflow=5,
             pool_timeout=30,
             pool_pre_ping=True,
+            echo = True
         )
     return _engine
 
@@ -92,4 +93,5 @@ def init_db(app):
         from new_model.weighing_new import WeighingNew
         from new_model.new_associations import TournamentCategory, AthleteRegistration, FightReferee
         from new_model.tatami_fight import TatamiFight
+        from new_model.AthleteTournamentRegistration import AthleteTournamentRegistration
         db.create_all()

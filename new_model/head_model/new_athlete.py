@@ -49,3 +49,7 @@ class AthleteNew(db.Model):
                                  lazy=True,
                                  back_populates='athletes')
 
+    athlete_tournament_registration = db.relationship('AthleteTournamentRegistration',
+                                                      lazy=True,
+                                                      back_populates='athlete')
+
