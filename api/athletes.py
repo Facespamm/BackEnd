@@ -1,6 +1,7 @@
 from flask import request, Blueprint, jsonify
 
 from database.db import db, create_session
+from models import tournament
 from new_model.Enums import translate_gender, RoleName
 from datetime import datetime
 
@@ -18,8 +19,9 @@ def get_athletes():
     try:
         club_id = request.args.get('club_id', type=int)
         search = request.args.get('search', '').strip()
+        tournament_id = request.args.get('tournament_id',None, type=int)
         with AthleteRepository() as athlete_repo:
-            basic_information = athlete_repo.get_basic_info(club_id, search)
+            basic_information = athlete_repo.get_basic_info(club_id, search, tournament_id)
 
         result = [
             {
@@ -27,7 +29,9 @@ def get_athletes():
                 'first_name': athlete[1],
                 'last_name': athlete[2],
                 'middle_name': athlete[3],
-                'rank': athlete[4]
+                'rank': athlete[4],
+                'gender': athlete[5],
+                'age': athlete[6]
             }for athlete in basic_information]
 
         return jsonify({
@@ -41,6 +45,30 @@ def get_athletes():
             'success': False,
             'message': f'Ошибка при получении участников: {str(e)}'
         }), 500
+
+@athletes_bp.route('/for_registration_on_club', methods=['GET'])
+def registration_on_club():
+    with AthleteRepository() as athlete_repo:
+        athletes = athlete_repo.get_athlete_for_registrations_on_club()
+
+        result = [
+            {
+                'id':athlete.id,
+                'last_name':athlete.user.last_name,
+                'first_name':athlete.user.first_name,
+                'patronymic':athlete.user.middle_name,
+                'birth_date': athlete.birth_date,
+                'age': athlete.age,
+                'club_name': athlete.club.name if athlete.club else None,
+                'gender': athlete.gender,
+            } for athlete in athletes
+        ]
+
+    return jsonify({
+        'message': True,
+        'athletes': result
+    })
+
 
 @athletes_bp.route('/<int:user_id>', methods=['POST'])
 def create_athlete(user_id):

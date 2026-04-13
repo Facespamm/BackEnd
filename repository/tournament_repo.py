@@ -1,4 +1,4 @@
-from sqlalchemy import and_, extract, delete
+from sqlalchemy import and_, extract, delete, update, distinct
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.functions import count
@@ -38,6 +38,7 @@ class TournamentRepository:
                 raise ValueError(f"No categories found for tournament {tournament_id}")
 
             category_ids = [cat.id for cat in categories]
+            from sqlalchemy import cast, String
 
             # Получаем атлетов клуба, которые подходят по возрасту/полу хотя бы к одной категории
             athletes_query = (
@@ -46,7 +47,7 @@ class TournamentRepository:
                 .join(CategoryNew, and_(
                     extract('year', AthleteNew.birth_date) >= CategoryNew.min_year,
                     extract('year', AthleteNew.birth_date) <= CategoryNew.max_year,
-                    CategoryNew.gender == AthleteNew.gender,
+                    cast(CategoryNew.gender, String) == AthleteNew.gender,
                     CategoryNew.id.in_(category_ids)
                 ))
                 .distinct(AthleteNew.id)   # убираем дубликаты
@@ -349,11 +350,25 @@ class TournamentRepository:
 
     def assign_athletes_tournament_after_weighting(self, tournament_category_id, athlete_id):
         try:
+            tournament_id = (
+                self.session.query(distinct(TournamentNew.id))
+                .join(TournamentCategory, TournamentCategory.tournament_id == TournamentNew.id)
+                .filter(TournamentCategory.tournament_category_id == tournament_category_id)
+                .scalar()
+            )
+
+            update_query = (
+                update(AthleteTournamentRegistration)
+                .filter_by(tournament_id=tournament_id, athlete_id=athlete_id)
+                .values(status=StatusTournamentRegistration.WEIGHED_IN.name)
+            )
+
             assign_athlete_query = (
                 insert(AthleteRegistration)
                 .values(tournament_category_id=tournament_category_id, athlete_id=athlete_id)
             )
             self.session.execute(assign_athlete_query)
+            self.session.execute(update_query)
             self.session.commit()
             return True
         except Exception as e:

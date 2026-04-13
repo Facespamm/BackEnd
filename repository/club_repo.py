@@ -93,9 +93,59 @@ class ClubRepository:
             print("❌ Exception: ", e)
             return []
 
+    def _get_athletes_id_by_club(self, club_id: int):
+        from new_model.head_model.new_athlete import AthleteNew
+        try:
+            return self.session.query(AthleteNew.id).filter_by(club_id=club_id, is_active=True).all()
+        except Exception as e:
+            print("❌ Exception: ", e)
+            return []
+
     def get_club_by_id(self, club_id: int):
         try:
             return self.session.query(ClubNew).filter_by(id=club_id, is_active=True).first()
         except Exception as e:
             print("❌ Exception: ", e)
             return None
+
+    def assign_athlete_to_club(self, club_id: int, athlete_ids: list[int]) -> bool:
+        try:
+            existing_athlete = self._get_athletes_id_by_club(club_id)
+            ignore_existing_athlete = [a for a in athlete_ids if a not in existing_athlete]
+
+            from new_model.head_model.new_athlete import AthleteNew
+            for athlete_id in ignore_existing_athlete:
+                athlete = self.session.query(AthleteNew).filter_by(id=athlete_id).first()
+                if not athlete:
+                    continue
+
+                athlete.club_id = club_id
+
+            self.session.commit()
+            return True
+        except Exception as e:
+            print('Exception in assign_athlete_to_club: ', e)
+            self.session.rollback()
+            raise e
+
+    def unassign_athletes_from_club(self, club_id: int, athlete_ids: list[int]):
+        try:
+            existing_athlete = self._get_athletes_id_by_club(club_id)
+            has_athlete = [a for a in athlete_ids if a not in existing_athlete]
+            if not has_athlete:
+                raise Exception('athlete not found this club')
+
+            from new_model.head_model.new_athlete import AthleteNew
+            for athlete_id in has_athlete:
+                athlete = self.session.query(AthleteNew).filter_by(id=athlete_id).first()
+                if not athlete:
+                    continue
+
+                athlete.club_id = None
+
+            self.session.commit()
+            return True
+        except Exception as e:
+            print('Exception in assign_athlete_to_club: ', e)
+            self.session.rollback()
+            raise e

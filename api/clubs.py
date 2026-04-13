@@ -62,7 +62,7 @@ def search_athletes():
             for athlete in athletes:
                 result.append({
                     'id': athlete.id,
-                    'user_id': athlete.user_id,
+                    'user_id': athlete.user.id,
                     'last_name': athlete.user.last_name or 'Неизвестно',
                     'first_name': athlete.user.first_name or 'Неизвестно',
                     'middle_name': athlete.user.middle_name or None,
@@ -274,3 +274,49 @@ def get_club_athletes(club_id):
 
     except Exception as e:
         return jsonify({'success': False, 'message': f'Ошибка при получении участников клуба: {str(e)}'}), 500
+
+@clubs_bp.route('/<int:club_id>/assign-athletes', methods=['POST'])
+def assign_athletes(club_id: int):
+    try:
+
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'success': False, 'message': 'Не переданы участники для регистрации'}), 400
+
+        athlete_ids = data.get('athlete_ids')
+        if not athlete_ids or not isinstance(athlete_ids, list):
+            return jsonify({'success': False, 'message': 'Не переданы участники или неверный формат'}), 400
+
+        with create_session() as session:
+            club_repo = ClubRepository(session)
+
+            club = club_repo.get_club_by_id(club_id)
+            if not club:
+                return jsonify({'success': False, 'message': 'Нет такого клуба'}), 404
+
+            is_assign = club_repo.assign_athlete_to_club(club_id=club_id, athlete_ids=athlete_ids)
+            return jsonify({"success": True, "message": "Участники добавленны в клуб"}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Ошибка при регистрации участников в клуб: {str(e)}'}), 500
+
+@clubs_bp.route('/<int:club_id>/unassign-athletes', methods=['POST'])
+def unassign_athletes(club_id: int):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'Не переданы участники для регистрации'}), 400
+
+        athlete_ids = data.get('athlete_ids')
+        if not athlete_ids or not isinstance(athlete_ids, list):
+            return jsonify({'success': False, 'message': 'Не переданы участники или неверный формат'}), 400
+
+        with ClubRepository() as club_repo:
+            club = club_repo.get_club_by_id(club_id)
+            if not club:
+                return jsonify({'success': False, 'message': 'Нет такого клуба'}), 404
+
+            is_assign = club_repo.unassign_athletes_from_club(club_id=club_id, athlete_ids=athlete_ids)
+            return jsonify({"success": True, "message": "Участники добавленны в клуб"}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Ошибка при отменены регистрации участников в клуб: {str(e)}'}), 500

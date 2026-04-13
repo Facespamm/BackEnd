@@ -3,6 +3,8 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import distinct
 from sqlalchemy.sql.functions import count
 
+from models import fight
+from new_model.AthleteTournamentRegistration import AthleteTournamentRegistration
 from new_model.handbook.role_new import RoleNew
 from new_model.head_model.new_user import UserNew
 from new_model.head_model.tournament_new import TournamentNew
@@ -33,7 +35,8 @@ def get_live_statistics():
 
             live_fights_count = (
                 session.query(count(FightNew.id))
-                .join(TournamentNew)
+                .join(TournamentCategory, TournamentCategory.tournament_category_id == FightNew.tournament_category_id)
+                .join(TournamentNew, TournamentCategory.tournament_id == TournamentNew.id)
                 .filter(
                     TournamentNew.status == StatusTournament.LIVE,
                     FightNew.status == FightStatus.LIVE
@@ -244,7 +247,10 @@ def get_active_tournaments():
             tournaments = (
                 session.query(TournamentNew)
                 .filter(TournamentNew.status == StatusTournament.LIVE)
-                .options(joinedload(TournamentNew.athletes))
+                .join(AthleteTournamentRegistration, TournamentNew.id == AthleteTournamentRegistration.tournament_id)
+                .options(
+                    joinedload(TournamentNew.registrations)
+                    .joinedload(AthleteTournamentRegistration.athlete))
                 .all()
             )
 
@@ -261,24 +267,24 @@ def get_active_tournaments():
                 # Количество активных боёв на этом турнире
                 live_fights_count = (
                     session.query(count(FightNew.id))
+                    .join(TournamentCategory.tournament_category_id == FightNew.tournament_category_id, tournament.id == TournamentCategory.tournament_id)
                     .filter(
-                        FightNew.tournament_id == tournament.id,
                         FightNew.status == FightStatus.LIVE
                     )
                     .scalar() or 0
                 )
 
-            result.append({
-                'id': tournament.id,
-                'name': tournament.name,
-                'start_date': tournament.start_date.isoformat() if tournament.start_date else None,
-                'end_date': tournament.end_date.isoformat() if tournament.end_date else None,
-                'city': tournament.city,
-                'country': tournament.country,
-                'tatami_count': tournament.tatami_count,
-                'athletes_count': athletes_count,
-                'live_fights_count': live_fights_count
-            })
+                result.append({
+                    'id': tournament.id,
+                    'name': tournament.name,
+                    'start_date': tournament.start_date.isoformat() if tournament.start_date else None,
+                    'end_date': tournament.end_date.isoformat() if tournament.end_date else None,
+                    'city': tournament.city,
+                    'country': tournament.country,
+                    'tatami_count': tournament.tatami_count,
+                    'athletes_count': athletes_count,
+                    'live_fights_count': live_fights_count
+                })
 
         return jsonify({
             'success': True,

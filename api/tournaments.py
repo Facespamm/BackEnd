@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 
 from database.db import create_session
+from new_model.Enums import StatusTournamentRegistration
 from new_model.head_model.tournament_new import TournamentNew
 from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
@@ -285,7 +286,7 @@ def get_tournament_athletes_after_weighed(tournament_id):
             if not tournament:
                 return jsonify({'success': False, 'message': 'Турнир не найден'}), 404
 
-            athletes = tournament_repo.get_preliminary_registrations(tournament_id)
+            athletes = tournament_repo.get_preliminary_registrations(tournament_id, status=StatusTournamentRegistration.REGISTERED)
 
             result = []
             for athlete_data in athletes:

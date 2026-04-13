@@ -14,6 +14,7 @@ def init_admin():
 
     try:
         admin =  session.query(UserNew).filter_by(username='admin').first()
+        print("✅ Изночальный админ есть")
         if not admin:
             role = session.query(RoleNew).filter_by(name='Администратор').first()
             auth_repository = AuthRepository(session)

@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from sqlalchemy import update
 
 from database.db import create_session
+from models import athlete
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.new_associations import AthleteRegistration, TournamentCategory
 from new_model.weighing_new import WeighingNew
@@ -110,7 +111,19 @@ def update_weighing(weighing_id):
             if not weighing:
                 return jsonify({'success': False, 'message': 'Взвешивание не найдено'}), 404
 
-            is_update = weighing_repo.update_weighing_information(weighing_id, data)
+            category_repo = CategoryRepository(session)
+            category = category_repo.get_category_by_weight(weighing_id)
+
+            if '-' in category.name:
+                if category.min_weight <= data['weight'] <= category.max_weight:
+                    is_update = weighing_repo.update_weighing_information(weighing_id, data)
+                else:
+                    return jsonify({'success':False, 'message': f'Вес не подходить для такой категории {category.name}'}), 400
+            elif '+' in category.name:
+                if category.min_weight >= data['weight']:
+                    is_update = weighing_repo.update_weighing_information(weighing_id, data)
+                else:
+                    return jsonify({'success':False, 'message': f'Вес не подходить для такой категории {category.name}'}), 400
 
             # ✅ Читаем данные ВНУТРИ сессии
             weight_category = weighing.weight_category
@@ -167,6 +180,8 @@ def create_weighing():
             category_repo = CategoryRepository(session)
             category = category_repo.get_category_by_name(correct_category_name)
 
+            # existing_weighting_repo = weighing_repo.get_existing_wight(tournament.tournament_category_id, athlete.id)
+
             weighing = WeighingNew(
                 tournament_category_id=tournament.tournament_category_id,
                 athlete_id=data['athlete_id'],
@@ -208,6 +223,7 @@ def change_category(tournament_id):
 
         with create_session() as session:
             tournament_repo = TournamentRepository(session)
+            athlete_repo = AthleteRepository(session)
             tournament = tournament_repo.get_tournament_by_id(tournament_id)
             if not tournament:
                 return jsonify({'message': 'Нет такого турнира'}), 404
@@ -227,11 +243,15 @@ def change_category(tournament_id):
             # ✅ Читаем имя категории ВНУТРИ сессии
             category_name = category.name
 
-            if existing:
+            athlete = athlete_repo.get_athlete_by_id(data['athlete_id'])
+            is_valid, correct_category_name = _is_valid_for_category(data, tournament, athlete, session)
+
+            if existing and is_valid:
                 return jsonify({'message': 'Участник находится в правильной категории'}), 200
 
             session.execute(
                 update(AthleteRegistration)
+                .where(AthleteRegistration.athlete_id == athlete.id, AthleteRegistration.tournament_category_id == tournament_category.tournament_category_id)
                 .values(
                     athlete_id=data['athlete_id'],
                     tournament_category_id=tournament_category.tournament_category_id
@@ -244,6 +264,15 @@ def change_category(tournament_id):
     except Exception as e:
         return jsonify({'message': f'Ошибка выполнения {e}'}), 500
 
+@weighing_bp.route('<int:weight_id>', methods=['DELETE'])
+def delete_weighing(weight_id):
+    try:
+        with WeightRepository() as weight_repo:
+            is_deleted = weight_repo.delete_weighting(weight_id)
+            if is_deleted:
+                return jsonify({'success':True,'message':'Звешивание удаленно'})
+    except Exception as e:
+        return jsonify({'message': f'Ошибка выполнения {e}'}), 500
 
 def _is_within_weight_category_limits(weighing: WeighingNew) -> bool:
     tc = weighing.tournament_categories

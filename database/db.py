@@ -24,7 +24,7 @@ def get_engine():
             max_overflow=5,
             pool_timeout=30,
             pool_pre_ping=True,
-            echo = True
+            # echo = True
         )
     return _engine
 

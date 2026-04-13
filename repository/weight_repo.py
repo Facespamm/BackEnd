@@ -1,3 +1,5 @@
+from sqlalchemy import delete
+
 from database.db import get_session
 from new_model.weighing_new import WeighingNew
 
@@ -26,6 +28,16 @@ class WeightRepository:
         except Exception as e:
             print('Error ', e)
             return None
+
+    def get_existing_wight(self, tournament_category_id: int, athlete_id: int) -> bool | None:
+        try:
+            query = self.session.query(WeighingNew).filter_by(tournament_category_id=tournament_category_id)
+            if athlete_id:
+                query = query.filter_by(athlete_id=athlete_id)
+            return query.order_by(WeighingNew.weighing_time.desc()).one_or_none()
+        except Exception as e:
+            print('Error ', e)
+            raise e
 
     def get_weight(self, weighing_id: int) -> WeighingNew | None:
         try:
@@ -74,3 +86,17 @@ class WeightRepository:
             print('Error ', e)
             self.session.rollback()
             return False
+
+    def delete_weighting(self, weight_id: int):
+        try:
+            delete_query = (
+                delete(WeighingNew)
+                .where(WeighingNew.id == weight_id)
+            )
+            self.session.execute(delete_query)
+            self.session.commit()
+            return True
+        except Exception as e:
+            print('Error ', e)
+            self.session.rollback()
+            raise e

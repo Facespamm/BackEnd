@@ -1,6 +1,6 @@
 from datetime import datetime
 from database.db import db
-from models.fight import Fight
+# from models.fight import Fight
 
 #TODO возможно пренисти некоторые методы  в repository
 # class Athlete:

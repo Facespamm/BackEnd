@@ -4,6 +4,7 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
 
 from database.db import get_session
+from new_model.AthleteTournamentRegistration import AthleteTournamentRegistration
 from new_model.Enums import RoleName
 from new_model.handbook.new_dan import DanNew
 from new_model.handbook.role_new import RoleNew
@@ -30,7 +31,12 @@ class AthleteRepository:
         self.session.close()
 
     def get_athletes(self, club_id: int, search_name: str):
-        query = self.session.query(AthleteNew).join(AthleteNew.user).filter_by(is_active=True)
+        query = (
+            self.session.query(AthleteNew)
+            .join(AthleteNew.user)
+            .filter_by(is_active=True)
+        )
+
         if club_id:
             query = query.filter(AthleteNew.club_id == club_id)
         if search_name:
@@ -42,13 +48,28 @@ class AthleteRepository:
             )
         return query.order_by(UserNew.last_name, UserNew.first_name).all()
 
-    def get_basic_info(self, club_id: int, search_name: str):
+    def get_athlete_for_registrations_on_club(self):
+        return self.session.query(AthleteNew).options(joinedload(AthleteNew.user),joinedload(AthleteNew.club)).filter(AthleteNew.is_active == True).all()
+
+    def get_basic_info(self, club_id: int, search_name: str,tournament_id: int | None = None ):
         query = (
-            self.session.query(AthleteNew.id, UserNew.first_name, UserNew.last_name, UserNew.middle_name, DanNew.level)
+            self.session.query(AthleteNew.id, UserNew.first_name, UserNew.last_name, UserNew.middle_name, DanNew.level, AthleteNew.gender,AthleteNew.age)
             .join(AthleteNew.user)
-            .join(AthleteNew.rank)
+            .outerjoin(AthleteNew.rank)
             .filter(AthleteNew.is_active == True)
         )
+
+        if tournament_id is not None:
+            registered_ids = (
+                self.session.query(AthleteTournamentRegistration.athlete_id).filter_by(tournament_id=tournament_id)
+                .scalar_subquery()
+            )
+
+            query = (
+                query
+                .filter(AthleteNew.id.not_in(registered_ids))
+            )
+
         if club_id:
             query = query.filter(AthleteNew.club_id == club_id)
         if search_name:
@@ -157,7 +178,7 @@ class AthleteRepository:
 
     def search_athletes_by_name(self, name_query: dict, club_id=None):
         query = (
-            self.session.query(AthleteNew.id, UserNew.id, UserNew.first_name, UserNew.last_name, UserNew.middle_name, DanNew.level)
+            self.session.query(AthleteNew)
             .join(AthleteNew.user)
             .join(AthleteNew.rank)
             .filter(AthleteNew.is_active == True)

@@ -4,6 +4,7 @@ from database.db import get_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
+from new_model.weighing_new import WeighingNew
 
 
 class CategoryRepository:
@@ -117,3 +118,11 @@ class CategoryRepository:
 
     def get_category_by_name(self, name: str) -> CategoryNew | None:
         return self.session.query(CategoryNew).filter_by(name=name).first()
+
+    def get_category_by_weight(self, weight_id: int) -> CategoryNew:
+        return (
+            self.session.query(CategoryNew)
+            .join(WeighingNew, WeighingNew.weight_category == CategoryNew.id)
+            .filter(WeighingNew.id == weight_id)
+            .first()
+        )
