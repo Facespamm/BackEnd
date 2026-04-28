@@ -487,3 +487,106 @@ def fight_bracket(tournament_id):
             'success': False,
             'message': f'Ошибка вывода боев: {str(e)}'
         }), 500
+
+@fights_bp.route('/change_athletes/', methods=['PUT'])
+def change_athletes():
+    try:
+        data = request.get_json()
+        required_fields = ['first_fight_id', 'first_athlete_id', 'second_fight_id', 'second_athlete_id']
+
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'message': f'Обязательное поле: {missing_fields}'
+            }), 400
+
+        first_fight_id = data['first_fight_id']
+        first_athlete_id = data['first_athlete_id']
+        second_fight_id = data['second_fight_id']
+        second_athlete_id = data['second_athlete_id']
+
+        with create_session() as session:
+            athlete_repo = AthleteRepository(session)
+            fights_repo = FightRepository(session)
+
+            first_fight = fights_repo.get_fight_by_id(first_fight_id)
+            second_fight = fights_repo.get_fight_by_id(second_fight_id)
+
+            if not first_fight or not second_fight:
+                return jsonify({
+                    'success': False,
+                    'message': 'Одна или обе схватки не найдены'
+                }), 404
+
+            first_has_both = first_fight.blue_athlete_id and first_fight.white_athlete_id
+            second_has_both = second_fight.blue_athlete_id and second_fight.white_athlete_id
+
+            if not first_has_both or not second_has_both:
+                return jsonify({
+                    'success': False,
+                    'message': 'Нельзя менять атлетов в бою где есть Пустой боец'
+                }), 400
+
+            first_athlete = athlete_repo.get_athlete_by_id(first_athlete_id)
+            second_athlete = athlete_repo.get_athlete_by_id(second_athlete_id)
+            if not first_athlete or not second_athlete:
+                return jsonify({
+                    'success': False,
+                    'message': 'Один или оба отлета не найдены'
+                }), 404
+
+            if first_fight.blue_athlete_id == first_athlete_id:
+                first_fight.blue_athlete_id = second_athlete_id
+            else:
+                first_fight.white_athlete_id = second_athlete_id
+
+            if second_fight.blue_athlete_id == second_athlete_id:
+                second_fight.blue_athlete_id = first_athlete_id
+            else:
+                second_fight.white_athlete_id = first_athlete_id
+
+            fights_repo.update_athlete_in_next_rounds(first_fight, first_athlete_id, second_athlete_id)
+            fights_repo.update_athlete_in_next_rounds(second_fight, second_athlete_id, first_athlete_id)
+
+            session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Спортсмены успешно изменены в схватках'
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при изменении спортсменов в схватке: {str(e)}'
+        })
+
+@fights_bp.route('/<int:fight_id>/change_tatami', methods=['GET'])
+def change_tatami(fight_id):
+    try:
+        tamami_number = request.args.get('tamami_number')
+        if not tamami_number:
+            return jsonify({
+                'success': False,
+                'message': 'Не указан татами'
+            }), 400
+
+        with FightRepository() as fights_repo:
+            fight = fights_repo.get_fight_by_id(fight_id)
+            if not fight:
+                return jsonify({
+                    'success': False,
+                    'message': 'Нет такого боя'
+                }), 404
+
+            fights_repo.change_tamami(fight.id,tamami_number)
+        return jsonify({
+            'success': True,
+            'message': 'Татами успешно изменен'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Ошибка при смене татами: {str(e)}'
+        }), 500

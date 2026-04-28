@@ -7,6 +7,7 @@ from database.db import get_session
 from new_model.AthleteTournamentRegistration import AthleteTournamentRegistration
 from new_model.Enums import StatusTournamentRegistration
 from new_model.handbook.category_new import CategoryNew
+from new_model.head_model.fight_new import FightNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
 from new_model.new_associations import TournamentCategory, AthleteRegistration

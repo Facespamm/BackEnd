@@ -63,13 +63,13 @@ def create_category():
                 'message': 'Обязательные поля: gender'
             }), 400
 
-        if data['min_weight'] > data['max_weight']:
+        if data['min_weight'] > data['max_weight'] != 0:
             return jsonify({
                 'message': 'Минемальный вес не может быть больше максимального'
             }),400
 
         # === Проверка веса ===
-        if data.get('min_weight') is not None and data.get('max_weight') is not None:
+        if data.get('min_weight') is not None and data.get('max_weight') is not None and data.get('max_weight') !=0:
             if data['min_weight'] > data['max_weight']:
                 return jsonify({
                     'message': 'Минимальный вес не может быть больше максимального'
@@ -79,12 +79,15 @@ def create_category():
         min_age = data.get('min_age')
         max_age = data.get('max_age')
 
-        if min_age is not None and max_age is not None:
-            if int(min_age) > int(max_age):
+        date_min = date(year=min_age, month=1, day=1)
+        date_max = date(year=max_age, month=1, day=1)
+
+        if min_age is not None and max_age is not None and max_age != 0:
+            if date_min > date_max:
                 return jsonify({
                     'message': 'Минимальный год не может быть больше максимального года'
                 }), 400
-        under_or_over_weight = f'-{data.get('max_weight')}'if data.get('max_weight') else f'+{data.get('min_weight')}'
+        under_or_over_weight = f'-{data.get('max_weight')}'if data.get('max_weight') != 0 else f'+{data.get('min_weight')}'
         generate_name = f'{under_or_over_weight}кг, ПОЛ: {data.get('gender')}, ГОДА:с {data.get('min_age')} по {data.get('max_age')}'
 
         with CategoryRepository() as category_repo:

@@ -75,10 +75,13 @@ class FightRepository:
             print('Error: ', e)
             raise e
 
-    def get_fight_by_tournament(self, tournament_category_id, status: FightStatus = None):
+    def get_fight_by_tournament(self, tournament_category_id, status: FightStatus = None, minimal_round_number=None):
         query = self.session.query(FightNew).filter_by(tournament_category_id=tournament_category_id)
         if status:
             query = query.filter_by(status=status)
+
+        if minimal_round_number:
+            query = query.filter_by(round_number=minimal_round_number)
         return query.all()
 
     def get_fights_by_search_params(self, tournament_id=None, tatami_number=None, status=None):
@@ -342,3 +345,31 @@ class FightRepository:
             print('Error: ', e)
             self.session.rollback()
             raise e
+
+    def update_athlete_in_next_rounds(self, fight, old_athlete_id, new_athlete_id):
+        """Рекурсивно обновляет атлета в следующих раундах"""
+        if not fight.next_fight_id:
+            return
+
+        next_fight = self.get_fight_by_id(fight.next_fight_id)
+        if not next_fight:
+            return
+
+        if next_fight.blue_athlete_id == old_athlete_id:
+            next_fight.blue_athlete_id = new_athlete_id
+            self.update_athlete_in_next_rounds(next_fight, old_athlete_id, new_athlete_id)
+        elif next_fight.white_athlete_id == old_athlete_id:
+            next_fight.white_athlete_id = new_athlete_id
+            self.update_athlete_in_next_rounds(next_fight, old_athlete_id, new_athlete_id)
+
+    def change_tamami(self, fight_id, tatami_number):
+        try:
+            fight = self.get_fight_by_id(fight_id)
+            if fight is None:
+                raise ValueError(f"Бой с id={fight_id} не найден")
+            fight.tatami_number = tatami_number
+            self.session.commit()
+        except Exception as e:
+            self.session.rollback()
+            raise e
+

@@ -117,3 +117,10 @@ class AuthRepository:
             self.session.rollback()
             print(f"Error updating user: {e}")
             return False
+
+    def get_user_by_email(self, email: str):
+        try:
+            return self.session.query(UserNew).filter_by(email=email, is_active=True).first()
+        except Exception as e:
+            print(f"Error getting user by email: {e}")
+            return None

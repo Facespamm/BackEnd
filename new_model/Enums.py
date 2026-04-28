@@ -91,7 +91,7 @@ class StatusTournamentRegistration(Enum):
     CANCELLED = "cancelled"            # Отменена регистрация (по желанию спортсмена/тренера)
 
 def translate_gender(gender):
-    return Gender.male.name if gender == 'мужской' else Gender.female.name
+    return Gender.male.name if gender == 'male' else Gender.female.name
 
 def text_to_referee_level(text: str):
     normolize_name = text.strip().lower()

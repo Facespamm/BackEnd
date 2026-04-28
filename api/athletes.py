@@ -311,7 +311,8 @@ def create_athlete_registration():
     try:
         data = request.get_json()
 
-        required_fields = ['login', 'fullname', 'email', 'phone', 'password', 'birth_date', 'gender', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
+        # 'password' поока убран, надо сделать через ссылку активации
+        required_fields = ['login', 'fullname', 'email', 'phone', 'birth_date', 'gender', 'rank_id', 'license_number', 'medical_check', 'insurance_number']
         missing = [field for field in required_fields if field not in data]
         if missing:
             return jsonify({
@@ -333,12 +334,16 @@ def create_athlete_registration():
             if existing_user:
                 return jsonify({'success': False, 'message': 'Пользователь с таким логином уже существует'}), 400
 
+            existing_email = auth_repo.get_user_by_email(data['email'])
+            if existing_email:
+                return jsonify({'success': False, 'message': 'Email уже используется'}), 400
+
             new_user = UserNew(
                 username=data['login'],
-                password_hash = auth_repo.hash_password(data['password']),
-                first_name=names[0],
-                middle_name=names[1] if len(names) > 1 else '',
-                last_name=names[2] if len(names) > 1 else '',
+                password_hash = '!', #не валидный хэш #auth_repo.hash_password(data['password']),
+                first_name=names[0] if len(names) > 0 else '',
+                middle_name = names[1] if len(names) > 1 else '',
+                last_name = names[2] if len(names) > 2 else '',
                 email = data['email'],
                 phone = data['phone'],
             )
@@ -378,4 +383,4 @@ def create_athlete_registration():
     except Exception as e:
         return jsonify({
             'message': f'Ошибка регистрации пользователя: {e}'
-        })
+        }), 500

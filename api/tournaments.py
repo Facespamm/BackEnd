@@ -296,6 +296,7 @@ def get_tournament_athletes_after_weighed(tournament_id):
                     'athlete_id': athlete.id,
                     'first_name': athlete.user.first_name if athlete.user else None,
                     'last_name': athlete.user.last_name if athlete.user else None,
+                    'middle_name': athlete.user.middle_name if athlete.user else None,
                     'gender': athlete.gender,
                     'birth_date': athlete.birth_date.isoformat() if athlete.birth_date else None,
                     'age': athlete.age,

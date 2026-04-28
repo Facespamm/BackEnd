@@ -17,7 +17,7 @@ _SessionFactory = None
 def get_engine():
     global _engine
     if _engine is None:
-        uri = os.getenv('LOCALHOST_CONNECTION', DATABASE_URI)
+        uri = os.getenv('DOCKER_CONNECTION', DATABASE_URI)
         _engine = create_engine(
             uri,
             pool_size=10,
@@ -69,7 +69,7 @@ def get_session():
 
 
 def init_db(app):
-    uri = os.getenv('LOCALHOST_CONNECTION', DATABASE_URI)
+    uri = os.getenv('DOCKER_CONNECTION', DATABASE_URI)
     app.config['SQLALCHEMY_DATABASE_URI'] = uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 

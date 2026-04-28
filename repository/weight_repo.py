@@ -1,7 +1,11 @@
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 
 from database.db import get_session
+from new_model.AthleteTournamentRegistration import AthleteTournamentRegistration
+from new_model.Enums import StatusTournamentRegistration
+from new_model.new_associations import TournamentCategory
 from new_model.weighing_new import WeighingNew
+from repository.tournament_repo import TournamentRepository
 
 
 class WeightRepository:
@@ -89,10 +93,27 @@ class WeightRepository:
 
     def delete_weighting(self, weight_id: int):
         try:
+            weight = self.get_weight(weight_id)
+
+            tournament_id = (
+                self.session.query(TournamentCategory.tournament_id)
+                .filter(TournamentCategory.tournament_category_id == weight.tournament_category_id)
+                .scalar()
+            )
+
+            update_query = (
+                update(AthleteTournamentRegistration)
+                .where(AthleteTournamentRegistration.athlete_id == weight.athlete_id,
+                       AthleteTournamentRegistration.tournament_id == tournament_id)
+                .values(status=StatusTournamentRegistration.REGISTERED)
+            )
+
             delete_query = (
                 delete(WeighingNew)
                 .where(WeighingNew.id == weight_id)
             )
+
+            self.session.execute(update_query)
             self.session.execute(delete_query)
             self.session.commit()
             return True

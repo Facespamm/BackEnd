@@ -212,3 +212,65 @@ def fight_bracket(tournament_id):
         })
     except Exception as e:
         return jsonify({'success': False, 'message': f'Ошибка вывода боев: {str(e)}'}), 500
+
+@brackets_bp.route('/<int:tournament_id>/first_fights', methods=['GET'])
+def first_fights(tournament_id):
+    try:
+        category_id = request.args.get('category')
+        if not category_id:
+            return jsonify({'success': False, 'message': 'Не выбрана категория'}), 400
+
+        with create_session() as session:
+            tournament_repo = TournamentRepository(session)
+            tournament_category = tournament_repo.get_tournament_category(tournament_id, category_id)
+            if not tournament_category:
+                return jsonify({'success': False, 'message': 'Категория турнира не найдена'}), 404
+
+            tournament_category_id = tournament_category.tournament_category_id
+
+            fight_repo = FightRepository(session)
+            fights = fight_repo.get_fight_by_tournament(tournament_category_id,minimal_round_number=1) #самый первый раунд это первый
+
+            athlete_repo = AthleteRepository(session)
+            fights_dtos = [{
+                'id': fight.id,
+                'blue_athlete': athlete_repo.get_athlete_by_fight(fight.blue_athlete_id, fight.id),
+                'white_athlete': athlete_repo.get_athlete_by_fight(fight.white_athlete_id, fight.id),
+                'tatami_number': fight.tatami_number,
+                'round': fight.round_number,
+                'status_fight': fight.status.value,
+                'next_fight': fight.next_fight_id,
+                'type_bracket': fight.type_bracket.value,
+            } for fight in fights]
+
+            tournament_name = tournament_repo.get_tournament_name_by_tournament_category(tournament_category_id)
+
+            category_repo = CategoryRepository(session)
+            category = category_repo.get_category_by_id(category_id)
+            # ✅ Извлекаем все данные из объекта ВНУТРИ сессии
+            category_dto = {
+                'id': category.id,
+                'name': category.name,
+                'weight_range': f'от {category.min_weight} до {category.max_weight}'
+            } if category else None
+
+            winner = None
+            if fights:
+                last_fight = fights[-1]
+                result_repo = ResultRepository(session)
+                has_result = result_repo.get_result_by_fight(last_fight.id)
+                if has_result:
+                    winner = athlete_repo.get_athlete_by_fight(has_result.winner_id, last_fight.id)
+
+        if not fights_dtos:
+            return jsonify({'success': False, 'message': 'Нет боев'}), 404
+
+        return jsonify({
+            'success': True,
+            'fights': fights_dtos,
+            'tournament_name': tournament_name,
+            'category': category_dto,
+            'winner': winner,
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Ошибка вывода боев: {str(e)}'}), 500
