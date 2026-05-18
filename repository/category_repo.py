@@ -1,9 +1,11 @@
+from pandas._libs import join
 from sqlalchemy import or_
 
 from database.db import get_session
 from new_model.handbook.category_new import CategoryNew
 from new_model.head_model.new_athlete import AthleteNew
 from new_model.head_model.tournament_new import TournamentNew
+from new_model.new_associations import TournamentCategory
 from new_model.weighing_new import WeighingNew
 
 
@@ -64,7 +66,11 @@ class CategoryRepository:
     def get_categories(self, tournament_id: int):
         query = self.session.query(CategoryNew).filter_by(is_active=True)
         if tournament_id:
-            query = query.filter(CategoryNew.tournaments.any(TournamentNew.id == tournament_id))
+            query = (
+                query
+                .join(TournamentCategory, TournamentCategory.category_id == CategoryNew.id)
+                .filter(TournamentCategory.tournament_id == tournament_id)
+                     )
         return query.all()
 
     def get_all_athletes(self, category_id):

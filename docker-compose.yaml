@@ -24,5 +24,19 @@ services:
 #      - ./database/init:/docker-entrypoint-initdb.d
     ports:
       - "5434:5432"
+
+  redis:
+    image: redis:alpine
+    container_name: judo_streams_redis_1
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
+    volumes:
+      - redis_data:/var/redisdata/data
+
 volumes:
     postgres-data:
+    redis_data:

@@ -12,7 +12,7 @@ categories_bp = Blueprint('categories', __name__, url_prefix='/api/categories')
 def get_categories():
     """Получить список категорий"""
     try:
-        tournament_id = request.args.get('tournament_id', type=int)
+        tournament_id = request.args.get('tournamentId', type=int)
 
         with CategoryRepository() as category_repo:
             categories =category_repo.get_categories(tournament_id)
