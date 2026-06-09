@@ -1,18 +1,18 @@
-from pandas._libs import join
-from sqlalchemy import or_
-
 from database.db import get_session
-from new_model.handbook.category_new import CategoryNew
-from new_model.head_model.new_athlete import AthleteNew
-from new_model.head_model.tournament_new import TournamentNew
-from new_model.new_associations import TournamentCategory
-from new_model.weighing_new import WeighingNew
+from models.category_new import CategoryNew
+from models.new_associations import TournamentCategory
+from models.new_athlete import AthleteNew
+from models.weighing_new import WeighingNew
+from routers.category.schemas import UpdateCategoryRequest
+from sqlalchemy import or_
 
 
 class CategoryRepository:
     def __init__(self, session=None):
         self.session = session if session else get_session()
-        self._owns_session = session is None  # закрывать сессию только если создали сами
+        self._owns_session = (
+            session is None
+        )  # закрывать сессию только если создали сами
 
     def __enter__(self):
         return self
@@ -33,7 +33,8 @@ class CategoryRepository:
                 CategoryNew.max_weight < athlete.weight,
                 CategoryNew.min_age >= athlete.age,
                 CategoryNew.max_age < athlete.age,
-            ).first()
+            )
+            .first()
         )
 
         if category:
@@ -43,18 +44,14 @@ class CategoryRepository:
 
         return False
 
-    def update_category(self, category_id, category_data: dict):
+    def update_category(self, category_id, category_data: UpdateCategoryRequest):
         """Обновить категорию"""
         try:
             category = self.session.query(CategoryNew).filter_by(id=category_id).first()
             if not category:
                 raise Exception("Category not found")
 
-            category.min_weight = category_data.get('min-weight', category.min_weight)
-            category.max_weight = category_data.get('max-weight', category.max_weight)
-            category.min_age = category_data.get('min-age', category.min_age)
-            category.max_age = category_data.get('max-age', category.max_age)
-            category.name = category_data.get('name', category.name)
+            category = CategoryNew(**category_data.model_dump(), id=category_id)
 
             self.session.commit()
             return True
@@ -66,18 +63,18 @@ class CategoryRepository:
     def get_categories(self, tournament_id: int):
         query = self.session.query(CategoryNew).filter_by(is_active=True)
         if tournament_id:
-            query = (
-                query
-                .join(TournamentCategory, TournamentCategory.category_id == CategoryNew.id)
-                .filter(TournamentCategory.tournament_id == tournament_id)
-                     )
+            query = query.join(
+                TournamentCategory, TournamentCategory.category_id == CategoryNew.id
+            ).filter(TournamentCategory.tournament_id == tournament_id)
         return query.all()
 
     def get_all_athletes(self, category_id):
         try:
-            count_athlete = self.session.query(AthleteNew.id).filter(
-                CategoryNew.athletes.any(CategoryNew.id == category_id)
-            ).count()
+            count_athlete = (
+                self.session.query(AthleteNew.id)
+                .filter(CategoryNew.athletes.any(CategoryNew.id == category_id))
+                .count()
+            )
             return count_athlete
         except Exception as e:
             print(f"Error getting athletes: {e}")
@@ -111,14 +108,12 @@ class CategoryRepository:
             self.session.query(CategoryNew.id)
             .filter(
                 CategoryNew.min_weight <= weigth,
-                or_(
-                    CategoryNew.max_weight >= weigth,
-                    CategoryNew.max_weight.is_(None)
-                ),
+                or_(CategoryNew.max_weight >= weigth, CategoryNew.max_weight.is_(None)),
                 CategoryNew.min_year <= bith_year,
                 CategoryNew.max_year >= bith_year,
-                CategoryNew.gender == gender
-            ).scalar()
+                CategoryNew.gender == gender,
+            )
+            .scalar()
         )
         return category_id
 

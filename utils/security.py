@@ -2,58 +2,87 @@
 Функции безопасности и аутентификации
 """
 
-import hashlib
-import secrets
-import string
-from functools import wraps
-from flask import session, redirect, url_for, flash, request, jsonify
-from flask_jwt_extended import get_jwt
+import os
+from typing import Annotated
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jwt import InvalidTokenError, encode
+from jwt.api_jwt import decode_complete
+
+from models.Enums import RoleName
+
+scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+TokenDependency = Annotated[str, Depends(scheme)]
 
 
-def generate_referee_code(length=6):
-    """
-    Генерация кода для судей
-    """
-    characters = string.ascii_uppercase + string.digits
-    return ''.join(secrets.choice(characters) for _ in range(length))
+def create_access_token(additional_claims: dict):
+    key = os.getenv("JWT_SECRET_KEY", None)
+    if key is None:
+        raise ValueError("JWT_SECRET_KEY is not set in environment variables")
 
-def generate_api_key():
-    """
-    Генерация API ключа
-    """
-    return secrets.token_urlsafe(32)
+    algorithms = os.getenv("JWT_ALGORITHM", None)
+    if algorithms is None:
+        raise ValueError("JWT_ALGORITHM is not set in environment variables")
+    jwt_token = encode(payload=additional_claims, key=key, algorithm=algorithms)
+    return jwt_token
 
-def role_required(*roles):
-    def decorated_function(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            claims = get_jwt()
-            user_role = claims.get('role')
 
-            if user_role not in roles:
-                return jsonify({
-                    'message':'Доступ запришен'
-                }), 403
-            return fn(*args, **kwargs)
-        return wrapper
-    return decorated_function
+def decode_access_token(token: str):
+    key = os.getenv("JWT_SECRET_KEY", None)
+    if key is None:
+        raise ValueError("JWT_SECRET_KEY is not set in environment variables")
 
-def scoreboard_required(f):
-    """
-    Декоратор для проверки прав доступа к табло
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            # Для табло может быть публичный доступ
-            if request.endpoint and 'scoreboard' in request.endpoint:
-                return f(*args, **kwargs)
-            flash('Требуется авторизация', 'warning')
-            return redirect(url_for('main.login'))
+    algorithms = os.getenv("JWT_ALGORITHM", None)
+    if algorithms is None:
+        raise ValueError("JWT_ALGORITHM is not set in environment variables")
 
-        if session.get('user_role') not in ['ADMIN', 'SCOREBOARD', 'REFEREE']:
-            flash('Недостаточно прав для доступа к табло', 'danger')
-            return redirect(url_for('main.dashboard'))
+    try:
+        playold = decode_complete(token, key=key, algorithms=[algorithms])
+        return playold
+    except InvalidTokenError as e:
+        print(f"❌ Invalid token: {e}")
+        return None
 
-        return f(*args, **kwargs)
-    return decorated_function
+
+def require_role(required_role: str):
+    def dependency(token: TokenDependency):
+        decoded_token = decode_access_token(token)
+
+        if not decoded_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
+
+        payload = decoded_token.get("payload") if decoded_token.get("payload") else None
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+            )
+
+        role = payload.get("role")
+
+        if role != required_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: insufficient permissions",
+            )
+
+        user_id = payload.get("user_id", None)
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: user_id is missing",
+            )
+
+        return user_id
+
+    return dependency
+
+
+admin_depd = Depends(require_role(RoleName.ADMIN.value))
+refere_depd = Depends(require_role(RoleName.REFEREE.value))
+athlete_depd = Depends(require_role(RoleName.ATHLETE.value))
+viewer_depd = Depends(require_role(RoleName.VIEWER.value))

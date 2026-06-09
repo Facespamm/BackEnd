@@ -1,11 +1,9 @@
 from sqlalchemy import delete
 
 from database.db import get_session
-from new_model.head_model.fight_new import FightNew
-from new_model.head_model.new_athlete import AthleteNew
-from new_model.head_model.new_user import UserNew
-from new_model.new_associations import TournamentCategory
-from new_model.result_new import ResultNew
+from models.fight_new import FightNew
+from models.new_associations import TournamentCategory
+from models.result_new import ResultNew
 
 
 class ResultRepository:
@@ -32,8 +30,13 @@ class ResultRepository:
         )
         if not fight:
             return None
-        result = self.session.query(ResultNew).filter(ResultNew.fight_id == fight_id).one_or_none()
+        result = (
+            self.session.query(ResultNew)
+            .filter(ResultNew.fight_id == fight_id)
+            .one_or_none()
+        )
         from repository.athlete_repo import AthleteRepository
+
         athlete_repo = AthleteRepository(self.session)
         if result.winner_id == fight.white_athlete_id:
             return athlete_repo.get_athlete_by_id(fight.blue_athlete_id)
@@ -44,12 +47,16 @@ class ResultRepository:
         query = (
             self.session.query(ResultNew)
             .join(FightNew, ResultNew.fight_id == FightNew.id)
-            .join(TournamentCategory, FightNew.tournament_category_id == TournamentCategory.tournament_category_id)
+            .join(
+                TournamentCategory,
+                FightNew.tournament_category_id
+                == TournamentCategory.tournament_category_id,
+            )
         )
         if tournament_id is not None and category_id is not None:
             query = query.filter(
                 TournamentCategory.tournament_id == tournament_id,
-                TournamentCategory.category_id == category_id
+                TournamentCategory.category_id == category_id,
             )
         return query.all()
 
@@ -61,7 +68,9 @@ class ResultRepository:
 
     def delete_result(self, fight_id):
         try:
-            self.session.execute(delete(ResultNew).where(ResultNew.fight_id == fight_id))
+            self.session.execute(
+                delete(ResultNew).where(ResultNew.fight_id == fight_id)
+            )
             self.session.commit()
             return True
         except Exception as e:

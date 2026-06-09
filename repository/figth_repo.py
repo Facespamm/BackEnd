@@ -1,14 +1,14 @@
 from datetime import timedelta
 
-from sqlalchemy import select, update, insert, delete
+from sqlalchemy import delete, insert, select, update
 
 from database.db import get_session
-from new_model.Enums import text_to_fight_status, FightStatus, TatamiStatus, BracketType
-from new_model.handbook.new_referee import RefereeNew
-from new_model.head_model.fight_new import FightNew
-from new_model.new_associations import FightReferee, TournamentCategory
-from new_model.result_new import ResultNew
-from new_model.tatami_fight import TatamiFight
+from models.Enums import BracketType, FightStatus, TatamiStatus, text_to_fight_status
+from models.fight_new import FightNew
+from models.new_associations import FightReferee, TournamentCategory
+from models.new_referee import RefereeNew
+from models.result_new import ResultNew
+from models.tatami_fight import TatamiFight
 
 
 class FightRepository:
@@ -42,16 +42,20 @@ class FightRepository:
             )
         else:
             self.session.execute(
-                insert(FightReferee).values(fight_id=fight_id, referee_id=referee_id, role=role)
+                insert(FightReferee).values(
+                    fight_id=fight_id, referee_id=referee_id, role=role
+                )
             )
         self.session.commit()
 
-    def get_fights_by_bracket_type(self, tournament_category_id, bracket_type: BracketType):
+    def get_fights_by_bracket_type(
+        self, tournament_category_id, bracket_type: BracketType
+    ):
         return (
             self.session.query(FightNew)
             .filter(
                 FightNew.tournament_category_id == tournament_category_id,
-                FightNew.type_bracket == bracket_type
+                FightNew.type_bracket == bracket_type,
             )
             .order_by(FightNew.round_number, FightNew.fight_number)
             .all()
@@ -72,11 +76,18 @@ class FightRepository:
             return True
         except Exception as e:
             self.session.rollback()
-            print('Error: ', e)
+            print("Error: ", e)
             raise e
 
-    def get_fight_by_tournament(self, tournament_category_id, status: FightStatus = None, minimal_round_number=None):
-        query = self.session.query(FightNew).filter_by(tournament_category_id=tournament_category_id)
+    def get_fight_by_tournament(
+        self,
+        tournament_category_id,
+        status: FightStatus = None,
+        minimal_round_number=None,
+    ):
+        query = self.session.query(FightNew).filter_by(
+            tournament_category_id=tournament_category_id
+        )
         if status:
             query = query.filter_by(status=status)
 
@@ -84,10 +95,14 @@ class FightRepository:
             query = query.filter_by(round_number=minimal_round_number)
         return query.all()
 
-    def get_fights_by_search_params(self, tournament_id=None, tatami_number=None, status=None):
+    def get_fights_by_search_params(
+        self, tournament_id=None, tatami_number=None, status=None
+    ):
         query = self.session.query(FightNew)
         if tournament_id:
-            query = query.join(TournamentCategory, TournamentCategory.tournament_id == tournament_id)
+            query = query.join(
+                TournamentCategory, TournamentCategory.tournament_id == tournament_id
+            )
         if status:
             status_in_enum = text_to_fight_status(status)
             query = query.filter(FightNew.status == status_in_enum.name)
@@ -100,17 +115,25 @@ class FightRepository:
 
     def get_fight_referees(self, fight_id):
         fight_referees = (
-            self.session.query(RefereeNew.first_name, RefereeNew.last_name, RefereeNew.middle_name, FightReferee.role)
+            self.session.query(
+                RefereeNew.first_name,
+                RefereeNew.last_name,
+                RefereeNew.middle_name,
+                FightReferee.role,
+            )
             .join(FightReferee, FightReferee.referee_id == RefereeNew.id)
             .filter(FightReferee.fight_id == fight_id)
             .all()
         )
-        return [{
-            'first_name': r.first_name,
-            'last_name': r.last_name,
-            'middle_name': r.middle_name,
-            'role': r.role
-        } for r in fight_referees]
+        return [
+            {
+                "first_name": r.first_name,
+                "last_name": r.last_name,
+                "middle_name": r.middle_name,
+                "role": r.role,
+            }
+            for r in fight_referees
+        ]
 
     def set_live_status(self, fight_id, tatami_number):
         try:
@@ -122,7 +145,10 @@ class FightRepository:
 
                 tournament_id = (
                     self.session.query(TournamentCategory.tournament_id)
-                    .filter(TournamentCategory.tournament_category_id == fight.tournament_category_id)
+                    .filter(
+                        TournamentCategory.tournament_category_id
+                        == fight.tournament_category_id
+                    )
                     .distinct(TournamentCategory.tournament_id)
                     .scalar()
                 )
@@ -130,22 +156,26 @@ class FightRepository:
                 if tournament_id:
                     tatami_fight = (
                         self.session.query(TatamiFight)
-                        .filter_by(tournament_id=tournament_id, tatami_number=tatami_number)
+                        .filter_by(
+                            tournament_id=tournament_id, tatami_number=tatami_number
+                        )
                         .first()
                     )
                     if tatami_fight:
                         tatami_fight.fight_id = fight.id
                         tatami_fight.status = TatamiStatus.TAKEN
                     else:
-                        self.session.add(TatamiFight(
-                            tournament_id=tournament_id,
-                            tatami_number=tatami_number,
-                            fight_id=fight.id,
-                            status=TatamiStatus.TAKEN
-                        ))
+                        self.session.add(
+                            TatamiFight(
+                                tournament_id=tournament_id,
+                                tatami_number=tatami_number,
+                                fight_id=fight.id,
+                                status=TatamiStatus.TAKEN,
+                            )
+                        )
             self.session.commit()
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             self.session.rollback()
             raise e
 
@@ -162,7 +192,9 @@ class FightRepository:
                     elif not next_fight.blue_athlete_id:
                         next_fight.blue_athlete_id = current_fight.white_athlete_id
                     current_fight.status = FightStatus.COMPLETED
-                elif current_fight.blue_athlete_id and not current_fight.white_athlete_id:
+                elif (
+                    current_fight.blue_athlete_id and not current_fight.white_athlete_id
+                ):
                     if not next_fight.white_athlete_id:
                         next_fight.white_athlete_id = current_fight.blue_athlete_id
                     elif not next_fight.blue_athlete_id:
@@ -170,7 +202,7 @@ class FightRepository:
                     current_fight.status = FightStatus.COMPLETED
             self.session.commit()
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             self.session.rollback()
             raise e
 
@@ -185,30 +217,32 @@ class FightRepository:
     def end_fight(self, fight_id, data: dict):
         try:
             fight = self.get_fight_by_id(fight_id)
-            end_time = self._text_to_time(data['end_time'])
+            end_time = self._text_to_time(data["end_time"])
             fight.end_time = end_time
             fight.status = FightStatus.COMPLETED
 
-            taken_tatami_fight = self.session.query(TatamiFight).filter_by(fight_id=fight.id).first()
+            taken_tatami_fight = (
+                self.session.query(TatamiFight).filter_by(fight_id=fight.id).first()
+            )
             if not taken_tatami_fight:
-                raise Exception('Tatami fight not found')
+                raise Exception("Tatami fight not found")
             taken_tatami_fight.fight_id = None
             taken_tatami_fight.status = TatamiStatus.FREE
 
             fight_duration = end_time - fight.start_time
-            athlete_id = int(data.get('winner_athlete_id'))
+            athlete_id = int(data.get("winner_athlete_id"))
             new_result = ResultNew(
                 fight_id=fight_id,
                 winner_id=athlete_id,
-                victory_type=data.get('victory_type'),
+                victory_type=data.get("victory_type"),
                 fight_duration=int(fight_duration.total_seconds()),
-                count_of_fights_win=1
+                count_of_fights_win=1,
             )
             self.move_athlete_next_fight(fight_id, athlete_id)
             self.session.add(new_result)
             self.session.commit()
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             self.session.rollback()
             raise e
 
@@ -219,44 +253,50 @@ class FightRepository:
                 return
             next_fight = self.get_fight_by_id(fight.next_fight_id)
             if not fight or not next_fight:
-                raise Exception('Fight or next fight not found')
+                raise Exception("Fight or next fight not found")
 
             if fight.blue_athlete_id == athlete_id and not next_fight.white_athlete_id:
                 next_fight.white_athlete_id = athlete_id
-            elif fight.white_athlete_id == athlete_id and not next_fight.blue_athlete_id:
+            elif (
+                fight.white_athlete_id == athlete_id and not next_fight.blue_athlete_id
+            ):
                 next_fight.blue_athlete_id = athlete_id
             elif not next_fight.white_athlete_id:
                 next_fight.white_athlete_id = athlete_id
             elif not next_fight.blue_athlete_id:
                 next_fight.blue_athlete_id = athlete_id
             else:
-                print('Error: Athlete not found in the fight')
+                print("Error: Athlete not found in the fight")
                 return
             self.session.commit()
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             self.session.rollback()
             raise e
 
-    def get_semi_final_fights(self, tournament_category_id, semi_final_round_number, eight_round=1):
+    def get_semi_final_fights(
+        self, tournament_category_id, semi_final_round_number, eight_round=1
+    ):
         return (
             self.session.query(FightNew)
             .filter(
                 FightNew.tournament_category_id == tournament_category_id,
                 FightNew.round_number <= semi_final_round_number,
-                FightNew.round_number >= eight_round
+                FightNew.round_number >= eight_round,
             )
             .all()
         )
 
-    def get_untracked_semifinal_fights(self, tournament_category_id, semi_final_round_number, eight_round):
+    def get_untracked_semifinal_fights(
+        self, tournament_category_id, semi_final_round_number, eight_round
+    ):
         fights = (
             self.session.query(FightNew)
             .filter(
                 FightNew.tournament_category_id == tournament_category_id,
                 FightNew.round_number <= semi_final_round_number,
                 FightNew.round_number >= eight_round,
-                FightNew.type_bracket == BracketType.MAIN
+                FightNew.type_bracket == BracketType.MAIN,
             )
             .all()
         )
@@ -268,7 +308,7 @@ class FightRepository:
             self.session.query(FightNew)
             .filter(
                 FightNew.tournament_category_id == tournament_category_id,
-                FightNew.round_number == final_round_number
+                FightNew.round_number == final_round_number,
             )
             .all()
         )
@@ -278,7 +318,7 @@ class FightRepository:
             m, s = map(int, text.split(":"))
             return timedelta(minutes=m, seconds=s)
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             return None
 
     def create_result(self, result):
@@ -287,7 +327,7 @@ class FightRepository:
             self.session.commit()
         except Exception as e:
             self.session.rollback()
-            print('Error: ', e)
+            print("Error: ", e)
             raise e
 
     def update_end_time(self, fight_id, end_time: timedelta):
@@ -297,14 +337,17 @@ class FightRepository:
                 fight.end_time = end_time
                 self.session.commit()
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             self.session.rollback()
 
     def tatami_is_taken(self, fight_id, tatami_number):
         fight = self.get_fight_by_id(fight_id)
         tournament_id = (
             self.session.query(TournamentCategory.tournament_id)
-            .filter(TournamentCategory.tournament_category_id == fight.tournament_category_id)
+            .filter(
+                TournamentCategory.tournament_category_id
+                == fight.tournament_category_id
+            )
             .distinct(TournamentCategory.tournament_id)
             .scalar()
         )
@@ -332,7 +375,7 @@ class FightRepository:
             self.session.add(fight)
             self.session.flush()
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             self.session.rollback()
 
     def update_status(self, fight_id, status):
@@ -342,7 +385,7 @@ class FightRepository:
                 fight.status = status
                 self.session.commit()
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             self.session.rollback()
             raise e
 
@@ -357,10 +400,14 @@ class FightRepository:
 
         if next_fight.blue_athlete_id == old_athlete_id:
             next_fight.blue_athlete_id = new_athlete_id
-            self.update_athlete_in_next_rounds(next_fight, old_athlete_id, new_athlete_id)
+            self.update_athlete_in_next_rounds(
+                next_fight, old_athlete_id, new_athlete_id
+            )
         elif next_fight.white_athlete_id == old_athlete_id:
             next_fight.white_athlete_id = new_athlete_id
-            self.update_athlete_in_next_rounds(next_fight, old_athlete_id, new_athlete_id)
+            self.update_athlete_in_next_rounds(
+                next_fight, old_athlete_id, new_athlete_id
+            )
 
     def change_tamami(self, fight_id, tatami_number):
         try:
@@ -372,4 +419,3 @@ class FightRepository:
         except Exception as e:
             self.session.rollback()
             raise e
-

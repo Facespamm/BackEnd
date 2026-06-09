@@ -1,6 +1,6 @@
 from database.db import get_session
-from new_model.handbook.new_referee import RefereeNew
-from new_model.new_associations import FightReferee
+from models.new_associations import FightReferee
+from models.new_referee import RefereeNew
 
 
 class RefereeRepository:
@@ -36,9 +36,11 @@ class RefereeRepository:
 
     def update_referee(self, referee, data):
         try:
-            referee.email = data.get('email', referee.email)
-            referee.phone = data.get('phone', referee.phone)
-            referee.certification_level = data.get('certification_level', referee.certification_level)
+            referee.email = data.get("email", referee.email)
+            referee.phone = data.get("phone", referee.phone)
+            referee.certification_level = data.get(
+                "certification_level", referee.certification_level
+            )
             self.session.commit()
             return True
         except Exception as e:
