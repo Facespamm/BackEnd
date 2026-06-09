@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from database.db import init_db
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from database.db import init_db
 from init_database.init_db import (
     init_admin,
     init_category,
@@ -27,7 +28,7 @@ from routers.tournament.tournaments import tournaments_router
 from routers.user.user import user_router
 from routers.weighing.weighing import weighing_router
 
-load_dotenv(Path(__file__).parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
 @asynccontextmanager

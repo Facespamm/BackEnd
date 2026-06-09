@@ -1,10 +1,11 @@
+from sqlalchemy import or_
+
 from database.db import get_session
 from models.category_new import CategoryNew
 from models.new_associations import TournamentCategory
 from models.new_athlete import AthleteNew
 from models.weighing_new import WeighingNew
 from routers.category.schemas import UpdateCategoryRequest
-from sqlalchemy import or_
 
 
 class CategoryRepository:
@@ -60,7 +61,7 @@ class CategoryRepository:
             print(f"Error updating category: {e}")
             return False
 
-    def get_categories(self, tournament_id: int):
+    def get_categories(self, tournament_id: int | None):
         query = self.session.query(CategoryNew).filter_by(is_active=True)
         if tournament_id:
             query = query.join(

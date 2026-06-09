@@ -16,7 +16,10 @@ _SessionFactory = None
 def get_engine():
     global _engine
     if _engine is None:
-        uri = os.getenv("LOCALHOST_CONNECTION")
+        uri = os.getenv(
+            "LOCALHOST_CONNECTION",
+            "postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament",
+        )
         if not uri:
             raise ValueError("DATABASE_URL environment variable is not set")
         _engine = create_engine(
@@ -70,7 +73,10 @@ def get_session():
 
 
 def init_db():
-    uri = os.getenv("LOCALHOST_CONNECTION")
+    uri = os.getenv(
+        "LOCALHOST_CONNECTION",
+        "postgresql+psycopg2://postgres:password@localhost:5434/judo_tournament",
+    )
 
     from sqlalchemy_utils import create_database, database_exists
 

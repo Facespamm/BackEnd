@@ -1,16 +1,18 @@
 from datetime import date
 
 from fastapi.routing import APIRouter
+
 from models import CategoryNew
 from models.Enums import translate_gender
 from repository.category_repo import CategoryRepository
 from routers.category.schemas import CreateCategoryRequest, UpdateCategoryRequest
+from utils.helpers import error_response
 
 categories_router = APIRouter(prefix="/api/categories", tags=["Categories"])
 
 
 @categories_router.get("/")
-async def get_categories(tournamentId: int):
+async def get_categories(tournamentId: int | None = None):
     """Получить список категорий"""
     try:
         with CategoryRepository() as category_repo:
@@ -39,10 +41,7 @@ async def get_categories(tournamentId: int):
         return {"success": True, "categories": result, "total": len(result)}
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка при получении категорий: {str(e)}",
-        }
+        return error_response(f"Ошибка при получении категорий: {str(e)}", 500)
 
 
 @categories_router.get("/{category_id}")
@@ -53,7 +52,7 @@ async def get_category(category_id: int):
             category = category_repo.get_category_by_id(category_id)
 
         if category is None:
-            return {"success": False, "message": "Категория не найдена"}
+            return error_response("Категория не найдена", 404)
 
         return {
             "id": category.id,
@@ -67,10 +66,7 @@ async def get_category(category_id: int):
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка при получении категории: {str(e)}",
-        }
+        return error_response(f"Ошибка при получении категории: {str(e)}", 500)
 
 
 @categories_router.get("/{category_id}/athletes")
@@ -80,7 +76,7 @@ async def get_category_athletes(category_id: int):
         with CategoryRepository() as category_repo:
             category = category_repo.get_category_by_id(category_id)
             if not category:
-                return {"success": False, "message": "Категория не найдена"}
+                return error_response("Категория не найдена", 404)
 
             athletes = []
             for athlete in category.athletes:
@@ -102,10 +98,10 @@ async def get_category_athletes(category_id: int):
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка при получении участников категории: {str(e)}",
-        }
+        return error_response(
+            f"Ошибка при получении участников категории: {str(e)}",
+            500,
+        )
 
 
 @categories_router.post("/")
@@ -113,17 +109,23 @@ async def create_category(create_data: CreateCategoryRequest):
     """Создать новую категорию"""
     try:
         if not create_data.gender:
-            return {"success": False, "message": "Обязательные поля: gender"}
+            return error_response("Обязательные поля: gender", 400)
 
         if create_data.min_weight > create_data.max_age != 0:
-            return {"message": "Минемальный вес не может быть больше максимального"}
+            return error_response(
+                "Минемальный вес не может быть больше максимального",
+                400,
+            )
 
         # === Проверка веса ===
         if (
             create_data.max_weight != 0
             and create_data.min_weight > create_data.max_age != 0
         ):
-            return {"message": "Минимальный вес не может быть больше максимального"}
+            return error_response(
+                "Минимальный вес не может быть больше максимального",
+                400,
+            )
 
         # === Проверка возраста (только годы) ===
         min_age = create_data.min_age
@@ -133,9 +135,10 @@ async def create_category(create_data: CreateCategoryRequest):
         date_max = date(year=max_age, month=1, day=1)
 
         if max_age != 0 and date_min > date_max:
-            return {
-                "message": "Минимальный год не может быть больше максимального года"
-            }
+            return error_response(
+                "Минимальный год не может быть больше максимального года",
+                400,
+            )
 
         under_or_over_weight = (
             f"-{create_data.max_age}"
@@ -147,7 +150,7 @@ async def create_category(create_data: CreateCategoryRequest):
         with CategoryRepository() as category_repo:
             existing_category = category_repo.get_category_by_name(generate_name)
             if existing_category:
-                return {"message": "Такая категория существует"}
+                return error_response("Такая категория существует", 400)
 
             translate_gender_ = translate_gender(create_data.gender)
             category = CategoryNew(
@@ -169,10 +172,10 @@ async def create_category(create_data: CreateCategoryRequest):
                 },
             )
         else:
-            return {"success": False, "message": "Ошибка при сохранении категории"}
+            return error_response("Ошибка при сохранении категории", 500)
 
     except Exception as e:
-        return {"success": False, "message": f"Ошибка при создании категории: {str(e)}"}
+        return error_response(f"Ошибка при создании категории: {str(e)}", 500)
 
 
 @categories_router.put("/{category_id}")
@@ -189,12 +192,9 @@ async def update_category(category_id: int, update_data: UpdateCategoryRequest):
                 "category_id": category_id,
             }
         else:
-            return {"success": False, "message": "Ошибка при обновлении категории"}
+            return error_response("Ошибка при обновлении категории", 500)
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка при обновлении категории: {str(e)}",
-        }
+        return error_response(f"Ошибка при обновлении категории: {str(e)}", 500)
 
 
 @categories_router.delete("/{category_id}")
@@ -205,14 +205,14 @@ async def delete_category(category_id: int):
             category = category_repo.get_category_by_id(category_id)
 
             if not category:
-                return {"success": False, "message": "Категория не найдена"}
+                return error_response("Категория не найдена", 404)
 
             is_delete = category_repo.delete_category(category)
 
         if is_delete:
             return {"success": True, "message": "Категория удалена"}
         else:
-            return {"success": False, "message": "Ошибка при удалении категории"}
+            return error_response("Ошибка при удалении категории", 500)
 
     except Exception as e:
-        return {"success": False, "message": f"Ошибка при удалении категории: {str(e)}"}
+        return error_response(f"Ошибка при удалении категории: {str(e)}", 500)

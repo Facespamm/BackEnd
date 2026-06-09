@@ -6,6 +6,7 @@ __pycache__/
 # C extensions
 *.so
 .idea/
+.zed
 
 # Distribution / packaging
 .Python

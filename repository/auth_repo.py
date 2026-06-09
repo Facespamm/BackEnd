@@ -94,11 +94,14 @@ class AuthRepository:
             print(f"Error getting user by username: {e}")
             return None
 
-    def get_users(self):
+    def get_users(self, page: int, page_size: int):
         return (
             self.session.query(UserNew, RoleNew.name.label("role_name"))
             .join(new_user_roles, UserNew.id == new_user_roles.c.user_id)
-            .filter(UserNew.is_active == True)
+            .join(RoleNew, RoleNew.id == new_user_roles.c.role_id)
+            .filter(UserNew.is_active.is_(True))
+            .offset((page - 1) * page_size)
+            .limit(page_size)
             .order_by(UserNew.username)
             .all()
         )

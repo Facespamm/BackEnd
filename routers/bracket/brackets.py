@@ -1,5 +1,6 @@
-from database.db import create_session
 from fastapi import APIRouter
+
+from database.db import create_session
 from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
 from repository.figth_repo import FightRepository
@@ -7,9 +8,8 @@ from repository.result_repo import ResultRepository
 from repository.tournament_repo import TournamentRepository
 from routers.bracket.schemas import BaseResponse, FightsResponse
 from services.bracket_generator import BracketGenerator
-from utils.helpers import calculate_rounds
-
-from backend.utils.security import admin_depd
+from utils.helpers import calculate_rounds, error_response
+from utils.security import admin_depd
 
 brackets_router = APIRouter(prefix="/api/brackets", tags=["Brackets"])
 
@@ -27,7 +27,7 @@ async def first_fights(tournament_id: int, category_id: int):
                 tournament_id, category_id
             )
             if not tournament_category:
-                return {"success": False, "message": "Категория турнира не найдена"}
+                return error_response("Категория турнира не найдена", 404)
 
             tournament_category_id = tournament_category.tournament_category_id
 
@@ -89,7 +89,7 @@ async def first_fights(tournament_id: int, category_id: int):
                     )
 
         if not fights_dtos:
-            return {"success": False, "message": "Нет боев"}
+            return error_response("Нет боев", 404)
 
         return {
             "success": True,
@@ -99,7 +99,7 @@ async def first_fights(tournament_id: int, category_id: int):
             "winner": winner,
         }
     except Exception as e:
-        return {"success": False, "message": f"Ошибка вывода боев: {str(e)}"}
+        return error_response(f"Ошибка вывода боев: {str(e)}", 500)
 
 
 @brackets_router.get(
@@ -113,7 +113,7 @@ async def fight_bracket(tournament_id: int, category_id: int):
                 tournament_id, category_id
             )
             if not tournament_category:
-                return {"success": False, "message": "Категория турнира не найдена"}
+                return error_response("Категория турнира не найдена", 404)
 
             tournament_category_id = tournament_category.tournament_category_id
 
@@ -173,7 +173,7 @@ async def fight_bracket(tournament_id: int, category_id: int):
                     )
 
         if not fights_dtos:
-            return {"success": False, "message": "Нет боев"}
+            return error_response("Нет боев", 404)
 
         return {
             "success": True,
@@ -183,7 +183,7 @@ async def fight_bracket(tournament_id: int, category_id: int):
             "winner": winner,
         }
     except Exception as e:
-        return {"success": False, "message": f"Ошибка вывода боев: {str(e)}"}
+        return error_response(f"Ошибка вывода боев: {str(e)}", 500)
 
 
 @brackets_router.get(
@@ -200,10 +200,10 @@ async def has_consolation_fights(tournament_id: int, category_id: int):
         )
 
         if not tournament_category:
-            return {"success": False, "message": "Категория турнира не найдена"}
+            return error_response("Категория турнира не найдена", 404)
 
         if not tournament_category.has_consolidation_fights:
-            return {"success": False}
+            return error_response("Утешительные бои не включены", 400)
 
         athlete_repo = AthleteRepository(session)
         athletes = athlete_repo.get_athletes_by_tournament(tournament_id, category_id)
@@ -222,7 +222,7 @@ async def has_consolation_fights(tournament_id: int, category_id: int):
     ]
 
     if len(semi_final_fights_not_none) < 2:
-        return {"success": False}
+        return error_response("Недостаточно полуфинальных боев", 400)
 
     return {"success": True}
 
@@ -237,28 +237,25 @@ async def create_bracket(tournament_id: int, category_id: int, tatami_number: in
             tournament_repo = TournamentRepository(session)
             tournament = tournament_repo.get_tournament_by_id(tournament_id)
             if not tournament:
-                return {"success": False, "message": "Турнир не найден"}
+                return error_response("Турнир не найден", 404)
 
             category = tournament_repo.get_category(tournament_id, category_id)
             if not category:
-                return {
-                    "success": False,
-                    "message": "Категория не найдена в этом турнире",
-                }
+                return error_response("Категория не найдена в этом турнире", 404)
 
         bracket_generator = BracketGenerator(tournament_id)
         generate_fights = bracket_generator.generate_olympic(category_id, tatami_number)
 
         if not generate_fights:
-            return {
-                "success": False,
-                "message": "Не удалось создать бои (возможно, недостаточно спортсменов в категории)",
-            }
+            return error_response(
+                "Не удалось создать бои (возможно, недостаточно спортсменов в категории)",
+                400,
+            )
 
         return {"success": True, "message": "Сетка успешно создана"}
 
     except Exception as e:
-        return {"success": False, "message": f"Ошибка создания сетки: {str(e)}"}
+        return error_response(f"Ошибка создания сетки: {str(e)}", 500)
 
 
 @brackets_router.post(
@@ -277,7 +274,7 @@ async def generate_semifinals_consolation_fights(
                 tournament_id, category_id
             )
             if not tournament_category:
-                return {"success": False, "message": "Категория турнира не найдена"}
+                return error_response("Категория турнира не найдена", 404)
 
         bracket_generator = BracketGenerator(tournament_id)
         generated_fights = (
@@ -287,11 +284,11 @@ async def generate_semifinals_consolation_fights(
         )
 
         if not generated_fights:
-            return {"success": False, "message": "Утешительные бои не созданы"}
+            return error_response("Утешительные бои не созданы", 400)
 
         return {"success": True, "message": "Утешительные бои успешно созданы"}
     except Exception as e:
-        return {"success": False, "message": f"Ошибка: {str(e)}"}
+        return error_response(f"Ошибка: {str(e)}", 500)
 
 
 @brackets_router.post(
@@ -310,7 +307,7 @@ async def generate_consolation_fights_finalist(
                 tournament_id, category_id
             )
             if not tournament_category:
-                return {"success": False, "message": "Категория турнира не найдена"}
+                return error_response("Категория турнира не найдена", 404)
 
         bracket_generator = BracketGenerator(tournament_id)
         generated_fights = bracket_generator.generate_olympic_consolation_fight_final(
@@ -318,11 +315,11 @@ async def generate_consolation_fights_finalist(
         )
 
         if not generated_fights:
-            return {"success": False, "message": "Утешительные бои не созданы"}
+            return error_response("Утешительные бои не созданы", 400)
 
         return {"success": True, "message": "Утешительные бои успешно созданы"}
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка создания утешительных боев: {str(e)}",
-        }
+        return error_response(
+            f"Ошибка создания утешительных боев: {str(e)}",
+            500,
+        )

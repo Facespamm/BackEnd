@@ -12,6 +12,7 @@ from routers.athletes.schemas import (
     CreateAthleteRequest,
     UpdateAthleteRequest,
 )
+from utils.helpers import error_response
 
 athlete_router = APIRouter(prefix="/api/athletes", tags=["Athletes"])
 
@@ -26,7 +27,7 @@ async def get_athlete_by_id(athlete_id: int):
             athlete = athlete_repo.get_athlete_by_id(athlete_id)
 
             if not athlete or athlete.is_active is False:
-                return {"success": False, "message": "Участник не найден"}
+                return error_response("Участник не найден", 404)
 
             return {
                 "success": True,
@@ -50,10 +51,7 @@ async def get_athlete_by_id(athlete_id: int):
                 },
             }
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка при получении участника: {str(e)}",
-        }
+        return error_response(f"Ошибка при получении участника: {str(e)}", 500)
 
 
 @athlete_router.get("/for_registration_on_club")
@@ -102,10 +100,7 @@ async def get_athletes(club_id: int, search: str, tournament_id: int):
 
         return {"success": True, "athletes": result, "total": len(result)}
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка при получении участников: {str(e)}",
-        }
+        return error_response(f"Ошибка при получении участников: {str(e)}", 500)
 
 
 @athlete_router.get("/search-athlete")
@@ -116,10 +111,10 @@ async def search_athlete(
     try:
         # Проверяем, что хотя бы один параметр передан
         if not any([last_name, first_name, middle_name, club_id]):
-            return {
-                "success": False,
-                "message": "Укажите хотя бы один параметр поиска (last_name, first_name, middle_name или club_id)",
-            }
+            return error_response(
+                "Укажите хотя бы один параметр поиска (last_name, first_name, middle_name или club_id)",
+                400,
+            )
 
         name_query = {
             "last_name": last_name,
@@ -144,7 +139,7 @@ async def search_athlete(
         return result
 
     except Exception as e:
-        return {"success": False, "message": f"Ошибка при поиске участника: {str(e)}"}
+        return error_response(f"Ошибка при поиске участника: {str(e)}", 500)
 
 
 @athlete_router.post("/private/create-athlete-admin")
@@ -162,14 +157,14 @@ async def create_athlete_registration(create_athlete: CreateAthleteByAdminReques
             auth_repo = AuthRepository(session)
             existing_user = auth_repo.get_user_by_username(create_athlete.login)
             if existing_user:
-                return {
-                    "success": False,
-                    "message": "Пользователь с таким логином уже существует",
-                }
+                return error_response(
+                    "Пользователь с таким логином уже существует",
+                    400,
+                )
 
             existing_email = auth_repo.get_user_by_email(create_athlete.email)
             if existing_email:
-                return {"success": False, "message": "Email уже используется"}
+                return error_response("Email уже используется", 400)
 
             new_user = UserNew(
                 username=create_athlete.login,
@@ -185,7 +180,7 @@ async def create_athlete_registration(create_athlete: CreateAthleteByAdminReques
             user_id = new_user.id if is_user_id is int else None
 
             if user_id is not int:
-                return {"message": "Не получилось создать пользователя"}
+                return error_response("Не получилось создать пользователя", 500)
 
             new_athlete = AthleteNew(
                 user_id=user_id,
@@ -206,9 +201,9 @@ async def create_athlete_registration(create_athlete: CreateAthleteByAdminReques
         if is_created:
             return {"message": "Вы создали участника"}
         else:
-            return {"message": "Не получилось создать пользователя"}
+            return error_response("Не получилось создать пользователя", 500)
     except Exception as e:
-        return {"message": f"Ошибка регистрации пользователя: {e}"}
+        return error_response(f"Ошибка регистрации пользователя: {e}", 500)
 
 
 @athlete_router.post("/{user_id}")
@@ -216,16 +211,16 @@ async def create_athlete(user_id: int, create_athlete: CreateAthleteRequest):
     """Создать нового участника"""
     try:
         if not user_id:
-            return {"success": False, "message": "Нет такого пользователя"}
+            return error_response("Нет такого пользователя", 404)
 
         with AthleteRepository() as athlete_repo:
             has_athlete = athlete_repo.has_athlete(user_id)
 
         if has_athlete:
-            return {
-                "success": False,
-                "message": "У этого пользователя уже есть профиль участника",
-            }
+            return error_response(
+                "У этого пользователя уже есть профиль участника",
+                400,
+            )
 
         if create_athlete.gender:
             create_athlete.gender = translate_gender(create_athlete.gender)
@@ -264,7 +259,7 @@ async def create_athlete(user_id: int, create_athlete: CreateAthleteRequest):
 
         if not athlete_is_added:
             session.rollback()
-            return {"success": False, "message": "Ошибка при сохранении участника"}
+            return error_response("Ошибка при сохранении участника", 500)
 
         return {
             "success": True,
@@ -273,7 +268,7 @@ async def create_athlete(user_id: int, create_athlete: CreateAthleteRequest):
             "user_id": user_id,
         }
     except Exception as e:
-        return {"success": False, "message": f"Ошибка при создании участника: {str(e)}"}
+        return error_response(f"Ошибка при создании участника: {str(e)}", 500)
 
 
 @athlete_router.put("/{athlete_id}")
@@ -284,7 +279,7 @@ async def update_athlete(athlete_id: int, updated_data: UpdateAthleteRequest):
             athlete = repo.get_athlete_by_id(athlete_id)
 
             if not athlete or athlete.is_active is False:
-                return {"success": False, "message": "Участник не найден"}
+                return error_response("Участник не найден", 404)
 
             is_updated = repo.update_athlete(athlete, updated_data)
 
@@ -295,12 +290,9 @@ async def update_athlete(athlete_id: int, updated_data: UpdateAthleteRequest):
                 "athlete_id": athlete.id,
             }
         else:
-            return {"success": False, "message": "Ошибка при сохранении"}
+            return error_response("Ошибка при сохранении", 500)
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка при обновлении участника: {str(e)}",
-        }
+        return error_response(f"Ошибка при обновлении участника: {str(e)}", 500)
 
 
 @athlete_router.delete("/{athlete_id}")
@@ -310,7 +302,7 @@ async def delete_athlete(athlete_id: int):
         with AthleteRepository() as athlete_repo:
             athlete = athlete_repo.get_athlete_by_id(athlete_id)
             if not athlete or athlete.is_active is False:
-                return {"success": False, "message": "Участник не найден"}
+                return error_response("Участник не найден", 404)
 
             # Мягкое удаление - помечаем как неактивного
             is_deleted = athlete_repo.delete_athlete(athlete)
@@ -318,6 +310,6 @@ async def delete_athlete(athlete_id: int):
         if is_deleted:
             return {"success": True, "message": "Участник удален"}
         else:
-            return {"success": False, "message": "Ошибка при удалении"}
+            return error_response("Ошибка при удалении", 500)
     except Exception as e:
-        return {"success": False, "message": f"Ошибка при удалении участника: {str(e)}"}
+        return error_response(f"Ошибка при удалении участника: {str(e)}", 500)

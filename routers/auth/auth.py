@@ -4,16 +4,18 @@ from fastapi import Depends, Response
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
+
 from models import UserNew
 from models.Enums import RoleName
 from repository.auth_repo import AuthRepository
 from routers.auth.schemas import (
-    ErrorResponse,
     LoginRequest,
     RegisterRequest,
     TokenResponse,
     UpdateUserRequest,
 )
+from utils.annotation import PaginationDependency
+from utils.helpers import error_response
 from utils.password import hash_password, verify_password
 from utils.security import admin_depd, create_access_token
 
@@ -25,25 +27,25 @@ async def login(enter_date: LoginRequest):
     """Аутентификация пользователя"""
 
     if not enter_date.login or not enter_date.password:
-        return {"success": False, "message": "Логин и пароль обязательны"}
+        return error_response("Логин и пароль обязательны", 400)
 
     with AuthRepository() as auth_repo:
         user = auth_repo.get_user_by_username(enter_date.login)
 
         user_role = (
             auth_repo.get_role_by_user(user.id)
-            if user is UserNew and user.id is int
+            if isinstance(user, UserNew) and isinstance(user.id, int)
             else None
         )
 
         if user_role is None:
-            return {"success": False, "message": "Роль пользователя не найдена"}
+            return error_response("Роль пользователя не найдена", 404)
 
         password_hash = (
             user.password_hash if user and isinstance(user.password_hash, str) else None
         )
         if password_hash is None:
-            return {"success": False, "message": "Пароль не установлен"}
+            return error_response("Пароль не установлен", 400)
 
         check_password = verify_password(enter_date.password, password_hash)
 
@@ -67,7 +69,7 @@ async def login(enter_date: LoginRequest):
             },
         )
     else:
-        return ErrorResponse(success=False, message="Неверные учетные данные")
+        return error_response("Неверные учетные данные", 500)
 
 
 @auth_router.post("/token")
@@ -76,7 +78,7 @@ async def create_token(
 ):
     """Аутентификация пользователя"""
     if not enter_data.username or not enter_data.password:
-        return {"success": False, "message": "Логин и пароль обязательны"}
+        return error_response("Логин и пароль обязательны", 400)
 
     with AuthRepository() as auth_repo:
         user = auth_repo.get_user_by_username(enter_data.username)
@@ -88,13 +90,13 @@ async def create_token(
         )
 
         if user_role is None:
-            return ({"success": False, "message": "Роль пользователя не найдена"},)
+            return error_response("Роль пользователя не найдена", 404)
 
         password_hash = (
             user.password_hash if user and isinstance(user.password_hash, str) else None
         )
         if password_hash is None:
-            return {"success": False, "message": "Пароль не установлен"}
+            return error_response("Пароль не установлен", 400)
 
         check_password = verify_password(enter_data.password, password_hash)
 
@@ -129,19 +131,19 @@ async def public_registration(register_data: RegisterRequest):
         existing_user = auth_repo.get_user_by_username(register_data.login)
 
         if existing_user:
-            return {
-                "success": False,
-                "message": "Пользователь с таким логином уже существует",
-            }
+            return error_response(
+                "Пользователь с таким логином уже существует",
+                400,
+            )
 
         names = register_data.fullname.strip().split(" ")
 
         new_user = UserNew(
             username=register_data.login,
             password_hash=hash_password(register_data.password),
-            rst_name=names[0],
+            first_name=names[0],
             middle_name=names[1] if len(names) > 1 else "",
-            last_name=names[2] if len(names) > 1 else "",
+            last_name=names[2] if len(names) > 2 else "",
             email=register_data.email,
             phone=register_data.phone,
             is_active=True,
@@ -165,11 +167,13 @@ async def public_registration(register_data: RegisterRequest):
 
 
 @auth_router.get("/users", dependencies=[admin_depd])
-async def get_users():
+async def get_users(pagan: PaginationDependency):
     """Получить список пользователей"""
+    page = pagan.per_page
+    size = pagan.page_size
     try:
         with AuthRepository() as auth_repo:
-            users = auth_repo.get_users()
+            users = auth_repo.get_users(page=page, page_size=size)
 
             result = []
             for user, role_name in users:
@@ -187,10 +191,7 @@ async def get_users():
         return {"success": True, "users": result, "total": len(result)}
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Ошибка при получении пользователей: {str(e)}",
-        }
+        return error_response(f"Ошибка при получении пользователей: {str(e)}", 500)
 
 
 @auth_router.put("/{user_id}/update", dependencies=[admin_depd])
@@ -200,14 +201,18 @@ async def update_user(user_id: int, update_data: UpdateUserRequest):
         with AuthRepository() as auth_repo:
             user = auth_repo.get_user_by_id(user_id)
 
-            if not user or user.is_active is False:
-                return {"success": False, "message": "Пользователь не найден"}
+            if not user:
+                return error_response("Пользователь не найден", 404)
 
             auth_repo.update_user(user, update_data)
 
-        return {"success": True, "message": "Данные пользователя успешно обнавленны"}
-    except Exception as e:
         return {
-            "success": False,
-            "message": f"Ошибка при обновление данных пользователя: {str(e)}",
+            "success": True,
+            "message": "Данные пользователя успешно обнавленны"
+            if user.is_active
+            else "Данные пользователя успешно обнавленны, но он не активнен",
         }
+    except Exception as e:
+        return error_response(
+            f"Ошибка при обновление данных пользователя: {str(e)}", 500
+        )

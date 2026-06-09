@@ -1,5 +1,6 @@
+from fastapi import APIRouter, Query, status
+
 from database.db import create_session
-from fastapi import APIRouter, HTTPException, Query, status
 from repository.athlete_repo import AthleteRepository
 from repository.club_repo import ClubRepository
 from routers.club.schemas import (
@@ -13,9 +14,8 @@ from routers.club.schemas import (
     MessageResponse,
     UpdateClubRequest,
 )
-
-from backend.utils.helpers import error_response
-from backend.utils.security import admin_depd
+from utils.helpers import error_response
+from utils.security import admin_depd
 
 club_router = APIRouter(prefix="/api/clubs", tags=["Clubs"])
 
@@ -135,17 +135,11 @@ def create_club(create_club_request: CreateClubRequest):
 
         existing_club = club_repo.get_club_by_name(create_club_request.name.strip())
         if existing_club:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Клуб с таким названием уже существует",
-            )
+            return error_response("Клуб с таким названием уже существует", 400)
 
         is_created = club_repo.create_club(create_club_request)
         if not is_created:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ошибка при сохранении в базу",
-            )
+            return error_response("Ошибка при сохранении в базу", 400)
 
     return MessageResponse(success=True, message="Клуб успешно создан")
 
@@ -157,18 +151,12 @@ def delete_club(club_id: int):
 
         club = club_repo.get_club_by_id(club_id)
         if not club:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Клуб с ID {club_id} не найден",
-            )
+            return error_response(f"Клуб с ID {club_id} не найден", 404)
 
         club_name = club.name
         is_deleted = club_repo.delete_club(club_id)
         if not is_deleted:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Не удалось удалить клуб",
-            )
+            return error_response("Не удалось удалить клуб", 400)
 
     return MessageResponse(
         success=True,
@@ -181,33 +169,21 @@ def update_club(club_id: int, update_request: UpdateClubRequest):
     update_data = update_request.model_dump()
 
     if not update_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Не передано ни одно поле для обновления",
-        )
+        return error_response("Не передано ни одно поле для обновления", 400)
 
     if "name" in update_data and not update_data["name"].strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Название клуба не может быть пустым",
-        )
+        return error_response("Название клуба не может быть пустым", 400)
 
     with create_session() as session:
         club_repo = ClubRepository(session)
 
         club = club_repo.get_club_by_id(club_id)
         if not club:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Клуб не найден",
-            )
+            return error_response("Клуб не найден", 404)
 
         is_updated = club_repo.update_club(club_id, update_data)
         if not is_updated:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Не удалось обновить данные клуба",
-            )
+            return error_response("Не удалось обновить данные клуба", 400)
 
         updated_club = club_repo.get_club_by_id(club_id)
         club_dto = ClubDTO.from_club(updated_club)
@@ -226,10 +202,7 @@ def get_club_athletes(
 
         club = club_repo.get_club_by_id(club_id)
         if not club:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Клуб с ID {club_id} не найден",
-            )
+            return error_response(f"Клуб с ID {club_id} не найден", 404)
 
         athlete_repo = AthleteRepository(session)
         athletes = athlete_repo.get_athletes_by_club_id(
@@ -287,10 +260,7 @@ def assign_athletes(club_id: int, request: AssignAthletesRequest):
 
         club = club_repo.get_club_by_id(club_id)
         if not club:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Нет такого клуба",
-            )
+            return error_response("Нет такого клуба", 404)
 
         club_repo.assign_athlete_to_club(
             club_id=club_id,
@@ -307,10 +277,7 @@ def unassign_athletes(club_id: int, request: AssignAthletesRequest):
 
         club = club_repo.get_club_by_id(club_id)
         if not club:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Нет такого клуба",
-            )
+            return error_response("Нет такого клуба", 404)
 
         club_repo.unassign_athletes_from_club(
             club_id=club_id,
