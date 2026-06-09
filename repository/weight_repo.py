@@ -1,11 +1,10 @@
 from sqlalchemy import delete, update
 
 from database.db import get_session
-from new_model.AthleteTournamentRegistration import AthleteTournamentRegistration
-from new_model.Enums import StatusTournamentRegistration
-from new_model.new_associations import TournamentCategory
-from new_model.weighing_new import WeighingNew
-from repository.tournament_repo import TournamentRepository
+from models.AthleteTournamentRegistration import AthleteTournamentRegistration
+from models.Enums import StatusTournamentRegistration
+from models.new_associations import TournamentCategory
+from models.weighing_new import WeighingNew
 
 
 class WeightRepository:
@@ -23,31 +22,39 @@ class WeightRepository:
             self.session.rollback()
         self.session.close()
 
-    def get_weights(self, tournament_category_id: int, athlete_id: int) -> list[WeighingNew] | None:
+    def get_weights(
+        self, tournament_category_id: int, athlete_id: int
+    ) -> list[WeighingNew] | None:
         try:
-            query = self.session.query(WeighingNew).filter_by(tournament_category_id=tournament_category_id)
+            query = self.session.query(WeighingNew).filter_by(
+                tournament_category_id=tournament_category_id
+            )
             if athlete_id:
                 query = query.filter_by(athlete_id=athlete_id)
             return query.order_by(WeighingNew.weighing_time.desc()).all()
         except Exception as e:
-            print('Error ', e)
+            print("Error ", e)
             return None
 
-    def get_existing_wight(self, tournament_category_id: int, athlete_id: int) -> bool | None:
+    def get_existing_wight(
+        self, tournament_category_id: int, athlete_id: int
+    ) -> bool | None:
         try:
-            query = self.session.query(WeighingNew).filter_by(tournament_category_id=tournament_category_id)
+            query = self.session.query(WeighingNew).filter_by(
+                tournament_category_id=tournament_category_id
+            )
             if athlete_id:
                 query = query.filter_by(athlete_id=athlete_id)
             return query.order_by(WeighingNew.weighing_time.desc()).one_or_none()
         except Exception as e:
-            print('Error ', e)
+            print("Error ", e)
             raise e
 
     def get_weight(self, weighing_id: int) -> WeighingNew | None:
         try:
             return self.session.query(WeighingNew).filter_by(id=weighing_id).first()
         except Exception as e:
-            print('Error ', e)
+            print("Error ", e)
             return None
 
     def change_weighing_validation(self, weighing_id: int):
@@ -59,25 +66,25 @@ class WeightRepository:
             self.session.commit()
             return True
         except Exception as e:
-            print('Error ', e)
+            print("Error ", e)
             self.session.rollback()
             return False
 
     def update_weighing_information(self, weight_id: int, data: dict) -> bool:
         try:
             weighing = self.get_weight(weight_id)
-            if 'weight' in data:
-                weighing.weight = data['weight']
-            if 'weight_category' in data:
-                weighing.weight_category = data['weight_category']
-            if 'is_valid' in data:
-                weighing.is_valid = data['is_valid']
-            if 'notes' in data:
-                weighing.notes = data['notes']
+            if "weight" in data:
+                weighing.weight = data["weight"]
+            if "weight_category" in data:
+                weighing.weight_category = data["weight_category"]
+            if "is_valid" in data:
+                weighing.is_valid = data["is_valid"]
+            if "notes" in data:
+                weighing.notes = data["notes"]
             self.session.commit()
             return True
         except Exception as e:
-            print('Error ', e)
+            print("Error ", e)
             self.session.rollback()
             return False
 
@@ -87,7 +94,7 @@ class WeightRepository:
             self.session.commit()
             return True
         except Exception as e:
-            print('Error ', e)
+            print("Error ", e)
             self.session.rollback()
             return False
 
@@ -97,27 +104,29 @@ class WeightRepository:
 
             tournament_id = (
                 self.session.query(TournamentCategory.tournament_id)
-                .filter(TournamentCategory.tournament_category_id == weight.tournament_category_id)
+                .filter(
+                    TournamentCategory.tournament_category_id
+                    == weight.tournament_category_id
+                )
                 .scalar()
             )
 
             update_query = (
                 update(AthleteTournamentRegistration)
-                .where(AthleteTournamentRegistration.athlete_id == weight.athlete_id,
-                       AthleteTournamentRegistration.tournament_id == tournament_id)
+                .where(
+                    AthleteTournamentRegistration.athlete_id == weight.athlete_id,
+                    AthleteTournamentRegistration.tournament_id == tournament_id,
+                )
                 .values(status=StatusTournamentRegistration.REGISTERED)
             )
 
-            delete_query = (
-                delete(WeighingNew)
-                .where(WeighingNew.id == weight_id)
-            )
+            delete_query = delete(WeighingNew).where(WeighingNew.id == weight_id)
 
             self.session.execute(update_query)
             self.session.execute(delete_query)
             self.session.commit()
             return True
         except Exception as e:
-            print('Error ', e)
+            print("Error ", e)
             self.session.rollback()
             raise e

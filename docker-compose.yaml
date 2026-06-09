@@ -1,7 +1,29 @@
 services:
 
-  app:
+  nginx:
+    image: nginx:alpine
+    container_name: judo_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx_config/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app_frontend
+      - app_backend
+
+  app_frontend:
     build:
+      context: ./judo_frontend/JudoTournamentWeb/
+      dockerfile: Dockerfile
+    container_name: judo_stream_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app_backend
+
+  app_backend:
+    build:
+      context: ./judo_backend      # Добавьте эту строку!
       dockerfile: Dockerfile
     container_name: judo_stream_backend
     ports:
@@ -10,33 +32,26 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       DOCKER_CONNECTION: ${DOCKER_CONNECTION}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:17-alpine
-    container_name: judo_streams_postgres_1
+    container_name: judo_db
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=judo_tournament
     volumes:
       - postgres-data:/var/lib/postgresql/data
-#      - ./database/init:/docker-entrypoint-initdb.d
+    #      - ./database/init:/docker-entrypoint-initdb.d
     ports:
       - "5434:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  redis:
-    image: redis:alpine
-    container_name: judo_streams_redis_1
-    ports:
-      - "6379:6379"
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_USER=${REDIS_USER}
-      - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
-    volumes:
-      - redis_data:/var/redisdata/data
 
 volumes:
-    postgres-data:
-    redis_data:
+  postgres-data:

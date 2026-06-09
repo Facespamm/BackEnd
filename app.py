@@ -1,71 +1,61 @@
-import os
+from contextlib import asynccontextmanager
+from pathlib import Path
 
-from flasgger import Swagger
-from flask import Flask
-from flask_cors import CORS
-from flask_jwt_extended import JWTManager
-
-from blueprints import register_blueprints
 from database.db import init_db
+from dotenv import load_dotenv
+from fastapi import FastAPI
 from init_database.init_db import (
     init_admin,
     init_category,
     init_dans_new,
     init_roles_new,
 )
+from routers.athletes.athletes import athlete_router
+from routers.auth.auth import auth_router
+from routers.bracket.brackets import brackets_router
+from routers.category.categories import categories_router
+from routers.club.clubs import club_router
+from routers.dan.dan import dans_bp
+from routers.fight.fights import fights_router
+from routers.pdf.pdf_routes import pdf_router
+from routers.referee.referee import referee_router
+from routers.result.results import results_router
+from routers.score.scores import scores_router
+from routers.statistic.statistics import statistics_router
+from routers.tournament.tournaments import tournaments_router
+from routers.user.user import user_router
+from routers.weighing.weighing import weighing_router
 
-app = Flask(__name__)
+load_dotenv(Path(__file__).parent / ".env")
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DOCKER_CONNECTION")
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = os.getenv(
-    "JWT_SECRET_KEY", "cc820b15d44f7643fa52046a6c34f98a804c35d5ebdf830204a074c2c0059f88"
-)
 
-CORS(app)
-jwt = JWTManager(app)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()  # создаёт БД и таблицы
 
-# ── Инициализация БД ──────────────────────────────────────────────
-init_db(app)
-# ── Blueprints ────────────────────────────────────────────────────
-register_blueprints(app)
-with app.app_context():
     init_dans_new()
     init_roles_new()
     init_category()
     init_admin()
 
-# ── Swagger ───────────────────────────────────────────────────────
-swagger_config = {
-    "headers": [],
-    "specs": [
-        {
-            "endpoint": "apispec",
-            "route": "/apispec.json",
-            "rule_filter": lambda rule: True,
-            "model_filter": lambda tag: True,
-        }
-    ],
-    "static_url_path": "/flasgger_static",
-    "swagger_ui": True,
-    "specs_route": "/api/docs/",
-}
+    yield
 
-swagger_template = {
-    "swagger": "2.0",
-    "info": {
-        "title": "Clubs API",
-        "description": "API для управления спортивными клубами",
-        "version": "1.0.0",
-        "contact": {"name": "API Support", "email": "support@example.com"},
-    },
-    "basePath": "/",
-    "schemes": ["http", "https"],
-    "consumes": ["application/json"],
-    "produces": ["application/json"],
-}
 
-swagger = Swagger(app, config=swagger_config, template=swagger_template)
+app = FastAPI(lifespan=lifespan)
 
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5001)
+app.include_router(auth_router)
+app.include_router(categories_router)
+app.include_router(athlete_router)
+app.include_router(brackets_router)
+app.include_router(club_router)
+app.include_router(tournaments_router)
+app.include_router(club_router)
+app.include_router(dans_bp)
+app.include_router(pdf_router)
+app.include_router(results_router)
+app.include_router(scores_router)
+app.include_router(statistics_router)
+app.include_router(weighing_router)
+app.include_router(fights_router)
+app.include_router(referee_router)
+app.include_router(user_router)

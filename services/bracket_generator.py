@@ -1,21 +1,21 @@
 """
 Генератор турнирных сеток по правилам дзюдо
 """
+
 import math
 
-from sqlalchemy import delete, select
-
 from database.db import get_session
-from new_model.Enums import BracketType
-from new_model.head_model.fight_new import FightNew
-from new_model.result_new import ResultNew
-from new_model.score_event import ScoreEvent
+from models.Enums import BracketType
+from models.fight_new import FightNew
+from models.result_new import ResultNew
+from models.score_event import ScoreEvent
 from repository.athlete_repo import AthleteRepository
 from repository.figth_repo import FightRepository
 from repository.tournament_repo import TournamentRepository
-from services.fight_generator import FightGenerator
-from utils.helpers import calculate_rounds
 from repository.weight_repo import WeightRepository
+from services.fight_generator import FightGenerator
+from sqlalchemy import delete, select
+from utils.helpers import calculate_rounds
 
 
 class BracketGenerator:
@@ -39,24 +39,32 @@ class BracketGenerator:
     def generate_olympic(self, category_id: int, tatami_number: int):
         try:
             athlete_repo = AthleteRepository(self.session)
-            all_athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
+            all_athletes = athlete_repo.get_athletes_by_tournament(
+                self.tournament_id, category_id
+            )
 
-            tournament_category = self.tournament_repo.get_tournament_category(self.tournament_id, category_id)
+            tournament_category = self.tournament_repo.get_tournament_category(
+                self.tournament_id, category_id
+            )
             if not tournament_category:
                 raise Exception("❌ Tournament category not found")
 
             with WeightRepository() as weight_repo:
                 athletes = [
-                    a for a in all_athletes
+                    a
+                    for a in all_athletes
                     if any(
                         w.is_valid
-                        for w in weight_repo.get_weights(tournament_category.tournament_category_id, a.id) or []
+                        for w in weight_repo.get_weights(
+                            tournament_category.tournament_category_id, a.id
+                        )
+                        or []
                     )
                 ]
 
             athlete_count = len(athletes)
             if athlete_count < 2:
-                raise Exception('Недостаточно атлетов прошедших взвешивание')
+                raise Exception("Недостаточно атлетов прошедших взвешивание")
 
             self.init_fight_table(tournament_category.tournament_category_id)
 
@@ -69,28 +77,42 @@ class BracketGenerator:
                 seeded_athletes,
                 total_rounds,
                 tournament_category.tournament_category_id,
-                tatami_number
+                tatami_number,
             )
 
             return fights
 
         except Exception as e:
-            print('Error in generate_olympic:', e)
+            print("Error in generate_olympic:", e)
             return None
 
     def generate_olympic_consolation_fight_semifinal(self, category_id, tatami_number):
         try:
             athlete_repo = AthleteRepository(self.session)
-            all_athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
+            all_athletes = athlete_repo.get_athletes_by_tournament(
+                self.tournament_id, category_id
+            )
 
-            tournament_category = self.tournament_repo.get_tournament_category(self.tournament_id, category_id)
+            tournament_category = self.tournament_repo.get_tournament_category(
+                self.tournament_id, category_id
+            )
+
+            if (
+                not tournament_category
+                and tournament_category.tournament_category_id is None
+            ):
+                raise Exception("❌ Tournament category not found")
 
             with WeightRepository() as weight_repo:
                 athletes = [
-                    a for a in all_athletes
+                    a
+                    for a in all_athletes
                     if any(
                         w.is_valid
-                        for w in weight_repo.get_weights(tournament_category.tournament_category_id, a.id) or []
+                        for w in weight_repo.get_weights(
+                            tournament_category.tournament_category_id, a.id
+                        )
+                        or []
                     )
                 ]
 
@@ -104,26 +126,28 @@ class BracketGenerator:
                 raise Exception("❌ Invalid number of rounds calculated")
 
             fights = self.fight_generator.generate_consolation_fights_semifinalist(
-                tournament_category.tournament_category_id,
-                tatami_number,
-                total_rounds
+                tournament_category.tournament_category_id, tatami_number, total_rounds
             )
 
             return fights
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             return None
 
     def generate_olympic_consolation_fight_final(self, category_id, tatami_number):
         try:
             athlete_repo = AthleteRepository(self.session)
-            athletes = athlete_repo.get_athletes_by_tournament(self.tournament_id, category_id)
+            athletes = athlete_repo.get_athletes_by_tournament(
+                self.tournament_id, category_id
+            )
 
             athlete_count = len(athletes)
             if not athletes or athlete_count < 2:
-                raise Exception('No athletes found')
+                raise Exception("No athletes found")
 
-            tournament_category = self.tournament_repo.get_tournament_category(self.tournament_id, category_id)
+            tournament_category = self.tournament_repo.get_tournament_category(
+                self.tournament_id, category_id
+            )
             if not tournament_category:
                 raise Exception("❌ Tournament category not found")
 
@@ -132,13 +156,11 @@ class BracketGenerator:
                 raise Exception("❌ Invalid number of rounds calculated")
 
             fight = self.fight_generator.generate_consolation_fights_finalist(
-                tournament_category.tournament_category_id,
-                tatami_number,
-                total_rounds
+                tournament_category.tournament_category_id, tatami_number, total_rounds
             )
             return fight
         except Exception as e:
-            print('Error: ', e)
+            print("Error: ", e)
             return None
 
     def _seed_athletes(self, athletes: list):
@@ -160,7 +182,14 @@ class BracketGenerator:
 
         return [a for a in seeded_athletes]
 
-    def _generate_fights(self, athletes, total_rounds, tournament_category_id, tatami_number, type_bracket=BracketType.MAIN):
+    def _generate_fights(
+        self,
+        athletes,
+        total_rounds,
+        tournament_category_id,
+        tatami_number,
+        type_bracket=BracketType.MAIN,
+    ):
         """Генерация схваток для всех раундов"""
         try:
             fights = []
@@ -169,8 +198,12 @@ class BracketGenerator:
             fight_number = 1
 
             round_fights = self.fight_generator.generate_first_round_fights(
-                current_athletes, current_round, fight_number,
-                tournament_category_id, tatami_number, type_bracket
+                current_athletes,
+                current_round,
+                fight_number,
+                tournament_category_id,
+                tatami_number,
+                type_bracket,
             )
             fights.extend(round_fights)
 
@@ -182,16 +215,25 @@ class BracketGenerator:
 
             while current_round <= total_rounds:
                 next_round = self.fight_generator.generate_next_rounds_fights(
-                    next_fights, current_round, fight_number,
-                    tournament_category_id, tatami_number, type_bracket
+                    next_fights,
+                    current_round,
+                    fight_number,
+                    tournament_category_id,
+                    tatami_number,
+                    type_bracket,
                 )
 
                 for i in range(0, len(current_round_fights), 2):
                     next_fight_index = i // 2
                     if i < len(current_round_fights):
-                        self.fight_repo.update_fight(current_round_fights[i].id, next_round[next_fight_index].id)
+                        self.fight_repo.update_fight(
+                            current_round_fights[i].id, next_round[next_fight_index].id
+                        )
                     if i + 1 < len(current_round_fights):
-                        self.fight_repo.update_fight(current_round_fights[i + 1].id, next_round[next_fight_index].id)
+                        self.fight_repo.update_fight(
+                            current_round_fights[i + 1].id,
+                            next_round[next_fight_index].id,
+                        )
 
                 fights.extend(next_round)
                 next_fights = [None] * (len(next_round) // 2)
@@ -226,33 +268,32 @@ class BracketGenerator:
         return positions
 
     def init_fight_table(self, tournament_category_id):
-        delete_results = (
-            delete(ResultNew)
-            .where(ResultNew.fight_id.in_(
+        delete_results = delete(ResultNew).where(
+            ResultNew.fight_id.in_(
                 select(FightNew.id).where(
                     FightNew.tournament_category_id == tournament_category_id
                 )
-            ))
+            )
         )
         self.session.execute(delete_results)
 
-        delete_score_event = (
-            delete(ScoreEvent)
-            .where(ScoreEvent.fight_id.in_(
+        delete_score_event = delete(ScoreEvent).where(
+            ScoreEvent.fight_id.in_(
                 select(FightNew.id).where(
                     FightNew.tournament_category_id == tournament_category_id
                 )
-            ))
+            )
         )
         self.session.execute(delete_score_event)
 
-        delete_fight = (
-            delete(FightNew)
-            .where(FightNew.tournament_category_id == tournament_category_id)
+        delete_fight = delete(FightNew).where(
+            FightNew.tournament_category_id == tournament_category_id
         )
         result = self.session.execute(delete_fight)
         self.session.commit()
-        print(f'Delete row in FightNew where tournament_category_id = {tournament_category_id}, count {result}')
+        print(
+            f"Delete row in FightNew where tournament_category_id = {tournament_category_id}, count {result}"
+        )
 
     @staticmethod
     def calculate_rounds(athlete_count: int) -> int:

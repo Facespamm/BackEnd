@@ -1,6 +1,6 @@
 from database.db import get_session
-from new_model.handbook.new_dan import DanNew
-from new_model.head_model.new_athlete import AthleteNew
+from models.new_athlete import AthleteNew
+from models.new_dan import DanNew
 
 
 class DanRepository:
@@ -27,14 +27,20 @@ class DanRepository:
 
     def get_athletes_count(self, dan_id):
         try:
-            return self.session.query(AthleteNew).filter(AthleteNew.rank_id == dan_id).count()
+            return (
+                self.session.query(AthleteNew)
+                .filter(AthleteNew.rank_id == dan_id)
+                .count()
+            )
         except Exception as e:
             print(f"Error getting athletes count: {e}")
             return 0
 
     def get_dan_by_name(self, level: str):
         try:
-            return self.session.query(DanNew).filter(DanNew.level == level).one_or_none()
+            return (
+                self.session.query(DanNew).filter(DanNew.level == level).one_or_none()
+            )
         except Exception as e:
             print(f"Error getting dan by name: {e}")
             return None
