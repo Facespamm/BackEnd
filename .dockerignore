@@ -1,2 +1,3 @@
 .idea
-../.exemple.env
+../.env.exemple
+.env
