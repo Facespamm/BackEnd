@@ -61,7 +61,7 @@ class CategoryRepository:
             print(f"Error updating category: {e}")
             return False
 
-    def get_categories(self, tournament_id: int | None):
+    def get_categories(self, tournament_id: int | None = None):
         query = self.session.query(CategoryNew).filter_by(is_active=True)
         if tournament_id:
             query = query.join(

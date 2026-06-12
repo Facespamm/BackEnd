@@ -82,7 +82,29 @@ def require_role(required_role: str):
     return dependency
 
 
+def require_several_roles(*roles: str):
+    def dependency(token: TokenDependency):
+        decoded_token = decode_access_token(token)
+        if not decoded_token:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        payload = decoded_token.get("payload")
+        if not payload:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+
+        role = payload.get("role")
+        if role not in roles:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        return payload.get("user_id")
+
+    return dependency
+
+
 admin_depd = Depends(require_role(RoleName.ADMIN.value))
 refere_depd = Depends(require_role(RoleName.REFEREE.value))
 athlete_depd = Depends(require_role(RoleName.ATHLETE.value))
 viewer_depd = Depends(require_role(RoleName.VIEWER.value))
+admin_or_referee_depd = Depends(
+    require_several_roles(RoleName.ADMIN.value, RoleName.REFEREE.value)
+)

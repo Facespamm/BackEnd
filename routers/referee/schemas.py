@@ -1,15 +1,22 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing_extensions import List
+from typing_extensions import List, Optional
 
 
 class RefereeDTO(BaseModel):
     id: int
     first_name: str
-    last_name: str
-    middle_name: str
-    email: EmailStr
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    email: Optional[EmailStr] = Field(default=None)
     phone: str
     certification_level: str
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def empty_email_to_none(cls, v):
+        if v == "" or v is None:
+            return None
+        return v
 
     @classmethod
     def from_referee(cls, referee) -> "RefereeDTO":

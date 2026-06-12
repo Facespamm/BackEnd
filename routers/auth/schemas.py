@@ -10,7 +10,7 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    login: str
+    username: str
     password: str
 
 

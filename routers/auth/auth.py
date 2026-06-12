@@ -26,11 +26,11 @@ auth_router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 async def login(enter_date: LoginRequest):
     """Аутентификация пользователя"""
 
-    if not enter_date.login or not enter_date.password:
+    if not enter_date.username or not enter_date.password:
         return error_response("Логин и пароль обязательны", 400)
 
     with AuthRepository() as auth_repo:
-        user = auth_repo.get_user_by_username(enter_date.login)
+        user = auth_repo.get_user_by_username(enter_date.username)
 
         user_role = (
             auth_repo.get_role_by_user(user.id)

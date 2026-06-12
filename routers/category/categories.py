@@ -16,12 +16,12 @@ async def get_categories(tournamentId: int | None = None):
     """Получить список категорий"""
     try:
         with CategoryRepository() as category_repo:
-            categories = category_repo.get_categories(tournamentId)
+            categories = category_repo.get_categories(tournament_id=tournamentId)
 
             result = []
             for category in categories:
                 tournament_ids = [
-                    t.tournament_category_id for t in category.tournament_categories
+                    t.tournament_id for t in category.tournament_categories
                 ]
 
                 result.append(
@@ -111,9 +111,9 @@ async def create_category(create_data: CreateCategoryRequest):
         if not create_data.gender:
             return error_response("Обязательные поля: gender", 400)
 
-        if create_data.min_weight > create_data.max_age != 0:
+        if create_data.min_age > create_data.max_age != 0:
             return error_response(
-                "Минемальный вес не может быть больше максимального",
+                "Максимальный год не может быть старше минимального",
                 400,
             )
 
@@ -141,9 +141,9 @@ async def create_category(create_data: CreateCategoryRequest):
             )
 
         under_or_over_weight = (
-            f"-{create_data.max_age}"
-            if create_data.max_age != 0
-            else f"+{create_data.min_age}"
+            f"-{create_data.max_weight}"
+            if create_data.max_weight != 0 or create_data.max_weight != 0.0
+            else f"+{create_data.min_weight}"
         )
         generate_name = f"{under_or_over_weight}кг, ПОЛ: {create_data.gender}, ГОДА:с {create_data.min_age} по {create_data.max_age}"
 

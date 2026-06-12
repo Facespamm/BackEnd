@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from database.db import create_session
 from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter
+
+from database.db import create_session
 from models import AthleteNew, UserNew
 from models.Enums import RoleName, translate_gender
 from repository.athlete_repo import AthleteRepository
@@ -77,7 +78,11 @@ async def registration_on_club():
 
 
 @athlete_router.get("/")
-async def get_athletes(club_id: int, search: str, tournament_id: int):
+async def get_athletes(
+    club_id: int | None = None,
+    search: str | None = None,
+    tournament_id: int | None = None,
+):
     """Получить список участников"""
     try:
         with AthleteRepository() as athlete_repo:

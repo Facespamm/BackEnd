@@ -3,10 +3,10 @@ from pydantic import BaseModel, Field
 
 class CreateCategoryRequest(BaseModel):
     gender: str
-    min_weight: float = Field(default=0.0, gt=0.0)
-    max_weight: float = Field(default=0.0, gt=0.0)
-    min_age: int
-    max_age: int
+    min_weight: float = Field(default=0.0)
+    max_weight: float = Field(default=0.0)
+    min_age: int = Field(ge=1950, le=9999)
+    max_age: int = Field(ge=1950, le=9999)
 
 
 class UpdateCategoryRequest(BaseModel):

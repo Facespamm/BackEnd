@@ -12,13 +12,13 @@ from routers.referee.schemas import (
     UpdateRefereRequest,
 )
 from utils.helpers import error_response
-from utils.security import admin_depd, refere_depd
+from utils.security import admin_depd, admin_or_referee_depd
 
 referee_router = APIRouter(prefix="/api/referee", tags=["Referee"])
 referee_repo = RefereeRepository()
 
 
-@referee_router.get("/", dependencies=[admin_depd, refere_depd])
+@referee_router.get("/", dependencies=[admin_or_referee_depd])
 def get_referees():
     try:
         referees = referee_repo.get_referees()
@@ -32,7 +32,7 @@ def get_referees():
         return error_response("Проблеммы с получением судей", 500)
 
 
-@referee_router.get("/{referee_id}", dependencies=[admin_depd, refere_depd])
+@referee_router.get("/{referee_id}", dependencies=[admin_or_referee_depd])
 def get_referee(referee_id: int):
     try:
         referee = referee_repo.get_referee(referee_id)
@@ -45,7 +45,7 @@ def get_referee(referee_id: int):
         return error_response("Ошибка получение судьи", 500)
 
 
-@referee_router.post("/", status_code=201, dependencies=[admin_depd])
+@referee_router.post("/", status_code=201, dependencies=[admin_or_referee_depd])
 def create_referee(create_data: CreateRefereeRequest):
     try:
         certificat_level = text_to_referee_level(create_data.certification_level)
@@ -101,7 +101,7 @@ def update_referee(referee_id: int, data: UpdateRefereRequest):
 
 
 @referee_router.post(
-    "/{tournament_id}/assign_to-fights", dependencies=[admin_depd, refere_depd]
+    "/{tournament_id}/assign_to-fights", dependencies=[admin_or_referee_depd]
 )
 def assign_referees_to_fights(tournament_id: int, category: int, data: AsignReferees):
     try:
@@ -132,7 +132,7 @@ def assign_referees_to_fights(tournament_id: int, category: int, data: AsignRefe
         return error_response("Ошибка назначения судей на бои", 500)
 
 
-@referee_router.delete("/{referee_id}")
+@referee_router.delete("/{referee_id}", dependencies=[admin_depd])
 def delete_referee(referee_id: int):
     try:
         referee = referee_repo.get_referee(referee_id)
