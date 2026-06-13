@@ -1,7 +1,9 @@
 from sqlalchemy import and_, delete, distinct, extract, update
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import joinedload
+from sqlalchemy.sql.expression import func
 from sqlalchemy.sql.functions import count
+from sqlalchemy.sql.operators import or_
 
 from database.db import get_session
 from models.AthleteTournamentRegistration import AthleteTournamentRegistration
@@ -241,22 +243,38 @@ class TournamentRepository:
         athletes = tournament.registrations
         return athletes
 
-    def get_all_tournaments(self, status=None, page=1, page_size=10):
+    def get_all_tournaments(
+        self, status=None, page=1, page_size=10, search=None, category_id=None
+    ):
         """Получить все турниры"""
         try:
-            tournaments_query = (
-                self.session.query(TournamentNew)
-                .filter_by(is_active=True)
-                .order_by(TournamentNew.start_date.desc())
+            tournaments_query = self.session.query(TournamentNew).filter_by(
+                is_active=True
+            )
+
+            if category_id:
+                tournaments_query = tournaments_query.filter(
+                    TournamentNew.tournament_categories.any(category_id=category_id)
+                )
+            if status:
+                tournaments_query = tournaments_query.filter_by(status=status)
+            if search:
+                s = f"%{search.lower()}%"
+                tournaments_query = tournaments_query.where(
+                    or_(
+                        func.lower(TournamentNew.name).ilike(s),
+                        func.lower(TournamentNew.venue).ilike(s),
+                        func.lower(TournamentNew.city).ilike(s),
+                        func.lower(TournamentNew.description).ilike(s),
+                    )
+                )
+
+            tournaments = (
+                tournaments_query.order_by(TournamentNew.start_date.desc())
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
-
-            if status:
-                tournaments_query = tournaments_query.filter_by(status=status)
-
-            tournaments = tournaments_query.all()
-            return tournaments
+            return tournaments.all()
         except Exception as e:
             print(f"Error getting all tournaments: {e}")
             return []

@@ -60,7 +60,12 @@ class AthleteRepository:
         )
 
     def get_basic_info(
-        self, club_id: int, search_name: str, tournament_id: int | None = None
+        self,
+        page,
+        page_size,
+        club_id: int | None = None,
+        search_name: str | None = None,
+        tournament_id: int | None = None,
     ):
         query = (
             self.session.query(
@@ -95,7 +100,14 @@ class AthleteRepository:
                     UserNew.first_name.ilike(f"%{search_name}%"),
                 )
             )
-        return query.order_by(UserNew.last_name, UserNew.first_name).all()
+
+        athletes = (
+            query.order_by(UserNew.last_name, UserNew.first_name)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+        return athletes
 
     def get_athletes_by_tournament(self, tournament_id: int, category_id: int):
         return (
@@ -236,7 +248,12 @@ class AthleteRepository:
         return query.order_by(UserNew.last_name, UserNew.first_name).all()
 
     def get_athletes_by_club_id(
-        self, club_id: int, tournament_id=None, include_tournament_info=False
+        self,
+        club_id: int,
+        page,
+        page_size,
+        tournament_id=None,
+        include_tournament_info=False,
     ):
         athletes_query = (
             self.session.query(AthleteNew)
@@ -246,8 +263,11 @@ class AthleteRepository:
                 joinedload(AthleteNew.club),
                 joinedload(AthleteNew.user),
             )
-            .filter(AthleteNew.is_active == True, AthleteNew.club_id == club_id)
+            .filter(AthleteNew.is_active == True)
         )
+
+        if club_id:
+            athletes_query = athletes_query.filter(AthleteNew.club_id == club_id)
         if tournament_id is not None:
             athletes_query = (
                 athletes_query.join(
@@ -266,7 +286,14 @@ class AthleteRepository:
                 .joinedload(AthleteRegistration.tournament_categories)
                 .joinedload(TournamentCategory.tournament)
             )
-        return athletes_query.order_by(UserNew.last_name, UserNew.first_name).all()
+
+        athletes = (
+            athletes_query.order_by(UserNew.last_name, UserNew.first_name)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+        return athletes
 
     def set_category(self, athlete: AthleteNew, weigth):
         category_repo = CategoryRepository(self.session)

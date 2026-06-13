@@ -1,6 +1,7 @@
-from database.db import create_session
 from fastapi import APIRouter, Query
-from models.Enums import StatusTournamentRegistration
+
+from database.db import create_session
+from models.Enums import StatusTournament, StatusTournamentRegistration
 from models.tournament_new import TournamentNew
 from repository.athlete_repo import AthleteRepository
 from repository.category_repo import CategoryRepository
@@ -18,14 +19,21 @@ tournaments_router = APIRouter(prefix="/api/tournaments", tags=["Tournaments"])
 
 
 @tournaments_router.get("/", status_code=200)
-def get_tournaments(pagination: PaginationDependency, status: str | None = None):
+def get_tournaments(
+    pagination: PaginationDependency,
+    status: StatusTournament | None = None,
+    category_id: int | None = None,
+    search: str | None = None,
+):
     """Получить список всех турниров"""
     try:
-        page = pagination.page_size
+        page = pagination.page
         per_page = pagination.per_page
         with create_session() as session:
             tournament_repo = TournamentRepository(session)
-            tournaments = tournament_repo.get_all_tournaments(status, page, per_page)
+            tournaments = tournament_repo.get_all_tournaments(
+                status, page, per_page, search, category_id
+            )
 
             result = []
             for tournament in tournaments:
@@ -38,36 +46,6 @@ def get_tournaments(pagination: PaginationDependency, status: str | None = None)
 
     except Exception:
         return error_response("Внутренняя ошибка сервера", 500)
-
-
-@tournaments_router.get("/by-category/{category_id}", status_code=200)
-def get_tournaments_by_category(category_id: int, status: str | None = None):
-    try:
-        with create_session() as session:
-            tournament_repo = TournamentRepository(session)
-            query = (
-                session.query(TournamentNew)
-                .filter(
-                    TournamentNew.tournament_categories.any(category_id=category_id)
-                )
-                .order_by(TournamentNew.start_date.desc())
-            )
-            if status:
-                query = query.filter(TournamentNew.status == status)
-
-            tournaments = query.all()
-
-            result = []
-            for tournament in tournaments:
-                athlete_count = tournament_repo.get_register_athlete_count(
-                    tournament.id
-                )
-                result.append(TournamentDTO.from_tournament(tournament, athlete_count))
-
-        return result
-
-    except Exception:
-        return error_response("Ошибка при получении турниров по категории", 500)
 
 
 @tournaments_router.get("/{tournament_id}", status_code=200)

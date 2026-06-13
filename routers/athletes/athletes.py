@@ -13,6 +13,7 @@ from routers.athletes.schemas import (
     CreateAthleteRequest,
     UpdateAthleteRequest,
 )
+from utils.annotation import PaginationDependency
 from utils.helpers import error_response
 
 athlete_router = APIRouter(prefix="/api/athletes", tags=["Athletes"])
@@ -79,15 +80,19 @@ async def registration_on_club():
 
 @athlete_router.get("/")
 async def get_athletes(
+    pagination: PaginationDependency,
     club_id: int | None = None,
     search: str | None = None,
     tournament_id: int | None = None,
 ):
     """Получить список участников"""
+    page = pagination.page
+    page_size = pagination.per_page
+
     try:
         with AthleteRepository() as athlete_repo:
             basic_information = athlete_repo.get_basic_info(
-                club_id, search, tournament_id
+                page, page_size, club_id, search, tournament_id
             )
 
         result = [

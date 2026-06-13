@@ -169,8 +169,8 @@ async def public_registration(register_data: RegisterRequest):
 @auth_router.get("/users", dependencies=[admin_depd])
 async def get_users(pagan: PaginationDependency):
     """Получить список пользователей"""
-    page = pagan.per_page
-    size = pagan.page_size
+    page = pagan.page
+    size = pagan.per_page
     try:
         with AuthRepository() as auth_repo:
             users = auth_repo.get_users(page=page, page_size=size)

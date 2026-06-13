@@ -14,6 +14,7 @@ from routers.club.schemas import (
     MessageResponse,
     UpdateClubRequest,
 )
+from utils.annotation import PaginationDependency
 from utils.helpers import error_response
 from utils.security import admin_depd
 
@@ -194,9 +195,12 @@ def update_club(club_id: int, update_request: UpdateClubRequest):
 @club_router.get("/{club_id}/club-athletes/", response_model=ClubAthletesResponse)
 def get_club_athletes(
     club_id: int,
+    pagination: PaginationDependency,
     include_tournament_info: bool = Query(default=False),
     tournament_id: int | None = Query(default=None),
 ):
+    page = pagination.page
+    page_size = pagination.per_page
     with create_session() as session:
         club_repo = ClubRepository(session)
 
@@ -207,6 +211,8 @@ def get_club_athletes(
         athlete_repo = AthleteRepository(session)
         athletes = athlete_repo.get_athletes_by_club_id(
             club_id=club_id,
+            page=page,
+            page_size=page_size,
             tournament_id=tournament_id,
             include_tournament_info=include_tournament_info,
         )
