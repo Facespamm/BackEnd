@@ -94,7 +94,6 @@ async def get_athletes(
             basic_information = athlete_repo.get_basic_info(
                 page, page_size, club_id, search, tournament_id
             )
-
         result = [
             {
                 "id": athlete[0],
@@ -102,8 +101,9 @@ async def get_athletes(
                 "last_name": athlete[2],
                 "middle_name": athlete[3],
                 "rank": athlete[4],
-                "gender": athlete[5],
+                "gender": translate_gender(athlete[5]),
                 "age": athlete[6],
+                "has_tournament": athlete[7],
             }
             for athlete in basic_information
         ]

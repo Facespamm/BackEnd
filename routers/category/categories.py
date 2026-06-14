@@ -145,7 +145,7 @@ async def create_category(create_data: CreateCategoryRequest):
             if create_data.max_weight != 0 or create_data.max_weight != 0.0
             else f"+{create_data.min_weight}"
         )
-        generate_name = f"{under_or_over_weight}кг, ПОЛ: {create_data.gender}, ГОДА:с {create_data.min_age} по {create_data.max_age}"
+        generate_name = f"{under_or_over_weight}kg, Sex: {create_data.gender}, Years:from {create_data.min_age} to {create_data.max_age}"
 
         with CategoryRepository() as category_repo:
             existing_category = category_repo.get_category_by_name(generate_name)

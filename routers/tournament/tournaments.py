@@ -14,6 +14,7 @@ from routers.tournament.schemas import (
 )
 from utils.annotation import PaginationDependency
 from utils.helpers import error_response
+from utils.security import admin_depd
 
 tournaments_router = APIRouter(prefix="/api/tournaments", tags=["Tournaments"])
 
@@ -23,7 +24,7 @@ def get_tournaments(
     pagination: PaginationDependency,
     status: StatusTournament | None = None,
     category_id: int | None = None,
-    search: str | None = None,
+    search: str | None = Query(default=None, min_length=3),
 ):
     """Получить список всех турниров"""
     try:
@@ -227,6 +228,48 @@ def get_tournament_categories(tournament_id: int):
                         "min_age": category.min_year,
                         "max_age": category.max_year,
                         "athletes_count": category_repo.get_all_athletes(category.id),
+                    }
+                )
+
+        return result
+
+    except Exception as e:
+        return error_response(f"Ошибка при получении категорий: {e}", 500)
+
+
+@tournaments_router.get(
+    "/{tournament_id}/categories-for-assignt", dependencies=[admin_depd]
+)
+def get_categories_for_assignt(tournament_id: int):
+    try:
+        with create_session() as session:
+            category_repo = CategoryRepository(session)
+            categories = category_repo.get_categories()
+
+            if not categories:
+                return error_response("Категории не найден", 404)
+
+            result = []
+            for category in categories:
+                is_assign = any(
+                    (
+                        tournament_id == tournament.tournament_id
+                        and category.id == tournament.category_id
+                    )
+                    for tournament in category.tournament_categories
+                )
+
+                result.append(
+                    {
+                        "id": category.id,
+                        "name": category.name,
+                        "gender": category.gender.value,
+                        "min_weight": category.min_weight,
+                        "max_weight": category.max_weight,
+                        "min_age": category.min_year,
+                        "max_age": category.max_year,
+                        "athletes_count": category_repo.get_all_athletes(category.id),
+                        "assign": is_assign,
                     }
                 )
 
@@ -464,7 +507,7 @@ def remove_category_from_tournament(tournament_id: int, category_id: int):
 
             return error_response(
                 f"Ошибка при удалении категории {category_id} из турнира {tournament_id}",
-                400,
+                500,
             )
 
     except Exception as e:

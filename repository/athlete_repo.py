@@ -1,4 +1,4 @@
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, exists, or_
 from sqlalchemy.orm import joinedload
 
 from database.db import get_session
@@ -67,6 +67,14 @@ class AthleteRepository:
         search_name: str | None = None,
         tournament_id: int | None = None,
     ):
+        has_tournament_query = exists().where(
+            AthleteTournamentRegistration.athlete_id == AthleteNew.id
+        )
+        if tournament_id is not None:
+            has_tournament_query = has_tournament_query.where(
+                AthleteTournamentRegistration.tournament_id == tournament_id
+            )
+
         query = (
             self.session.query(
                 AthleteNew.id,
@@ -76,30 +84,30 @@ class AthleteRepository:
                 DanNew.level,
                 AthleteNew.gender,
                 AthleteNew.age,
+                has_tournament_query.label("has_tournament"),
             )
             .join(AthleteNew.user)
             .outerjoin(AthleteNew.rank)
             .filter(AthleteNew.is_active == True)
         )
 
-        if tournament_id is not None:
-            registered_ids = (
-                self.session.query(AthleteTournamentRegistration.athlete_id)
-                .filter_by(tournament_id=tournament_id)
-                .scalar_subquery()
-            )
-
-            query = query.filter(AthleteNew.id.not_in(registered_ids))
-
         if club_id:
             query = query.filter(AthleteNew.club_id == club_id)
         if search_name:
-            query = query.filter(
-                or_(
-                    UserNew.last_name.ilike(f"%{search_name}%"),
-                    UserNew.first_name.ilike(f"%{search_name}%"),
+            names = search_name.split()
+            if names:
+                query = query.filter(
+                    and_(
+                        *[
+                            or_(
+                                UserNew.last_name.ilike(f"%{name}%"),
+                                UserNew.first_name.ilike(f"%{name}%"),
+                                UserNew.middle_name.ilike(f"%{name}%"),
+                            )
+                            for name in names
+                        ]
+                    )
                 )
-            )
 
         athletes = (
             query.order_by(UserNew.last_name, UserNew.first_name)
@@ -139,11 +147,13 @@ class AthleteRepository:
 
         if hasattr(athlete_id, "id"):
             athlete_id = athlete_id.id
+
         query = (
             self.session.query(ResultNew)
             .join(FightNew, ResultNew.fight_id == FightNew.id)
             .filter(ResultNew.winner_id == athlete_id)
         )
+
         if tournament_id is not None:
             query = query.filter(FightNew.tournament_id == tournament_id)
         return query.count()

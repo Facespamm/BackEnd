@@ -20,6 +20,7 @@ class TournamentDTO(BaseModel):
     tatami_count: int
     athletes_count: int
     description: str | None = None
+    has_consolation_fights: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,6 +41,7 @@ class TournamentDTO(BaseModel):
                 "tatami_count": tournament.tatami_count,
                 "athletes_count": athletes_count,
                 "description": tournament.description,
+                "has_consolation_fights": tournament.has_consolation_fights,
             }
         )
 
@@ -66,7 +68,7 @@ class TournamentUpdateRequest(BaseModel):
     city: str | None = None
     country: str | None = None
     status: str | None = None
-    tatami_count: int | None = Field(default=None, ge=1)
+    tatami_count: int = Field(ge=1)
     has_consolation_fights: bool | None = None
 
 

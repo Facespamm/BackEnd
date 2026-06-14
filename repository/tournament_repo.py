@@ -1,9 +1,8 @@
-from sqlalchemy import and_, delete, distinct, extract, update
+from sqlalchemy import and_, delete, distinct, extract, or_, update
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
 from sqlalchemy.sql.functions import count
-from sqlalchemy.sql.operators import or_
 
 from database.db import get_session
 from models.AthleteTournamentRegistration import AthleteTournamentRegistration
@@ -270,7 +269,7 @@ class TournamentRepository:
                 )
 
             tournaments = (
-                tournaments_query.order_by(TournamentNew.start_date.desc())
+                tournaments_query.order_by(TournamentNew.id.asc())
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )

@@ -7,7 +7,11 @@ from database.db import create_session
 from models import AthleteTournamentRegistration
 from models.Enums import FightStatus, StatusTournament
 from models.fight_new import FightNew
-from models.new_associations import AthleteRegistration, TournamentCategory, new_user_roles
+from models.new_associations import (
+    AthleteRegistration,
+    TournamentCategory,
+    new_user_roles,
+)
 from models.new_user import UserNew
 from models.role_new import RoleNew
 from models.tournament_new import TournamentNew
@@ -31,7 +35,10 @@ def get_live_statistics():
         with create_session() as session:
             active_tournaments_count = (
                 session.query(count(TournamentNew.id))
-                .filter(TournamentNew.status == StatusTournament.LIVE)
+                .filter(
+                    TournamentNew.status == StatusTournament.LIVE,
+                    TournamentNew.is_active == True,
+                )
                 .scalar()
                 or 0
             )
@@ -99,7 +106,9 @@ def get_all_users():
         return {"success": True, "data": result, "total": len(result)}
 
     except Exception as e:
-        return error_response(f"Ошибка при получении списка пользователей: {str(e)}", 500)
+        return error_response(
+            f"Ошибка при получении списка пользователей: {str(e)}", 500
+        )
 
 
 @statistics_router.delete("/users/{user_id}")
@@ -164,7 +173,7 @@ def get_users_by_role_statistics():
                 session.query(
                     RoleNew.name.label("role_name"),
                     RoleNew.normalized_name.label("normalized_name"),
-                    count(UserNew.id).label("count"),
+                    count(UserNew.id).label("count_user_role"),
                 )
                 .join(new_user_roles, RoleNew.id == new_user_roles.c.role_id)
                 .join(UserNew, UserNew.id == new_user_roles.c.user_id)
@@ -191,7 +200,7 @@ def get_users_by_role_statistics():
                 UsersByRoleDTO(
                     role_name=role.role_name,
                     normalized_name=role.normalized_name,
-                    count=role.count,
+                    count=role.count_user_role,
                 )
                 for role in users_by_role
             ],
@@ -214,7 +223,10 @@ def get_active_tournaments():
         with create_session() as session:
             tournaments = (
                 session.query(TournamentNew)
-                .filter(TournamentNew.status == StatusTournament.LIVE)
+                .filter(
+                    TournamentNew.status == StatusTournament.LIVE,
+                    TournamentNew.is_active == True,
+                )
                 .outerjoin(
                     AthleteTournamentRegistration,
                     TournamentNew.id == AthleteTournamentRegistration.tournament_id,
