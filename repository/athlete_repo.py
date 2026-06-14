@@ -94,18 +94,12 @@ class AthleteRepository:
         if club_id:
             query = query.filter(AthleteNew.club_id == club_id)
         if search_name:
-            names = search_name.split()
-            if names:
+            for name in search_name.split():
                 query = query.filter(
-                    and_(
-                        *[
-                            or_(
-                                UserNew.last_name.ilike(f"%{name}%"),
-                                UserNew.first_name.ilike(f"%{name}%"),
-                                UserNew.middle_name.ilike(f"%{name}%"),
-                            )
-                            for name in names
-                        ]
+                    or_(
+                        UserNew.last_name.ilike(f"%{name}%"),
+                        UserNew.first_name.ilike(f"%{name}%"),
+                        UserNew.middle_name.ilike(f"%{name}%"),
                     )
                 )
 
